@@ -48,6 +48,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark_theme.css') }}">
 </head>
 <body>
+    
     <div class="dashboard-container">
         <h1>Trading Account Dashboard</h1>
         
@@ -113,97 +114,102 @@
             </table>
         </div>
     </div>
-
+    <div id="dashboard" data-account="{{ account_number }}"></div>
     <script>
-        $(document).ready(function() {
-            // Initialize DataTables
-            const activePositionsTable = $('#active-positions').DataTable({
-                responsive: true,
-                order: [[5, 'desc']],
-                columns: [
-                    { data: 'symbol' },
-                    { data: 'position' },
-                    { 
-                        data: 'market_price',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { 
-                        data: 'market_value',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { 
-                        data: 'average_cost',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { 
-                        data: 'unrealized_pnl',
-                        render: function(data) {
-                            const color = data >= 0 ? 'positive' : 'negative';
-                            return `<span class="${color}">$${Number(data).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
-                        }
-                    },
-                    { data: 'exchange' }
-                ]
-            });
-
-            const closedPositionsTable = $('#closed-positions').DataTable({
-                responsive: true,
-                order: [[3, 'desc']],
-                columns: [
-                    { data: 'symbol' },
-                    { data: 'position' },
-                    { 
-                        data: 'market_price',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { 
-                        data: 'realized_pnl',
-                        render: function(data) {
-                            const color = data >= 0 ? 'positive' : 'negative';
-                            return `<span class="${color}">$${Number(data).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
-                        }
-                    },
-                    { data: 'exchange' }
-                ]
-            });
-
-            function updateDashboard() {
-                // Update PnL summary
-                $.get('/api/current-pnl/DU7397764', function(response) {
-                    if (response.status === 'success') {
-                        const data = response.data;
-                        $('#daily-pnl').text('$' + Number(data.daily_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
-                            .toggleClass('positive', data.daily_pnl >= 0)
-                            .toggleClass('negative', data.daily_pnl < 0);
-                        
-                        $('#unrealized-pnl').text('$' + Number(data.total_unrealized_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
-                            .toggleClass('positive', data.total_unrealized_pnl >= 0)
-                            .toggleClass('negative', data.total_unrealized_pnl < 0);
-                        
-                        $('#realized-pnl').text('$' + Number(data.total_realized_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
-                            .toggleClass('positive', data.total_realized_pnl >= 0)
-                            .toggleClass('negative', data.total_realized_pnl < 0);
-                        
-                        $('#net-liquidation').text('$' + Number(data.net_liquidation).toLocaleString('en-US', {minimumFractionDigits: 2}));
-                        $('#risk-amount').text('$' + Number(data.risk_amount).toLocaleString('en-US', {minimumFractionDigits: 2}));
+    $(document).ready(function() {
+        const accountNumber = $('#dashboard').data('account');
+        const activePositionsTable = $('#active-positions').DataTable({
+            responsive: true,
+            order: [[5, 'desc']],
+            deferRender: true,
+            processing: true,
+            columns: [
+                { data: 'symbol' },
+                { data: 'position' },
+                {
+                    data: 'market_price',
+                    render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                },
+                {
+                    data: 'market_value',
+                    render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                },
+                {
+                    data: 'average_cost',
+                    render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                },
+                {
+                    data: 'unrealized_pnl',
+                    render: function(data) {
+                        const color = data >= 0 ? 'positive' : 'negative';
+                        return `<span class="${color}">$${Number(data).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
                     }
-                });
-
-                // Update positions tables
-                $.get('/api/positions/DU7397764', function(response) {
-                    if (response.status === 'success') {
-                        activePositionsTable.clear().rows.add(response.data.active_positions).draw();
-                        closedPositionsTable.clear().rows.add(response.data.closed_positions).draw();
-                    }
-                });
-            }
-
-            // Initial update
-            updateDashboard();
-
-            // Update every 5 seconds
-            setInterval(updateDashboard, 5000);
+                },
+                { data: 'exchange' }
+            ]
         });
-    </script>
+
+        const closedPositionsTable = $('#closed-positions').DataTable({
+            responsive: true,
+            order: [[3, 'desc']],
+            deferRender: true,
+            processing: true,
+            columns: [
+                { data: 'symbol' },
+                { data: 'position' },
+                {
+                    data: 'market_price',
+                    render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                },
+                {
+                    data: 'realized_pnl',
+                    render: function(data) {
+                        const color = data >= 0 ? 'positive' : 'negative';
+                        return `<span class="${color}">$${Number(data).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
+                    }
+                },
+                { data: 'exchange' }
+            ]
+        });
+
+        function updateDashboard() {
+            $.get('/api/current-pnl/${accountNumber}', function(response) {
+                if (response.status === 'success') {
+                    const data = response.data;
+                    $('#daily-pnl').text('$' + Number(data.daily_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
+                        .toggleClass('positive', data.daily_pnl >= 0)
+                        .toggleClass('negative', data.daily_pnl < 0);
+
+                    $('#unrealized-pnl').text('$' + Number(data.total_unrealized_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
+                        .toggleClass('positive', data.total_unrealized_pnl >= 0)
+                        .toggleClass('negative', data.total_unrealized_pnl < 0);
+
+                    $('#realized-pnl').text('$' + Number(data.total_realized_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
+                        .toggleClass('positive', data.total_realized_pnl >= 0)
+                        .toggleClass('negative', data.total_realized_pnl < 0);
+
+                    $('#net-liquidation').text('$' + Number(data.net_liquidation).toLocaleString('en-US', {minimumFractionDigits: 2}));
+                    $('#risk-amount').text('$' + Number(data.risk_amount).toLocaleString('en-US', {minimumFractionDigits: 2}));
+                }
+            }).fail(function() {
+                $('.status-indicator').text('Error fetching PnL data').addClass('status-error');
+            });
+
+            $.get('/api/positions/${accountNumber}', function(response) {
+                if (response.status === 'success') {
+                    activePositionsTable.clear().rows.add(response.data.active_positions).draw();
+                    closedPositionsTable.clear().rows.add(response.data.closed_positions).draw();
+                }
+            }).fail(function() {
+                $('.status-indicator').text('Error fetching position data').addClass('status-error');
+            });
+        }
+
+        // Initial update
+        updateDashboard();
+        setInterval(updateDashboard, 10000); // Increased interval for efficiency
+    });
+</script>
+
 </body>
 </html>
