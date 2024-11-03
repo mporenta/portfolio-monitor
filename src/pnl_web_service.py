@@ -6,8 +6,9 @@ import sqlite3
 from datetime import datetime
 import os
 from logging.handlers import RotatingFileHandler
-app = Flask(__name__)
-CORS(app)
+app = Flask(__name__, static_url_path='/portfolio/static', static_folder='static')
+
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Configure logging
 log_dir = Path("/home/tbot/logs")
@@ -63,7 +64,8 @@ def get_latest_data():
 
 @app.route('/')
 def index():
-    return render_template('pnl_dashboard.html')
+    account_number = os.getenv('ACCOUNT_NUMBER')
+    return render_template('pnl_dashboard.html', account_number=account_number)
 
 @app.route('/api/current-pnl/<account_id>')
 def get_current_pnl(account_id):
@@ -154,11 +156,7 @@ def get_status():
 
 if __name__ == '__main__':
     port = int(os.getenv('FLASK_PORT', '5001'))
-    host = os.getenv('FLASK_HOST', '127.0.0.1')
+    host = os.getenv('FLASK_HOST', '0.0.0.0')  # Changed to '0.0.0.0'
     
     logger.info(f"Starting PnL service on {host}:{port}")
-    app.run(
-        host=host,
-        port=port,
-        debug=os.getenv('TBOT_PRODUCTION', 'False').lower() != 'true'
-    )
+    app.run(host='0.0.0.0', port=5001)
