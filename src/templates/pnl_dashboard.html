@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PnL Dashboard</title>
+    
+    <!-- jQuery and jQuery UI -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    
+    <!-- DataTables -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.4.0/css/responsive.dataTables.min.css">
+    <script type="text/javascript" src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.4.0/js/dataTables.responsive.min.js"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .dashboard-container { max-width: 1200px; margin: 0 auto; }
+        .summary-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric-label { font-size: 0.9em; color: #666; }
+        .metric-value { 
+            font-size: 1.4em; 
+            font-weight: bold; 
+            margin-top: 5px;
+        }
+        .positive { color: #28a745; }
+        .negative { color: #dc3545; }
+        .positions-container { margin-top: 30px; }
+        .table-container { margin-bottom: 30px; }
+        h2 { color: #333; margin-bottom: 20px; }
+        .dataTables_wrapper { margin-top: 20px; }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark_theme.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Trading Account Dashboard</h1>
+        
+        <!-- Summary Panel -->
+        <div class="summary-panel">
+            <div class="metric-card">
+                <div class="metric-label">Daily P&L</div>
+                <div id="daily-pnl" class="metric-value">$0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Unrealized P&L</div>
+                <div id="unrealized-pnl" class="metric-value">$0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Realized P&L</div>
+                <div id="realized-pnl" class="metric-value">$0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Net Liquidation</div>
+                <div id="net-liquidation" class="metric-value">$0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Risk Amount</div>
+                <div id="risk-amount" class="metric-value">$0.00</div>
+            </div>
+        </div>
+        
+        <!-- Active Positions -->
+        <div class="positions-container">
+            <h2>Active Positions</h2>
+            <table id="active-positions" class="display responsive nowrap" width="100%">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Position</th>
+                        <th>Market Price</th>
+                        <th>Market Value</th>
+                        <th>Average Cost</th>
+                        <th>Unrealized P&L</th>
+                        <th>Exchange</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Closed Positions -->
+        <div class="positions-container">
+            <h2>Closed Positions</h2>
+            <table id="closed-positions" class="display responsive nowrap" width="100%">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Last Position</th>
+                        <th>Last Price</th>
+                        <th>Realized P&L</th>
+                        <th>Exchange</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTables
+            const activePositionsTable = $('#active-positions').DataTable({
+                responsive: true,
+                order: [[5, 'desc']],
+                columns: [
+                    { data: 'symbol' },
+                    { data: 'position' },
+                    { 
+                        data: 'market_price',
+                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                    },
+                    { 
+                        data: 'market_value',
+                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                    },
+                    { 
+                        data: 'average_cost',
+                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                    },
+                    { 
+                        data: 'unrealized_pnl',
+                        render: function(data) {
+                            const color = data >= 0 ? 'positive' : 'negative';
+                            return `<span class="${color}">$${Number(data).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
+                        }
+                    },
+                    { data: 'exchange' }
+                ]
+            });
+
+            const closedPositionsTable = $('#closed-positions').DataTable({
+                responsive: true,
+                order: [[3, 'desc']],
+                columns: [
+                    { data: 'symbol' },
+                    { data: 'position' },
+                    { 
+                        data: 'market_price',
+                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                    },
+                    { 
+                        data: 'realized_pnl',
+                        render: function(data) {
+                            const color = data >= 0 ? 'positive' : 'negative';
+                            return `<span class="${color}">$${Number(data).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
+                        }
+                    },
+                    { data: 'exchange' }
+                ]
+            });
+
+            function updateDashboard() {
+                // Update PnL summary
+                $.get('/api/current-pnl/DU7397764', function(response) {
+                    if (response.status === 'success') {
+                        const data = response.data;
+                        $('#daily-pnl').text('$' + Number(data.daily_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
+                            .toggleClass('positive', data.daily_pnl >= 0)
+                            .toggleClass('negative', data.daily_pnl < 0);
+                        
+                        $('#unrealized-pnl').text('$' + Number(data.total_unrealized_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
+                            .toggleClass('positive', data.total_unrealized_pnl >= 0)
+                            .toggleClass('negative', data.total_unrealized_pnl < 0);
+                        
+                        $('#realized-pnl').text('$' + Number(data.total_realized_pnl).toLocaleString('en-US', {minimumFractionDigits: 2}))
+                            .toggleClass('positive', data.total_realized_pnl >= 0)
+                            .toggleClass('negative', data.total_realized_pnl < 0);
+                        
+                        $('#net-liquidation').text('$' + Number(data.net_liquidation).toLocaleString('en-US', {minimumFractionDigits: 2}));
+                        $('#risk-amount').text('$' + Number(data.risk_amount).toLocaleString('en-US', {minimumFractionDigits: 2}));
+                    }
+                });
+
+                // Update positions tables
+                $.get('/api/positions/DU7397764', function(response) {
+                    if (response.status === 'success') {
+                        activePositionsTable.clear().rows.add(response.data.active_positions).draw();
+                        closedPositionsTable.clear().rows.add(response.data.closed_positions).draw();
+                    }
+                });
+            }
+
+            // Initial update
+            updateDashboard();
+
+            // Update every 5 seconds
+            setInterval(updateDashboard, 5000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+2024-11-02 16:32:52,787 - __main__ - INFO - Initializing PnL monitoring service
+2024-11-02 16:32:52,814 - pnl_database_observer - INFO - Database initialized at c:\Users\mikep\OneDrive\vscode\pnl_webapp\pnl_monitoring\data\pnl_monitor.db
+2024-11-02 16:32:52,830 - ib_async.client - INFO - Connecting to 127.0.0.1:4002 with clientId 8...
+2024-11-02 16:32:52,832 - ib_async.client - INFO - Connected
+2024-11-02 16:32:52,908 - ib_async.client - INFO - Logged on to server version 176
+2024-11-02 16:32:52,944 - ib_async.client - INFO - API connection ready
+2024-11-02 16:32:52,960 - ib_async.wrapper - INFO - Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2024-11-02 16:32:52,960 - ib_async.wrapper - INFO - Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2024-11-02 16:32:52,963 - ib_async.wrapper - INFO - Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2024-11-02 16:32:53,162 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=692025016, symbol='RDDT', exchange='NYSE', currency='USD', localSymbol='RDDT', tradingClass='RDDT'), position=600.0, avgCost=112.995048)
+2024-11-02 16:32:53,163 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=532497563, symbol='WULF', exchange='NASDAQ', currency='USD', localSymbol='WULF', tradingClass='SCM'), position=0.0, avgCost=0.0)
+2024-11-02 16:32:53,164 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=511470142, symbol='CIFR', exchange='NASDAQ', currency='USD', localSymbol='CIFR', tradingClass='NMS'), position=1400.0, avgCost=5.265048)
+2024-11-02 16:32:53,165 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=2560358, symbol='AES', exchange='NYSE', currency='USD', localSymbol='AES', tradingClass='AES'), position=2400.0, avgCost=14.715048)
+2024-11-02 16:32:53,166 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=271303334, symbol='BTU', exchange='NYSE', currency='USD', localSymbol='BTU', tradingClass='BTU'), position=0.0, avgCost=0.0)
+2024-11-02 16:32:53,167 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=29624264, symbol='CRM', exchange='NYSE', currency='USD', localSymbol='CRM', tradingClass='CRM'), position=100.0, avgCost=296.010048)
+2024-11-02 16:32:53,167 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=270639, symbol='INTC', exchange='NASDAQ', currency='USD', localSymbol='INTC', tradingClass='NMS'), position=0.0, avgCost=0.0)
+2024-11-02 16:32:53,168 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=4815747, symbol='NVDA', exchange='NASDAQ', currency='USD', localSymbol='NVDA', tradingClass='NMS'), position=0.0, avgCost=0.0)
+2024-11-02 16:32:53,169 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=385087203, symbol='PTON', exchange='NASDAQ', currency='USD', localSymbol='PTON', tradingClass='NMS'), position=0.0, avgCost=0.0)
+2024-11-02 16:32:53,169 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=517641765, symbol='DJT', exchange='NASDAQ', currency='USD', localSymbol='DJT', tradingClass='NMS'), position=0.0, avgCost=0.0)
+2024-11-02 16:32:53,170 - ib_async.wrapper - INFO - position: Position(account='DU7397764', contract=Stock(conId=3691937, symbol='AMZN', exchange='NASDAQ', currency='USD', localSymbol='AMZN', tradingClass='NMS'), position=0.0, avgCost=0.0)
+2024-11-02 16:32:53,373 - ib_async.wrapper - INFO - updatePortfolio: PortfolioItem(contract=Stock(conId=2560358, symbol='AES', right='0', primaryExchange='NYSE', currency='USD', localSymbol='AES', tradingClass='AES'), position=2400.0, marketPrice=14.76000025, marketValue=35424.0, averageCost=14.715048, unrealizedPNL=107.89, realizedPNL=0.0, account='DU7397764')
+2024-11-02 16:32:53,375 - ib_async.wrapper - INFO - updatePortfolio: PortfolioItem(contract=Stock(conId=511470142, symbol='CIFR', right='0', primaryExchange='NASDAQ', currency='USD', localSymbol='CIFR', tradingClass='NMS'), position=1400.0, marketPrice=5.23, marketValue=7322.0, averageCost=5.265048, unrealizedPNL=-49.07, realizedPNL=0.0, account='DU7397764')
+2024-11-02 16:32:53,376 - ib_async.wrapper - INFO - updatePortfolio: PortfolioItem(contract=Stock(conId=29624264, symbol='CRM', right='0', primaryExchange='NYSE', currency='USD', localSymbol='CRM', tradingClass='CRM'), position=100.0, marketPrice=294.98999025, marketValue=29499.0, averageCost=296.010048, unrealizedPNL=-102.01, realizedPNL=0.0, account='DU7397764')
+2024-11-02 16:32:53,379 - ib_async.wrapper - INFO - updatePortfolio: PortfolioItem(contract=Stock(conId=692025016, symbol='RDDT', right='0', primaryExchange='NYSE', currency='USD', localSymbol='RDDT', tradingClass='RDDT'), position=600.0, marketPrice=112.19999695, marketValue=67320.0, averageCost=112.995048, unrealizedPNL=-477.03, realizedPNL=0.0, account='DU7397764')
+2024-11-02 16:32:53,501 - ib_async.ib - INFO - Synchronization complete
+2024-11-02 16:32:53,502 - pnl_monitor - INFO - Connected successfully to IB Gateway
+2024-11-02 16:32:55,523 - pnl_monitor - INFO - Managed accounts: ['DU7397764']
+2024-11-02 16:32:55,523 - pnl_monitor - INFO - Using account DU7397764
+2024-11-02 16:32:55,597 - pnl_monitor - INFO - Net liquidation changed: $0.00 -> $256,374.45
+2024-11-02 16:32:55,626 - pnl_monitor - INFO - Requested account summary update
+2024-11-02 16:32:57,640 - pnl_monitor - INFO - Successfully subscribed to PnL updates for account DU7397764
+2024-11-02 16:32:57,642 - __main__ - INFO - Database observer thread started
+2024-11-02 16:33:00,117 - __main__ - INFO - 
+PnL Monitoring Service Started
+-----------------------------
+Time: 2024-11-02 18:33:00 EDT
+Database: c:\Users\mikep\OneDrive\vscode\pnl_webapp\pnl_monitoring\data\pnl_monitor.db
+IB Account: DU7397764
+Risk Percent: 1.0%
+            
+2024-11-02 16:33:00,118 - pnl_monitor - INFO - Starting IB event loop...
+2024-11-02 16:33:00,118 - pnl_monitor - INFO - 
+PnL Update:
+- Daily P&L: $-536.80
+- Unrealized P&L: $-520.22
+- Realized P&L: $-92.44
+- Current Net Liquidation: $256,374.45
+
+2024-11-02 16:33:00,119 - pnl_monitor - INFO - Risk amount is $2,563.74 
+2024-11-02 16:33:00,120 - pnl_monitor - INFO - 
+PnL Update:
+- Daily P&L: $-1,974.74
+- Unrealized P&L: $-342.49
+- Realized P&L: $-92.44
+- Current Net Liquidation: $256,374.45
+
+2024-11-02 16:33:00,121 - pnl_monitor - INFO - Risk amount is $2,563.74 
+2024-11-02 16:44:42,077 - __main__ - INFO - Received signal 2
+2024-11-02 16:44:42,078 - __main__ - INFO - Initiating shutdown sequence...
+2024-11-02 16:44:42,078 - ib_async.ib - INFO - Disconnecting from 127.0.0.1:4002, 730 B sent in 10 messages, 25.5 kB received in 552 messages, session time 709 s.
+2024-11-02 16:44:42,079 - ib_async.client - INFO - Disconnecting
+2024-11-02 16:44:42,079 - __main__ - INFO - Shutdown complete
