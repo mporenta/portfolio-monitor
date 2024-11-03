@@ -1,18 +1,31 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, redirect
 from flask_cors import CORS
 import logging
 from pathlib import Path
 import sqlite3
 from datetime import datetime
-
+import os
+from logging.handlers import RotatingFileHandler
 app = Flask(__name__)
 CORS(app)
 
 # Configure logging
+log_dir = Path("/home/tbot/logs")
+log_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        RotatingFileHandler(
+            log_dir / "pnl_service.log",
+            maxBytes=10000000,  # 10MB
+            backupCount=5
+        ),
+        logging.StreamHandler()
+    ]
 )
+
 logger = logging.getLogger(__name__)
 
 # Database path
@@ -140,5 +153,12 @@ def get_status():
         })
 
 if __name__ == '__main__':
-    logger.info(f"Starting web service, database path: {DB_PATH}")
-    app.run(debug=True, port=5001)
+    port = int(os.getenv('FLASK_PORT', '5001'))
+    host = os.getenv('FLASK_HOST', '127.0.0.1')
+    
+    logger.info(f"Starting PnL service on {host}:{port}")
+    app.run(
+        host=host,
+        port=port,
+        debug=os.getenv('TBOT_PRODUCTION', 'False').lower() != 'true'
+    )
