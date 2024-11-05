@@ -22,7 +22,7 @@ log "Waiting for 60 seconds..."
 sleep 60
 
 # Run Python scripts with logging
-run_with_logging "python3 ./src/run_pnl_monitor.py"
-run_with_logging "python3 ./src/pnl_web_service.py"
+run_with_logging "python3 ./src/pnl_monitor.py"
+
 
 log "Script completed"
