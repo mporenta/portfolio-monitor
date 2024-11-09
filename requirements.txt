@@ -1,4 +1,6 @@
 ib_async
+asyncio
+signal
 python-dotenv
 pytz
 pathlib
