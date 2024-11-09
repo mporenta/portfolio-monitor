@@ -13,17 +13,16 @@ from dotenv import load_dotenv
 import time
 from db import *
 from db import is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
-from ib_base import IBBase
-#from close_all import CloseAllPositions
 
-class IBPortfolioTracker(IBBase):
+
+class IBPortfolioTracker():
     def __init__(self):
      
             
             self.trade = Trade()
             self.ib = IB()
             self.dotenv = load_dotenv()
-            self.risk_percent = float(os.getenv('RISK_PERCENT', 0.000748))
+            self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
             self.total_realized_pnl = 0.0
             self.total_unrealized_pnl = 0.0
             self.daily_pnl = 0.0  
@@ -306,7 +305,7 @@ class IBPortfolioTracker(IBBase):
                     
                     self.send_webhook_request(symbol)
                     self.close_all_positions()
-                    self.logger.info(f"Closing this bitch")
+                    self.logger.info(f"Closing this bitch {symbol}")
                     return True
                 else:
                     self.logger.info(f"Symbol {symbol} is not eligible for closing")
@@ -436,10 +435,10 @@ class IBPortfolioTracker(IBBase):
                                                                     
         except KeyboardInterrupt:
             self.logger.info("Shutting down...")
-        #finally:
-            #self.ib.disconnect()
+      
    
 
 if __name__ == "__main__":
     portfolio_tracker = IBPortfolioTracker()
     portfolio_tracker.run()
+   
