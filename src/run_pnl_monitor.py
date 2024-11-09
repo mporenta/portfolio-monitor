@@ -1,8 +1,8 @@
 import threading
 import logging
 from datetime import datetime
-import IBPortfolioTracker
-import app
+from pnl_monitor import IBPortfolioTracker
+from app import *
 import os
 logging.basicConfig(
                 level=logging.debug,
