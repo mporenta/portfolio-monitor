@@ -1,6 +1,8 @@
-from flask import Flask, jsonify, render_template, redirect, url_for
+from flask import Flask, jsonify, render_template, redirect, url_for, request
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
 import logging
+import signal
+from werkzeug.serving import is_running_from_reloader
 
 # Initialize the database to ensure tables are created
 init_db()
@@ -18,7 +20,19 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-@app.route('/portfolio')
+# Add this to handle clean shutdowns
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    shutdown_server()
+    return 'Server shutting down...'
+
+@app.route('/')
 def home():
     try:
         logger.info("Home route accessed, rendering dashboard.")
@@ -48,8 +62,8 @@ def get_current_pnl():
     except Exception as e:
         logger.error(f"Error fetching current PnL: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch current PnL data'}), 500
-@app.route('/api/trades', methods=['GET'])
 
+@app.route('/api/trades', methods=['GET'])
 def get_trades():
     try:
         logger.info("API call to /api/trades")
@@ -60,9 +74,14 @@ def get_trades():
         logger.error(f"Error fetching trades: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch trades data'}), 500
 
+def run_flask_app():
+    app.run(host='127.0.0.1', port=5001, use_reloader=False)
+
 if __name__ == '__main__':
     try:
         logger.info("Starting Flask app.")
-        app.run(host='0.0.0.0', port=5001)
+        run_flask_app()
+    except KeyboardInterrupt:
+        logger.info("Received KeyboardInterrupt, shutting down...")
     except Exception as e:
         logger.error(f"Error starting Flask app: {str(e)}")
