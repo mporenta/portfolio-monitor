@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/portfolio')
 def home():
     try:
         logger.info("Home route accessed, rendering dashboard.")
@@ -63,6 +63,6 @@ def get_trades():
 if __name__ == '__main__':
     try:
         logger.info("Starting Flask app.")
-        app.run(host='0.0.0.0', port=5000)
+        app.run(host='0.0.0.0', port=5001)
     except Exception as e:
         logger.error(f"Error starting Flask app: {str(e)}")
