@@ -10,3 +10,4 @@ requests
 datetime
 werkzeug
 dataclasses
+setuptools
