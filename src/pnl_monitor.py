@@ -15,7 +15,7 @@ import time
 from db import *
 from db import is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
 from app import app as flask_app
-
+load_dotenv()
 
 class IBPortfolioTracker():
     def __init__(self):
@@ -23,7 +23,10 @@ class IBPortfolioTracker():
             
             self.trade = Trade()
             self.ib = IB()
-            self.dotenv = load_dotenv()
+            self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Use container name as default
+            self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))   # Use existing env var
+            self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
+          
             self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
             self.total_realized_pnl = 0.0
             self.total_unrealized_pnl = 0.0
@@ -44,7 +47,12 @@ class IBPortfolioTracker():
             self.logger = logging.getLogger(__name__)
             util.logToConsole(level=30)
             try:
-                self.ib.connect("127.0.0.1", 4002, clientId=8)
+                self.logger.info(f"Connecting to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
+                self.ib.connect(
+                    host=self.host,
+                    port=self.port,
+                    clientId=self.client_id
+            )
                 self.logger.info("Connected successfully to IB Gateway")
             
                 self.ib.waitOnUpdate(timeout=2)
