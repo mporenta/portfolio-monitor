@@ -2,6 +2,8 @@ from flask import Flask, jsonify, render_template, redirect, url_for, request
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
 import logging
 import signal
+from flask_cors import CORS
+from werkzeug import *
 from werkzeug.serving import is_running_from_reloader
 
 # Initialize the database to ensure tables are created
@@ -19,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-
+CORS(app)
 # Add this to handle clean shutdowns
 def shutdown_server():
     func = request.environ.get('werkzeug.server.shutdown')
@@ -32,11 +34,11 @@ def shutdown():
     shutdown_server()
     return 'Server shutting down...'
 
-@app.route('/')
+@app.route('/portfolio', methods=['GET'])
 def home():
     try:
         logger.info("Home route accessed, rendering dashboard.")
-        return render_template('dashboard.html')
+        return render_template('tbot_dashboard.html')
     except Exception as e:
         logger.error(f"Error in home route: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Failed to render the dashboard'}), 500
