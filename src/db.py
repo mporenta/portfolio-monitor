@@ -9,7 +9,7 @@ from typing import Optional
 # Set up logging to file
 log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.ERROR,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path),
