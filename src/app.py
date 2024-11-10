@@ -80,13 +80,12 @@ def get_trades():
         return jsonify({'status': 'error', 'message': 'Failed to fetch trades data'}), 500
 
 def run_flask_app():
-    app.run(host='0.0.0.0', port=5001, use_reloader=False)
+    app.run(host='/', port=5001, use_reloader=False)
 
 if __name__ == '__main__':
     try:
         logger.info("Starting Flask app.")
         run_flask_app()
-    except KeyboardInterrupt:
-        logger.info("Received KeyboardInterrupt, shutting down...")
+    
     except Exception as e:
         logger.error(f"Error starting Flask app: {str(e)}")
