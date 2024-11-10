@@ -1,11 +1,13 @@
 from flask import Flask, jsonify, render_template, redirect, url_for, request
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
 import logging
+from waitress import serve
 import signal
 from flask_cors import CORS
 from werkzeug import *
 from werkzeug.serving import is_running_from_reloader
 import os
+
 
 # Initialize the database to ensure tables are created
 init_db()
@@ -22,7 +24,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
+PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 app = Flask(__name__)
 CORS(app)
 # Add this to handle clean shutdowns
@@ -78,13 +80,26 @@ def get_trades():
     except Exception as e:
         logger.error(f"Error fetching trades: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch trades data'}), 500
-
-
-if __name__ == "__main__":
-    port = int(os.getenv("PNL_HTTPS_PORT", "5001"))
-    if strtobool(os.getenv("TBOT_PRODUCTION", "False")):
-        serve(app, host="0.0.0.0", port=port)
+def str2bool(value):
+    """Convert string to boolean, accepting various common string representations"""
+    value = value.lower()
+    if value in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif value in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
     else:
-        app.run(debug=True, host="0.0.0.0", port=port)
-
-
+        raise ValueError(f'Invalid boolean value: {value}')
+def create_app():
+    """Factory function to create the app with consistent configuration"""
+    return app
+if __name__ == "__main__":
+    production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))
+    
+    if production:
+        serve(app, host="0.0.0.0", port=PORT)
+    else:
+        app.run(debug=True, host="0.0.0.0", port=PORT)
+else:
+    # This ensures the port is set correctly when running with 'flask run'
+    app.config['ENV'] = os.getenv('FLASK_ENV', 'development')
+    app.config['DEBUG'] = not str2bool(os.getenv("TBOT_PRODUCTION", "False"))
