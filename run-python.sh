@@ -1,9 +1,10 @@
-#!/bin/sh
-sleep 30
-# Change directory to the specified path
-cd /home/tbot/develop/github/portfolio-monitor/src || exit
+#!/bin/bash
 
-# Run main.py using Python (ensure Python is installed and configured)
+# Navigate to the directory containing the Python files
+cd /home/tbot/develop/github/portfolio-monitor/src
+
+# Run the PnL monitor script
 python3 pnl_monitor.py
-sleep 10
-python3 app.py
+
+# Start the Flask app
+flask --app app run
