@@ -1,6 +1,7 @@
 # pnl.py
 import logging
 from operator import is_
+import flask
 import requests
 import json
 from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade
@@ -13,6 +14,7 @@ from dotenv import load_dotenv
 import time
 from db import *
 from db import is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
+from app import app as flask_app
 
 
 class IBPortfolioTracker():
@@ -439,6 +441,18 @@ class IBPortfolioTracker():
    
 
 if __name__ == "__main__":
-    portfolio_tracker = IBPortfolioTracker()
-    portfolio_tracker.run()
-   
+    logger = logging.getLogger(__name__)
+    logger.debug("Starting IBPortfolioTracker...")
+    try:
+        
+      
+       
+        portfolio_tracker = IBPortfolioTracker()
+        portfolio_tracker.run()
+        
+        
+    
+    except Exception as e:
+        logger.error(f"Error in main: {str(e)}")
+        raise  
+
