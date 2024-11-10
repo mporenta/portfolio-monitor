@@ -5,19 +5,22 @@ import signal
 from flask_cors import CORS
 from werkzeug import *
 from werkzeug.serving import is_running_from_reloader
+import os
 
 # Initialize the database to ensure tables are created
 init_db()
 
 # Set up logging
+log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('app.log'),
-        logging.StreamHandler()
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()  # Optional: to also output logs to the console
     ]
 )
+
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -34,7 +37,7 @@ def shutdown():
     shutdown_server()
     return 'Server shutting down...'
 
-@app.route('/portfolio', methods=['GET'])
+@app.route('/', methods=['GET'])
 def home():
     try:
         logger.info("Home route accessed, rendering dashboard.")
