@@ -1,3 +1,3 @@
 #!/bin/sh
-sleep 60
+sleep 10
 python3 ./src/main.py
