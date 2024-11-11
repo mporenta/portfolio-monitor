@@ -26,10 +26,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-PORT = int(os.getenv("PNL_HTTPS_PORT", "5002"))
+PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 app = Flask(__name__)
 CORS(app)
-PNL_MONITOR_URL = os.getenv('PNL_MONITOR_URL', 'http://pnl-monitor:5002')
+PNL_MONITOR_URL = os.getenv('PNL_MONITOR_URL', 'http://pnl-monitor:5001')
 # Add this to handle clean shutdowns
 def shutdown_server():
     func = request.environ.get('werkzeug.server.shutdown')
