@@ -24,7 +24,7 @@ class IBPortfolioTracker():
             
             self.trade = Trade()
             self.ib = IB()
-            self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Use container name as default
+            self.host = os.getenv('TBOT_IBKR_IPADDR', '127.0.0.1')  # Use container name as default
             self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))   # Use existing env var
             self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
           
@@ -464,4 +464,3 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")
         raise  
-
