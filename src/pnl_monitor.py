@@ -15,8 +15,9 @@ import time
 from db import *
 from db import is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
 from app import app as flask_app
-load_dotenv()
 
+load_dotenv()
+PORT = int(os.getenv("PNL_HTTPS_PORT", "5002"))
 class IBPortfolioTracker():
     def __init__(self):
      
