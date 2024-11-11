@@ -17,6 +17,7 @@ from db import is_symbol_eligible_for_close, insert_positions_data, insert_pnl_d
 from app import app as flask_app
 
 load_dotenv()
+log_file_path = os.path.join(os.path.dirname(__file__), 'pnl_monitor.log')
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5002"))
 class IBPortfolioTracker():
     def __init__(self):
@@ -24,7 +25,7 @@ class IBPortfolioTracker():
             
             self.trade = Trade()
             self.ib = IB()
-            self.host = os.getenv('TBOT_IBKR_IPADDR', '127.0.0.1')  # Use container name as default
+            self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Use container name as default
             self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))   # Use existing env var
             self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
           
@@ -43,7 +44,11 @@ class IBPortfolioTracker():
              # Set up logging
             logging.basicConfig(
                 level=logging.debug,
-                format='%(asctime)s - %(levelname)s - %(message)s'
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                handlers=[
+            logging.FileHandler(log_file_path),
+            logging.StreamHandler()  # Optional: to also output logs to the console
+                ]
             )
             self.logger = logging.getLogger(__name__)
             util.logToConsole(level=30)
