@@ -1,463 +1,485 @@
-# pnl.py
+import sqlite3
 import logging
-from operator import is_
-import flask
-import requests
-import json
-from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade
-from ib_async import util
-from typing import *
+from dataclasses import asdict
+from typing import List, Dict
 from datetime import datetime
-import pytz 
+from ib_async.objects import PortfolioItem
 import os
-from dotenv import load_dotenv
-import time
-from db import *
-from db import is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
-from app import app as flask_app
+from typing import Optional
+# Set up logging to file
+log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()  # Optional: to also output logs to the console
+    ]
+)
 
-load_dotenv()
-PORT = int(os.getenv("PNL_HTTPS_PORT", "5002"))
-class IBPortfolioTracker():
-    def __init__(self):
-     
-            
-            self.trade = Trade()
-            self.ib = IB()
-            self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Use container name as default
-            self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))   # Use existing env var
-            self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
-            self.logger = logging.getLogger(__name__)
-            self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
-            self.total_realized_pnl = 0.0
-            self.total_unrealized_pnl = 0.0
-            self.daily_pnl = 0.0  
-            self.net_liquidation = 0.0
-            self.positions = []
-            self.last_log_time = 0
-            self.log_interval = 10
-            self.closing_initiated = False
-            self.portfolio_items = []
-            self.trade = None
-    
-             # Set up logging
-            log_file_path = os.path.join(os.path.dirname(__file__), 'app.log')
-            logging.basicConfig(
-               level=logging.DEBUG,
-               format='%(asctime)s - %(levelname)s - %(message)s',
-               handlers=[
-                   logging.FileHandler(log_file_path),
-                    logging.StreamHandler()  # Optional: to also output logs to the console
-               ]
-           )
-            try:
-                self.logger.info(f"Connecting to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
-                self.ib.connect(
-                    host=self.host,
-                    port=self.port,
-                    clientId=self.client_id
+logger = logging.getLogger(__name__)
+
+DATABASE_PATH = 'pnl_data.db'
+
+# db.py
+def init_db():
+    """Initialize the SQLite database and create the necessary tables."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        # Existing tables...
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pnl_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                daily_pnl REAL,
+                total_unrealized_pnl REAL,
+                total_realized_pnl REAL,
+                net_liquidation REAL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-                self.logger.info("Connected successfully to IB Gateway")
-            
-                self.ib.waitOnUpdate(timeout=2)
-                accounts = self.ib.managedAccounts()
-                
-                if not accounts:
-                    raise Exception("No managed accounts available")
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS positions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT UNIQUE,
+                position REAL,
+                market_price REAL,
+                market_value REAL,
+                average_cost REAL,
+                unrealized_pnl REAL,
+                realized_pnl REAL,
+                account TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # New trades table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trade_time TIMESTAMP NOT NULL,
+                symbol TEXT UNIQUE,
+                action TEXT NOT NULL,
+                quantity REAL NOT NULL,
+                fill_price REAL NOT NULL,
+                commission REAL,
+                realized_pnl REAL,
+                order_ref TEXT,
+                exchange TEXT,
+                order_type TEXT,
+                status TEXT,
+                order_id INTEGER,
+                perm_id INTEGER,
+                account TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Add new orders table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                order_id INTEGER,
+                perm_id INTEGER,
+                action TEXT NOT NULL,
+                order_type TEXT NOT NULL,
+                total_quantity REAL NOT NULL,
+                limit_price REAL,
+                status TEXT NOT NULL,
+                filled_quantity REAL DEFAULT 0,
+                average_fill_price REAL,
+                last_fill_time TIMESTAMP,
+                commission REAL,
+                realized_pnl REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(symbol, order_id)
+            )
+        ''')
+
+        # Clear all entries from the orders table
+        cursor.execute('DELETE FROM orders')
+
+        # Add trigger to update timestamp
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS update_orders_timestamp 
+            AFTER UPDATE ON orders
+            BEGIN
+                UPDATE orders SET updated_at = CURRENT_TIMESTAMP 
+                WHERE id = NEW.id;
+            END;
+        ''')
+        
+        conn.commit()
+        conn.close()
+        logger.debug("Database initialized successfully and orders table cleared.")
+    except Exception as e:
+        logger.error(f"Error initializing the database: {e}")
+
+
+def insert_trades_data(trades):
+    """Insert or update trades data."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        for trade in trades:
+            if trade.fills:  # Only process trades with fills
+                for fill in trade.fills:
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO trades 
+                        (symbol, trade_time, action, quantity, fill_price, commission,
+                         realized_pnl, order_ref, exchange, order_type, status, 
+                         order_id, perm_id, account)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        trade.contract.symbol,
+                        fill.time,
+                        trade.order.action,
+                        fill.execution.shares,
+                        fill.execution.price,
+                        fill.commissionReport.commission if fill.commissionReport else None,
+                        fill.commissionReport.realizedPNL if fill.commissionReport else None,
+                        trade.order.orderRef,
+                        fill.execution.exchange,
+                        trade.order.orderType,
+                        trade.orderStatus.status,
+                        trade.order.orderId,
+                        trade.order.permId,
+                        trade.order.account
+                    ))
+        
+        conn.commit()
+        conn.close()
+        logger.debug("Trade data inserted successfully.")
+    except Exception as e:
+        logger.error(f"Error inserting trade data: {e}")
+
+def fetch_latest_trades_data():
+    """Fetch the latest trades data to match DataTables columns."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                trade_time,
+                symbol,
+                action,
+                quantity,
+                fill_price,
+                commission,
+                realized_pnl,
+                exchange,
+                order_ref,
+                status
+            FROM trades 
+            ORDER BY trade_time DESC
+        ''')
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        return [
+           
+                        {
+                            'trade_time': row[0],
+                            'symbol': row[1],
+                            'action': row[2],
+                            'quantity': row[3],
+                            'fill_price': row[4],
+                            'commission': row[5],
+                            'realized_pnl': row[6],
+                            'exchange': row[7],
+                            'order_ref': row[8],
+                            'status': row[9]
+                        }
+                        for row in rows
+                    ]
                     
-                self.account = accounts[0]
-                self.logger.info(f"Using account {self.account}")
-                
+    except Exception as e:
+        logger.error(f"Error fetching latest trades data from the database: {e}")
+        return {"data": {"trades": {"data": [], "status": "error"}}, "status": "error", "message": str(e)}
 
-                # Set up callbacks
-                self.ib.accountSummaryEvent += self.on_account_summary
-                self.ib.connectedEvent += self.onConnected
-                self.ib.newOrderEvent += self.get_trades
-                self.ib.updatePortfolioEvent += self.on_portfolio_update
-                #self.ib.updatePortfolioEvent += self.on_pnl_update
 
-                # Request initial account summary
-                self.request_account_summary()
-                
-                
-                # Subscribe to PnL updates
-                self.pnl = self.ib.reqPnL(self.account)
-                if not self.pnl:
-                    raise RuntimeError("Failed to subscribe to PnL updates")
-                self.ib.pnlEvent += self.on_pnl_update
-                self.logger.info(f"Subscribed to PnL updates for Jengo {self.pnl}")
-                self.portfolio_items = self.ib.portfolio(self.account)
-                
+def insert_pnl_data(daily_pnl: float, total_unrealized_pnl: float, total_realized_pnl: float, net_liquidation: float):
+    """Insert PnL data into the pnl_data table."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO pnl_data (daily_pnl, total_unrealized_pnl, total_realized_pnl, net_liquidation)
+            VALUES (?, ?, ?, ?)
+        ''', (daily_pnl, total_unrealized_pnl, total_realized_pnl, net_liquidation))
+        conn.commit()
+        conn.close()
+        logger.debug("PnL data inserted into the database.")
+    except Exception as e:
+        logger.error(f"Error inserting PnL data into the database: {e}")
+
+def insert_positions_data(portfolio_items: List[PortfolioItem]):
+    """Insert or update positions data into the positions table."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
+        # Instead of deleting all records, use INSERT OR REPLACE to update existing records
+        for item in portfolio_items:
+            cursor.execute('''
+                INSERT OR REPLACE INTO positions 
+                (symbol, position, market_price, market_value, average_cost, unrealized_pnl, realized_pnl, account)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item.contract.symbol,
+                item.position,
+                item.marketPrice,
+                item.marketValue,
+                item.averageCost,
+                item.unrealizedPNL,
+                item.realizedPNL,
+                item.account
+            ))
+
+        conn.commit()
+        conn.close()
+        logger.debug(f"Portfolio data inserted into the database: {portfolio_items}")
+    except Exception as e:
+        logger.error(f"Error inserting positions data into the database: {e}")
+
+
+def fetch_latest_pnl_data() -> Dict[str, float]:
+    """Fetch the latest PnL data from the pnl_data table."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute('SELECT daily_pnl, total_unrealized_pnl, total_realized_pnl, net_liquidation FROM pnl_data ORDER BY timestamp DESC LIMIT 1')
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return {
+                'daily_pnl': row[0],
+                'total_unrealized_pnl': row[1],
+                'total_realized_pnl': row[2],
+                'net_liquidation': row[3]
+            }
+        return {}
+    except Exception as e:
+        logger.error(f"Error fetching latest PnL data from the database: {e}")
+        return {}
+
+def fetch_latest_positions_data() -> List[Dict[str, float]]:
+    """Fetch the latest positions data from the positions table."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute('SELECT symbol, position, market_price, market_value, average_cost, unrealized_pnl, realized_pnl, account FROM positions ORDER BY timestamp DESC')
+        rows = cursor.fetchall()
+        conn.close()
+        return [
+            {
+                'symbol': row[0],
+                'position': row[1],
+                'market_price': row[2],
+                'market_value': row[3],
+                'average_cost': row[4],
+                'unrealized_pnl': row[5],
+                'realized_pnl': row[6],
+                'exchange': row[7]  # Ensure 'exchange' is included
+            }
+            for row in rows
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching latest positions data from the database: {e}")
+        return []
+
+
+def insert_order(trade):
+    """Insert a new order into the orders table."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
         
+        cursor.execute('''
+            INSERT or REPLACE INTO orders (
+                symbol,
+                order_id,
+                perm_id,
+                action,
+                order_type,
+                total_quantity,
+                limit_price,
+                status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(symbol, order_id) DO UPDATE SET
+                status = excluded.status,
+                updated_at = CURRENT_TIMESTAMP
+        ''', (
+            trade.contract.symbol,
+            trade.order.orderId,
+            trade.order.permId,
+            trade.order.action,
+            trade.order.orderType,
+            trade.order.totalQuantity,
+            trade.order.lmtPrice if hasattr(trade.order, 'lmtPrice') else None,
+            trade.orderStatus.status
+        ))
         
-            except Exception as e:
-                self.logger.error(f"Initialization failed: {str(e)}")
-                raise
+        conn.commit()
+        conn.close()
+        logger.debug(f"Order inserted/updated for {trade.contract.symbol} order type: {trade.order.orderType}")
+    except Exception as e:
+        logger.error(f"Error inserting order: {e}")
 
-    def should_log(self) -> bool:
-        """Check if enough time has passed since last logging"""
-        current_time = time.time()
-        if current_time - self.last_log_time >= self.log_interval:
-            self.last_log_time = current_time
-            return True
-        return False
- 
-
-    def request_account_summary(self):
-        """Request account summary update"""
-        try:
-            # Request account summary
-            self.ib.reqAccountSummary()
-            self.logger.debug("Requested account summary update")
-        except Exception as e:
-            self.logger.error(f"Error requesting account summary: {str(e)}")
-
-    def on_account_summary(self, value: AccountValue):
-        """Handle account summary updates"""
-        try:
-            if value.tag == 'NetLiquidation':
-                try:
-                    new_value = float(value.value)
-                    if new_value > 0:
-                        if new_value != self.net_liquidation:
-                            self.logger.debug(f"Net liquidation changed: ${self.net_liquidation:,.2f} -> ${new_value:,.2f}")
-                        self.net_liquidation = new_value
-                    else:
-                        self.logger.warning(f"Received non-positive net liquidation value: {new_value}")
-                except ValueError:
-                    self.logger.error(f"Invalid net liquidation value received: {value.value}")
-        except Exception as e:
-            self.logger.error(f"Error processing account summary: {str(e)}")
-
-    def get_net_liquidation(self) -> float:
-        """Get the current net liquidation value"""
-        if self.net_liquidation <= 0:
-            # Request a fresh update if the value is invalid
-            self.request_account_summary()
-            self.ib.sleep(1)
-            #self.ib.sleep(1)  # Give time for update to arrive
-        return self.net_liquidation
-    def get_trades(self, trade: Trade):
-        try:
-            #print(f"Trade received: {trade}")
-            existing_trades = self.ib.trades()
-            insert_trades_data(existing_trades)  # Add this line
-            #self.logger.info(f"db Trades inserted: {existing_trades}")
-            return trade
-        except Exception as e:
-            self.logger.error(f"Error processing trade: {str(e)}")
-            return None
-    def get_market_data(self, contract) -> float:
-       
-        market_contract = Contract(contract)
-        market_contract.symbol = contract.symbol
-        market_contract.secType = contract.secType
-        market_contract.currency = contract.currency
-        market_contract.exchange = 'SMART'
-        market_contract.primaryExchange = contract.primaryExchange
-        self.logger.debug(f"Closing {contract.symbol} after hours")  
-
-        bars =  self.ib.reqHistoricalData(
-            contract=market_contract,
-            endDateTime='',
-            durationStr='60 S',
-            barSizeSetting='1 min',
-            whatToShow='TRADES',
-            useRTH=False,
-            formatDate=1
+def update_order_fill(trade):
+    """Update order fill information when a fill occurs."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        total_filled = sum(fill.execution.shares for fill in trade.fills)
+        avg_fill_price = (
+            sum(fill.execution.shares * fill.execution.price for fill in trade.fills) / 
+            total_filled if total_filled > 0 else None
         )
-        self.logger.debug(f"Got {len(bars)} bars for {contract.symbol}")
-        return bars[-1].close if bars else contract.marketPrice
+        last_fill_time = max(fill.execution.time for fill in trade.fills) if trade.fills else None
+        total_commission = sum(
+            fill.commissionReport.commission 
+            for fill in trade.fills 
+            if fill.commissionReport
+        )
+        total_realized_pnl = sum(
+            fill.commissionReport.realizedPNL 
+            for fill in trade.fills 
+            if fill.commissionReport and fill.commissionReport.realizedPNL
+        )
 
+        cursor.execute('''
+            UPDATE orders SET 
+                filled_quantity = ?,
+                average_fill_price = ?,
+                last_fill_time = ?,
+                commission = ?,
+                realized_pnl = ?,
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE symbol = ? AND order_id = ?
+        ''', (
+            total_filled,
+            avg_fill_price,
+            last_fill_time,
+            total_commission,
+            total_realized_pnl,
+            trade.orderStatus.status,
+            trade.contract.symbol,
+            trade.order.orderId
+        ))
+        
+        conn.commit()
+        conn.close()
+        logger.debug(f"Order fill updated for {trade.contract.symbol}")
+    except Exception as e:
+        logger.error(f"Error updating order fill: {e}")
 
-
-    def send_webhook_request(self, ticker):
-        url = "https://tv.porenta.us/webhook"
-        timenow = int(datetime.now().timestamp() * 1000)  # Convert to Unix timestamp in milliseconds
-
-        payload = {
-            "timestamp": timenow,
-            "ticker": ticker,
-            "currency": "USD",
-            "timeframe": "S",
-            "clientId": 1,
-            "key": "WebhookReceived:fcbd3d",
-            "contract": "stock",
-            "orderRef": f"close-all {timenow}",
-            "direction": "strategy.close_all",
-            "metrics": [
-                {"name": "entry.limit", "value": 0},
-                {"name": "entry.stop", "value": 0},
-                {"name": "exit.limit", "value": 0},
-                {"name": "exit.stop", "value": 0},
-                {"name": "qty", "value": -10000000000},
-                {"name": "price", "value": 116.00}
-            ]
-        }
-
-        headers = {
-            'Content-Type': 'application/json'
-        }
-
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
-        print(response.text)
-  
-    def close_all_positions(self):
-        """Close all positions and monitor fills"""
-        self.portfolio_items = self.ib.portfolio()
-        openOrders = self.ib.openOrders()
-        for trade in openOrders:
-            #insert_order(trade)
-            self.logger.debug(f"Order inserted/updated for {trade} order type: {trade.orderType}")
-            self.ib.sleep(2)
-            self.logger.debug(f"After sleep - Order inserted/updated for {trade} order type: {trade.orderType}")
-            
+def get_order_status(symbol: str) -> Optional[dict]:
+    """Get the current status of an order by symbol."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                symbol,
+                order_id,
+                status,
+                filled_quantity,
+                total_quantity,
+                average_fill_price,
+                realized_pnl,
+                updated_at
+            FROM orders 
+            WHERE symbol = ?
+            ORDER BY updated_at DESC 
+            LIMIT 1
+        ''', (symbol,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return {
+                'symbol': row[0],
+                'order_id': row[1],
+                'status': row[2],
+                'filled_quantity': row[3],
+                'total_quantity': row[4],
+                'average_fill_price': row[5],
+                'realized_pnl': row[6],
+                'last_update': row[7]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Error fetching order status: {e}")
+        return None
     
-        try:
-            if not self.portfolio_items:
-                self.logger.info("No positions to close")
-                return
+def is_symbol_eligible_for_close(symbol: str) -> bool:
+    """
+    Check if a symbol is eligible for closing based on database conditions:
+    - Must be in positions table
+    - No recent orders (within 60 seconds)
+    - No recent trades (within 60 seconds)
+    """
+    try:
+        current_time = datetime.now()
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
 
-            ny_tz = pytz.timezone('America/New_York')
-            ny_time = datetime.now(ny_tz)
-            is_after_hours = True
+        # Add debug logging
+        cursor.execute('SELECT * FROM positions WHERE symbol = ?', (symbol,))
+        position_record = cursor.fetchone()
+        logger.debug(f" is_symbol_eligible_for_closePosition record for {symbol}: {position_record}")
 
-            for item in self.portfolio_items:
-                if item.position == 0:
-                    continue
-                
-                # Get the contract from portfolio item
-                contract = item.contract
-            
-                # Check if symbol is eligible for closing
-                if not is_symbol_eligible_for_close(contract.symbol):
-                    self.logger.info(f"Skipping {contract.symbol} - not eligible for closing")
-                    self.on_pnl_update(PnL)
-                
-                self.insert_positions_db(self.portfolio_items)
+        # Check if symbol exists in positions table
+        cursor.execute('''
+            SELECT COUNT(*) FROM positions 
+            WHERE symbol = ?
+        ''', (symbol,))
+        position_exists = cursor.fetchone()[0] > 0
 
-                action = 'BUY' if item.position < 0 else 'SELL'
-                quantity = abs(item.position)
-
-                try:
-                    # Set the exchange
-                    contract.exchange = contract.primaryExchange
-
-                    if is_after_hours:
-                        self.logger.debug(f"Closing {contract.symbol} during market hours")
-                        order = MarketOrder(
-                            action=action,
-                            totalQuantity=quantity,
-                            tif='GTC'
-                        )
-                    else:
-                        self.logger.debug(f"Getting market data for {contract.symbol}")
-                        limit_price = self.get_market_data(contract)
-                        self.logger.debug(f"Got market data for {contract.symbol}: {limit_price}")
-
-                        self.logger.debug(f"Closing {contract.symbol} after hours")
-                        order = LimitOrder(
-                            action=action,
-                            totalQuantity=quantity,
-                            lmtPrice=round(limit_price, 2),
-                            tif='GTC',
-                            outsideRth=True
-                        )
-                        self.logger.debug(f"Limit order for {contract.symbol}: {order}")
-
-                    trade = self.ib.placeOrder(contract, order)
-                    update_order_fill(trade)
-                    
-                    
-                    self.logger.info(f"jengo2orders inserted: {trade}")
-                    self.on_pnl_update(PnL)
-
-                except Exception as e:
-                    self.logger.error(f"Error creating order for position: {str(e)}")
-
-        except Exception as e:
-            self.logger.error(f"Error in close_all_positions: {str(e)}")
-            
-    
-        
-   
-
-    
-                    
-    def check_pnl_conditions(self, pnl: PnL) -> bool:
-        self.portfolio_items =  self.ib.portfolio(self.account)
-        for item in self.portfolio_items:
-            symbol = item.contract.symbol
-            self.logger.info(f"jengo Symbol: {symbol}")
-        
-        try:
-            # If we've already initiated closing, don't try again
-            if self.closing_initiated:
-                return False
-            
-            net_liq = self.get_net_liquidation()
-            if net_liq <= 0:
-                self.logger.warning(f"Invalid net liquidation value: ${net_liq:,.2f}")
-                return False
-        
-            self.daily_pnl =  float(pnl.dailyPnL) if pnl.dailyPnL is not None else 0.0
-            self.risk_amount = net_liq * self.risk_percent
-            #self.risk_amount = 30000 * self.risk_percent
-            
-            is_threshold_exceeded = self.daily_pnl <= -self.risk_amount
-            self.logger.info(f"Risk threshold is Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
-        
-            if is_threshold_exceeded:
-                # Insert portfolio data into the database
-                self.insert_positions_db(self.portfolio_items)
-                #self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items.contract.symbol}")
-                self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items}")
-                self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
-                self.logger.info(f"Threshold is {self.risk_percent:.1%} of ${net_liq:,.2f}")
-                self.closing_initiated = True
-                if is_symbol_eligible_for_close(symbol):
-                    
-                    self.send_webhook_request(symbol)
-                    self.close_all_positions()
-                    self.logger.info(f"Closing this bitch {symbol}")
-                    return True
-                else:
-                    self.logger.info(f"Symbol {symbol} is not eligible for closing")
-                    return False
-                
-            
-        except Exception as e:
-            self.logger.error(f"Error checking PnL conditions: {str(e)}")
+        if not position_exists:
+            logger.debug(f"{symbol} not found in positions table is_symbol_eligible_for_close")
             return False
-            
-    def on_portfolio_update(self, account: str = "") -> List[PnL]:
-        """Handle portfolio updates from IB"""
-        # Get all portfolio positions
-        self.portfolio_items = self.ib.portfolio(account)
-        if not self.portfolio_items:
-            self.logger.debug("No positions to close")
-            return
-            
-        try:
-            for item in self.portfolio_items:
-                symbol = item.contract.symbol
-                self.existing_trades = self.ib.trades()
-                # Insert portfolio data into the database
-                self.insert_positions_db(self.portfolio_items)
-                
-                if self.should_log():
-                    #self.logger.info(f"Portfolio data inserted into the database: {self.portfolio_items}")  
-                    self.logger.info(
-                        f"My updatePortfolio: {item}"
-                    )
-                        
-                    # Log summary of position
-                    self.logger.info(f"""
-    Position Update for {symbol}:
-    - Position: {item.position}
-    - Market Price: ${item.marketPrice:.2f}
-    - Market Value: ${item.marketValue:.2f}
-    - Average Cost: ${item.averageCost:.2f}
-    - Unrealized P&L: ${item.unrealizedPNL:.2f}
-    - Realized P&L: ${item.realizedPNL:.2f}
-    """)
-                # remove this during market hours    
-            #self.close_all_positions()
-                
-                    
-        except Exception as e:
-            self.logger.error(f"Error processing portfolio update: {str(e)}")
 
-   
-    def on_pnl_update(self, pnl: PnL):
-        """Handle PnL updates from IB"""
-       
-        try:
-            # Convert PnL values to float to ensure they're numeric
-            self.daily_pnl =  float(pnl.dailyPnL) if pnl.dailyPnL is not None else 0.0
-            self.total_unrealized_pnl = float(pnl.unrealizedPnL) if pnl.unrealizedPnL is not None else 0.0
-            self.total_realized_pnl = float(pnl.realizedPnL) if pnl.realizedPnL is not None else 0.0
-            # Insert PnL data into the database
-            insert_pnl_data(self.daily_pnl, self.total_unrealized_pnl, self.total_realized_pnl, self.net_liquidation)
-            self.positions =  [pos for pos in self.ib.positions() if pos.position != 0]
-            
-            orders = self.ib.openOrders()
-            for trade in orders:
-                #insert_order(trade)
-                self.logger.debug(f"on_pnl_update Order inserted/updated for {trade} order type: {trade.orderType}")
-               
-            #existing_trades = self.ib.trades()
-            
-            
-            #self.ib.sleep(1)
-            self.on_portfolio_update(self.account)
-            #if self.should_log():
-           
-            #if self.should_log():
-            self.logger.info(f"""
-    PnL Update:
-    - Daily P&L: ${self.daily_pnl:,.2f}
-    - Unrealized P&L: ${self.total_unrealized_pnl:,.2f}
-    - Realized P&L: ${self.total_realized_pnl:,.2f}
-    - Current Net Liquidation: ${self.get_net_liquidation():,.2f}
-    """)
-            #self.logger.info(f"jengo Trades: {self.trade}")  
-            #self.logger.debug(f"jengo self.positions: {self.positions}")
-            
-            #self.logger.info(f"existing_trades: {self.get_trades(self.trade)}")
-            
-            # Check PnL conditions and get positions if needed
-            for item in self.portfolio_items:
-                if item.position == 0:
-                    continue
-            self.check_pnl_conditions(self.pnl)
-                
-               
+        # Check for recent orders (within last 60 seconds)
+        cursor.execute('''
+            SELECT COUNT(*) FROM orders 
+            WHERE symbol = ? 
+            AND datetime(created_at) >= datetime(?, 'unixepoch')
+        ''', (symbol, current_time.timestamp() - 60))
+        recent_orders = cursor.fetchone()[0] > 0
 
+        if recent_orders:
+            logger.debug(f"{symbol} has recent orders is_symbol_eligible_for_close")
+            return False
 
-                
-             
-                    
-               
-                   
-        except Exception as e:
-            self.logger.error(f"Error processing PnL update: {str(e)}")
-            
-    def insert_positions_db(self, portfolio_items):
-        try:
-            portfolio_items = self.ib.portfolio(self.account)
-            insert_positions_data(portfolio_items)
-            
-        except Exception as e:
-            self.logger.error(f"Error processing poistions db update: {str(e)}")
-    
-    def onConnected(self):
-        self.logger.info("Connected to IB Gateway.")
-        # Request account summary when connected
-        self.request_account_summary()
+        # Check for recent trades (within last 60 seconds)
+        cursor.execute('''
+            SELECT COUNT(*) FROM trades 
+            WHERE symbol = ? 
+            AND datetime(trade_time) >= datetime(?, 'unixepoch')
+        ''', (symbol, current_time.timestamp() - 60))
+        recent_trades = cursor.fetchone()[0] > 0
 
-    def run(self):
-        """Start the event loop"""
-        init_db()
-       
-        try:
-            self.logger.info("Starting IB event loop...")
-            self.ib.run()
-           
-            
-                   
-                                                                    
-        except KeyboardInterrupt:
-            self.logger.info("Shutting down...")
-      
-   
+        if recent_trades:
+            logger.debug(f"{symbol} has recent trades is_symbol_eligible_for_close")
+            return False
 
-if __name__ == "__main__":
+        conn.close()
+        logger.debug(f"{symbol} is eligible for closing")
+        return True
 
-       
-    portfolio_tracker = IBPortfolioTracker()
-    portfolio_tracker.run()
-
-
-    
-   
+    except Exception as e:
+        logger.error(f"Error checking symbol eligibility: {e}")
+        return False
