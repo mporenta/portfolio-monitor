@@ -1,18 +1,15 @@
-#db.py
 import sqlite3
 import logging
 from dataclasses import asdict
 from typing import List, Dict
 from datetime import datetime
 from ib_async.objects import PortfolioItem
-from dotenv import load_dotenv
 import os
 from typing import Optional
-load_dotenv()
 # Set up logging to file
 log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
 logging.basicConfig(
-    level=logging.ERROR,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path),
@@ -22,7 +19,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data.db')
+DATABASE_PATH = 'pnl_data.db'
+
 # db.py
 def init_db():
     """Initialize the SQLite database and create the necessary tables."""
