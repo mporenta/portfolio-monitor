@@ -1,11 +1,12 @@
-from flask import Flask, jsonify, render_template, redirect, url_for, request, serve
+from flask import Flask, jsonify, render_template, redirect, url_for, request
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
 import logging
 import signal
 import requests
 from flask_cors import CORS
 from werkzeug import *
-from werkzeug.serving import is_running_from_reloader
+from werkzeug.serving import serve
+from werkzeug.serving import *
 import os
 
 # Initialize the database to ensure tables are created
