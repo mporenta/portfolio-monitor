@@ -97,7 +97,7 @@ if __name__ == "__main__":
     if production:
         serve(app, host="0.0.0.0", port=PORT)
     else:
-        app.run(debug=True, host="0.0.0.0", port=PORT)
+        app.run(debug=True, host='0.0.0.0', port=PORT)
 else:
     # This ensures the port is set correctly when running with 'flask run'
     app.config['ENV'] = os.getenv('FLASK_ENV', 'development')
