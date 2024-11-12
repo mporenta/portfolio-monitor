@@ -5,7 +5,7 @@ import signal
 import requests
 from flask_cors import CORS
 from werkzeug import *
-from werkzeug.serving import serve
+from waitress import serve
 from werkzeug.serving import *
 import os
 
