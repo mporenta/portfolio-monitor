@@ -1,7 +1,8 @@
-from flask import Flask, jsonify, render_template, redirect, url_for, request
+from flask import Flask, jsonify, render_template, redirect, url_for, request, serve
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
 import logging
 import signal
+import requests
 from flask_cors import CORS
 from werkzeug import *
 from werkzeug.serving import is_running_from_reloader
@@ -9,7 +10,7 @@ import os
 
 # Initialize the database to ensure tables are created
 init_db()
-
+PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 # Set up logging
 log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
 logging.basicConfig(
@@ -78,12 +79,26 @@ def get_trades():
     except Exception as e:
         logger.error(f"Error fetching trades: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch trades data'}), 500
+def str2bool(value):
+    """Convert string to boolean, accepting various common string representations"""
+    value = value.lower()
+    if value in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif value in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(f'Invalid boolean value: {value}')
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PNL_HTTPS_PORT", "5001"))
-    if strtobool(os.getenv("TBOT_PRODUCTION", "False")):
-        serve(app, host="0.0.0.0", port=port)
+    production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))
+    
+    if production:
+        serve(app, host="0.0.0.0", port=PORT)
     else:
-        app.run(debug=True, host="0.0.0.0", port=port)
+        app.run(debug=True, host="0.0.0.0", port=PORT)
+else:
+    # This ensures the port is set correctly when running with 'flask run'
+    app.config['ENV'] = os.getenv('FLASK_ENV', 'development')
+    app.config['DEBUG'] = not str2bool(os.getenv("TBOT_PRODUCTION", "False"))
 
