@@ -2,6 +2,7 @@
 from flask import Flask, jsonify, render_template, redirect, url_for, request
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
 import logging
+import requests
 from waitress import serve
 import signal
 from flask_cors import CORS
