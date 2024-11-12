@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize the database to ensure tables are created
-init_db()
+#init_db()
 
 # Set up logging
 log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
