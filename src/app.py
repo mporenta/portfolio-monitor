@@ -13,7 +13,7 @@ import os
 init_db()
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 # Set up logging
-log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
+log_file_path = os.path.join(os.path.dirname(__file__), 'app.log')
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
