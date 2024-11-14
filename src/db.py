@@ -5,11 +5,11 @@ import os
 from dataclasses import asdict
 from datetime import datetime
 from typing import List, Dict, Optional
-from ib_async import PortfolioItem, Trade, IB
+from ib_async import PortfolioItem, Trade, IB, Order
 # Set up logging to file
 log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path),
@@ -187,7 +187,7 @@ def insert_trades_data(trades):
         
         conn.commit()
         conn.close()
-        logger.info("insert_trades_data_jengo Trade data inserted successfully.")
+        logger.debug("insert_trades_data_jengo Trade data inserted successfully.")
     except Exception as e:
         logger.error(f"Error inserting trade data: {e}")
 
@@ -254,12 +254,23 @@ def insert_pnl_data(daily_pnl: float, total_unrealized_pnl: float, total_realize
         logger.error(f"Error inserting PnL data into the database: {e}")
 
 def insert_positions_data(portfolio_items: List[PortfolioItem]):
-    """Insert or update positions data into the positions table."""
+    """Insert or update positions data and remove stale records."""
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
-        # Instead of deleting all records, use INSERT OR REPLACE to update existing records
+        # Get current symbols from portfolio
+        current_symbols = {item.contract.symbol for item in portfolio_items}
+        print(f"insert_positions_data print Jengo Current symbols: {current_symbols}")
+
+        # Delete records for symbols not in current portfolio
+        cursor.execute('''
+            DELETE FROM positions 
+            WHERE symbol NOT IN ({})
+        '''.format(','.join('?' * len(current_symbols))), 
+        tuple(current_symbols))
+
+        # Insert or update current positions
         for item in portfolio_items:
             cursor.execute('''
                 INSERT OR REPLACE INTO positions 
@@ -278,9 +289,11 @@ def insert_positions_data(portfolio_items: List[PortfolioItem]):
 
         conn.commit()
         conn.close()
-        logger.debug(f"Portfolio data inserted into the database: {portfolio_items}")
+        logger.debug(f"Portfolio data updated in database: {portfolio_items}")
     except Exception as e:
-        logger.error(f"Error inserting positions data into the database: {e}")
+        logger.error(f"Error updating positions data in database: {e}")
+        if 'conn' in locals():
+            conn.close()
 
 
 def fetch_latest_pnl_data() -> Dict[str, float]:
@@ -469,66 +482,24 @@ def get_order_status(symbol: str) -> Optional[dict]:
         logger.error(f"Error fetching order status: {e}")
         return None
     
-def is_symbol_eligible_for_close(symbol: str) -> bool:
-    """
-    Check if a symbol is eligible for closing based on database conditions:
-    - Must be in positions table
-    - No recent orders (within 60 seconds)
-    - No recent trades (within 60 seconds)
-    """
+def is_symbol_eligible_for_close(symbol: str, portfolio_items: List[PortfolioItem]) -> bool:
+    """Check if a symbol is eligible for closing based on presence in positions table."""
     try:
-        current_time = datetime.now()
+        insert_positions_data(portfolio_items)
+        
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
-        # Add debug logging
-        cursor.execute('SELECT * FROM positions WHERE symbol = ?', (symbol,))
-        position_record = cursor.fetchone()
-        logger.debug(f" is_symbol_eligible_for_closePosition record for {symbol}: {position_record}")
-
-        # Check if symbol exists in positions table
-        cursor.execute('''
-            SELECT COUNT(*) FROM positions 
-            WHERE symbol = ?
-        ''', (symbol,))
+        cursor.execute('SELECT COUNT(*) FROM positions WHERE symbol = ?', (symbol,))
         position_exists = cursor.fetchone()[0] > 0
 
-        if not position_exists:
-            logger.debug(f"{symbol} not found in positions table is_symbol_eligible_for_close")
-            return False
-
-        # Check for recent orders (within last 60 seconds)
-        cursor.execute('''
-            SELECT COUNT(*) FROM orders 
-            WHERE symbol = ? 
-            AND datetime(created_at) >= datetime(?, 'unixepoch')
-        ''', (symbol, current_time.timestamp() - 60))
-        recent_orders = cursor.fetchone()[0] > 0
-
-        if recent_orders:
-            logger.debug(f"{symbol} has recent orders is_symbol_eligible_for_close")
-            return False
-
-        # Check for recent trades (within last 60 seconds)
-        cursor.execute('''
-            SELECT COUNT(*) FROM trades 
-            WHERE symbol = ? 
-            AND datetime(trade_time) >= datetime(?, 'unixepoch')
-        ''', (symbol, current_time.timestamp() - 60))
-        recent_trades = cursor.fetchone()[0] > 0
-
-        if recent_trades:
-            logger.debug(f"{symbol} has recent trades is_symbol_eligible_for_close")
-            return False
-
         conn.close()
-        logger.debug(f"{symbol} is eligible for closing")
-        return True
+        logger.debug(f"{symbol} position exists: {position_exists}")
+        return position_exists
 
     except Exception as e:
         logger.error(f"Error checking symbol eligibility: {e}")
         return False
-
    
     
     
@@ -547,30 +518,31 @@ class DataHandler:
         insert_pnl_data(daily_pnl, total_unrealized_pnl, total_realized_pnl, net_liquidation)
         
         # Insert positions data
+        print(f"Jengo Portfolio data inserted successfully {portfolio_items}")
         insert_positions_data(portfolio_items)
         
         # Insert trades data
        
-        print(f"Jengo Trades data inserted successfully {trades}")
+        #print(f"Jengo Trades data inserted successfully {trades}")
         insert_trades_data(trades)
         
         # Insert/update each order
-        for order in orders:
-            insert_order(order)
-            update_order_fill(order)
+        #for trade in orders:
+            #insert_order(trade)
+            #update_order_fill(trade)
 
         # Log consolidated data after all insertions
-        self.log_pnl_and_positions()
+        #self.log_pnl_and_positions()
         
     
-
+'''
     def log_pnl_and_positions(self):
         """Fetch and log the latest PnL, positions, and trades data."""
         try:
             # Fetch and log PnL data
             pnl_data = fetch_latest_pnl_data()
             if pnl_data:
-                self.logger.info(f"""
+                self.logger.debug(f"""
     PnL Update:
     - Daily P&L: ${pnl_data.get('daily_pnl', 0.0):,.2f}
     - Unrealized P&L: ${pnl_data.get('total_unrealized_pnl', 0.0):,.2f}
@@ -580,9 +552,9 @@ class DataHandler:
 
             # Fetch and log positions data
             positions_data = fetch_latest_positions_data()
-            self.logger.info("Positions:")
+            self.logger.debug("Positions:")
             for position in positions_data:
-                self.logger.info(
+                self.logger.debug(
                     f"Symbol: {position['symbol']}, Position: {position['position']}, "
                     f"Market Price: ${position.get('market_price', 0.0):,.2f}, "
                     f"Market Value: ${position.get('market_value', 0.0):,.2f}, "
@@ -591,9 +563,9 @@ class DataHandler:
 
             # Fetch and log trades data
             trades_data = fetch_latest_trades_data()
-            self.logger.info("Jengo db Trades:")
+            self.logger.debug("Jengo db Trades:")
             for trade in trades_data:
-                self.logger.info(
+                self.logger.debug(
                     f"Trade Time: {trade['trade_time']}, Symbol: {trade['symbol']}, "
                     f"Action: {trade['action']}, Quantity: {trade['quantity']}, "
                     f"Fill Price: ${trade.get('fill_price', 0.0):,.2f}, "
@@ -604,3 +576,4 @@ class DataHandler:
 
         except Exception as e:
             self.logger.error(f"Error fetching data for logging: {e}")
+'''
