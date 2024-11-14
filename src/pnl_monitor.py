@@ -1,5 +1,5 @@
 # pnl.py
-import logging
+
 from operator import is_
 import flask
 import requests
@@ -12,163 +12,10 @@ import pytz
 import os
 from dotenv import load_dotenv
 import time
-from db import DataHandler, init_db
-from app import app as flask_app
-
-load_dotenv()
-PORT = int(os.getenv("PNL_HTTPS_PORT", "5002"))
-class IBPortfolioTracker():
-    def __init__(self):
-     
-            
-            self.trade = Trade()
-            self.ib = IB()
-            self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Use container name as default
-            self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))   # Use existing env var
-            self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
-          
-            self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
-            self.total_realized_pnl = 0.0
-            self.total_unrealized_pnl = 0.0
-            self.daily_pnl = 0.0  
-            self.net_liquidation = 0.0
-            self.positions = []
-            self.last_log_time = 0
-            self.log_interval = 10
-            self.closing_initiated = False
-            self.portfolio_items = []
-            self.trade = None
-    
-             # Set up logging
-            logging.basicConfig(
-                level=logging.debug,
-                format='%(asctime)s - %(levelname)s - %(message)s'
-            )
-            self.logger = logging.getLogger(__name__)
-            util.logToConsole(level=30)
-            try:
-                self.logger.info(f"Connecting to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
-                self.ib.connect(
-                    host=self.host,
-                    port=self.port,
-                    clientId=self.client_id
-            )
-                self.logger.info("Connected successfully to IB Gateway")
-            
-                self.ib.waitOnUpdate(timeout=2)
-                accounts = self.ib.managedAccounts()
-                
-                if not accounts:
-                    raise Exception("No managed accounts available")
-                    
-                self.account = accounts[0]
-                self.logger.info(f"Using account {self.account}")
-                
-
-                # Set up callbacks
-                self.ib.accountSummaryEvent += self.on_account_summary
-                self.ib.connectedEvent += self.onConnected
-                self.ib.newOrderEvent += self.get_trades
-                self.ib.updatePortfolioEvent += self.on_portfolio_update
-                #self.ib.updatePortfolioEvent += self.on_pnl_update
-
-                # Request initial account summary
-                self.request_account_summary()
-                
-                
-                # Subscribe to PnL updates
-                self.pnl = self.ib.reqPnL(self.account)
-                if not self.pnl:
-                    raise RuntimeError("Failed to subscribe to PnL updates")
-                self.ib.pnlEvent += self.on_pnl_update
-                self.logger.info(f"Subscribed to PnL updates for Jengo {self.pnl}")
-                self.portfolio_items = self.ib.portfolio(self.account)
-                
-        
-        
-            except Exception as e:
-                self.logger.error(f"Initialization failed: {str(e)}")
-                raise
-
-    def should_log(self) -> bool:
-        """Check if enough time has passed since last logging"""
-        current_time = time.time()
-        if current_time - self.last_log_time >= self.log_interval:
-            self.last_log_time = current_time
-            return True
-        return False
- 
-
-    def request_account_summary(self):
-        """Request account summary update"""
-        try:
-            # Request account summary
-            self.ib.reqAccountSummary()
-            self.logger.debug("Requested account summary update")
-        except Exception as e:
-            self.logger.error(f"Error requesting account summary: {str(e)}")
-
-    def on_account_summary(self, value: AccountValue):
-        """Handle account summary updates"""
-        try:
-            if value.tag == 'NetLiquidation':
-                try:
-                    new_value = float(value.value)
-                    if new_value > 0:
-                        if new_value != self.net_liquidation:
-                            self.logger.debug(f"Net liquidation changed: ${self.net_liquidation:,.2f} -> ${new_value:,.2f}")
-                        self.net_liquidation = new_value
-                    else:
-                        self.logger.warning(f"Received non-positive net liquidation value: {new_value}")
-                except ValueError:
-                    self.logger.error(f"Invalid net liquidation value received: {value.value}")
-        except Exception as e:
-            self.logger.error(f"Error processing account summary: {str(e)}")
-
-    def get_net_liquidation(self) -> float:
-        """Get the current net liquidation value"""
-        if self.net_liquidation <= 0:
-            # Request a fresh update if the value is invalid
-            self.request_account_summary()
-            self.ib.sleep(1)
-            #self.ib.sleep(1)  # Give time for update to arrive
-        return self.net_liquidation
-    def get_trades(self, trade: Trade):
-        try:
-            #print(f"Trade received: {trade}")
-            existing_trades = self.ib.trades()
-            insert_trades_data(existing_trades)  # Add this line
-            #self.logger.info(f"db Trades inserted: {existing_trades}")
-            return trade
-        except Exception as e:
-            self.logger.error(f"Error processing trade: {str(e)}")
-            return None
-    def get_market_data(self, contract) -> float:
-       
-        market_contract = Contract(contract)
-        market_contract.symbol = contract.symbol
-        market_contract.secType = contract.secType
-        market_contract.currency = contract.currency
-        market_contract.exchange = 'SMART'
-        market_contract.primaryExchange = contract.primaryExchange
-        self.logger.debug(f"Closing {contract.symbol} after hours")  
-
-        bars =  self.ib.reqHistoricalData(
-            contract=market_contract,
-            endDateTime='',
-            durationStr='60 S',
-            barSizeSetting='1 min',
-            whatToShow='TRADES',
-            useRTH=False,
-            formatDate=1
-        )
-        self.logger.debug(f"Got {len(bars)} bars for {contract.symbol}")
-        return bars[-1].close if bars else contract.marketPrice
 from time import sleep
-from ib_async import IB, Trade, PnL
 import logging
 from typing import Optional, List
-from db import DataHandler, init_db
+from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
 
 class IBClient:
     def __init__(self):
@@ -242,42 +89,6 @@ class IBClient:
             self.daily_pnl, self.total_unrealized_pnl, self.total_realized_pnl, 
             net_liquidation, portfolio_items, trades, orders
         )
-
-    
-    def run(self):
-        """Run the client to listen for updates continuously."""
-        init_db()
-        self.connect()
-        sleep(2)
-        self.subscribe_events()
-        self.on_pnl_update(self.pnl)
-        no_update_counter = 0
-        try:
-            while True:
-                if self.ib.waitOnUpdate(timeout=1):
-                    no_update_counter = 0
-                else:
-                    no_update_counter += 1
-                    if no_update_counter >= 60:
-                        self.logger.info("No updates for the last 60 seconds.")
-                        no_update_counter = 0
-        except KeyboardInterrupt:
-            print("Interrupted by user; shutting down...")
-        finally:
-            self.disconnect()
-
-    def disconnect(self):
-        """Disconnect from IB Gateway and clean up."""
-        if self.account:
-            self.ib.cancelPnL(self.account)  # Cancel PnL subscription if active
-
-        # Unsubscribe from events
-        self.ib.newOrderEvent -= self.on_new_order
-        self.ib.pnlEvent -= self.on_pnl_update
-
-        self.ib.disconnect()
-        self.logger.info("Disconnected from IB Gateway")
-
     def send_webhook_request(self, ticker):
         url = "https://tv.porenta.us/webhook"
         timenow = int(datetime.now().timestamp() * 1000)  # Convert to Unix timestamp in milliseconds
@@ -315,9 +126,9 @@ class IBClient:
         openOrders = self.ib.openOrders()
         for trade in openOrders:
             #insert_order(trade)
-            logger.debug(f"Order inserted/updated for {trade} order type: {trade.orderType}")
+            self.logger.debug(f"Order inserted/updated for {trade} order type: {trade.orderType}")
             self.ib.sleep(2)
-            logger.debug(f"After sleep - Order inserted/updated for {trade} order type: {trade.orderType}")
+            self.logger.debug(f"After sleep - Order inserted/updated for {trade} order type: {trade.orderType}")
             
     
         try:
@@ -384,15 +195,45 @@ class IBClient:
 
         except Exception as e:
             self.logger.error(f"Error in close_all_positions: {str(e)}")
+
+    
+    def run(self):
+        """Run the client to listen for updates continuously."""
+        init_db()
+        self.connect()
+        sleep(2)
+        self.subscribe_events()
+        self.on_pnl_update(self.pnl)
+        no_update_counter = 0
+        try:
+            while True:
+                if self.ib.waitOnUpdate(timeout=1):
+                    no_update_counter = 0
+                else:
+                    no_update_counter += 1
+                    if no_update_counter >= 60:
+                        self.logger.info("No updates for the last 60 seconds.")
+                        no_update_counter = 0
+        except KeyboardInterrupt:
+            print("Interrupted by user; shutting down...")
+        finally:
+            self.disconnect()
+
+    def disconnect(self):
+        """Disconnect from IB Gateway and clean up."""
+        if self.account:
+            self.ib.cancelPnL(self.account)  # Cancel PnL subscription if active
+
+        # Unsubscribe from events
+        self.ib.newOrderEvent -= self.on_new_order
+        self.ib.pnlEvent -= self.on_pnl_update
+
+        self.ib.disconnect()
+        self.logger.info("Disconnected from IB Gateway")
+
+
 # Usage
 if __name__ == '__main__':
     IBClient.setup_logging()
     client = IBClient()
     client.run()
-
-
-  
-            
-    
-        
-   
