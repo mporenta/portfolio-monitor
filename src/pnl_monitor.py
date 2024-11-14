@@ -165,8 +165,119 @@ class IBPortfolioTracker():
         )
         self.logger.debug(f"Got {len(bars)} bars for {contract.symbol}")
         return bars[-1].close if bars else contract.marketPrice
+from time import sleep
+from ib_async import IB, Trade, PnL
+import logging
+from typing import Optional, List
+from db import DataHandler, init_db
 
+class IBClient:
+    def __init__(self):
+        self.ib = IB()
+        self.account: Optional[str] = None
+        self.daily_pnl: float = 0.0
+        self.total_unrealized_pnl: float = 0.0
+        self.total_realized_pnl: float = 0.0
+        self.positions: List = []
+        self.data_handler = DataHandler()
+        self.pnl = PnL()
+        
+        # Logger setup
+        self.logger = logging.getLogger(__name__)
+    
+    @staticmethod
+    def setup_logging():
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+    
+    def connect(self):
+        """Establish connection to IB Gateway."""
+        try:
+            self.ib.connect('127.0.0.1', 4002, clientId=1)
+            self.logger.info("Connected to IB Gateway")
+        except Exception as e:
+            self.logger.error(f"Failed to connect to IB Gateway: {e}")
+    
+    def subscribe_events(self):
+        """Subscribe to order and PnL events, and initialize account."""
+        self.ib.newOrderEvent += self.on_new_order
+        self.ib.pnlEvent += self.on_pnl_update
+        accounts = self.ib.managedAccounts()
+        
+        if not accounts:
+            self.logger.error("No managed accounts available.")
+            return
 
+        self.account = accounts[0]
+        if self.account:
+            self.ib.reqPnL(self.account)
+        else:
+            self.logger.error("Account not found; cannot subscribe to PnL updates.")
+    
+    def on_new_order(self, trade: Trade):
+        """Callback for new orders."""
+        self.logger.info(f"New order placed: {trade}")
+    
+    def on_pnl_update(self, pnl: PnL):
+        """Handle PnL updates by inserting and logging data."""
+        self.daily_pnl = float(pnl.dailyPnL or 0.0)
+        self.total_unrealized_pnl = float(pnl.unrealizedPnL or 0.0)
+        self.total_realized_pnl = float(pnl.realizedPnL or 0.0)
+        net_liquidation = 10000.0  # Replace with the actual net liquidation value
+    
+        # Fetch positions, trades, and open orders
+        portfolio_items = self.ib.portfolio(self.account)
+        trades = self.ib.trades()
+        orders = self.ib.openOrders()
+    
+        # Debugging step: log trades fetched
+        if trades:
+            self.logger.info(f"Fetched trades: {[trade.contract.symbol for trade in trades]}")
+        else:
+            self.logger.warning("No trades fetched; check connection or trade subscriptions.")
+
+        # Use DataHandler to insert and log the data
+        self.data_handler.insert_all_data(
+            self.daily_pnl, self.total_unrealized_pnl, self.total_realized_pnl, 
+            net_liquidation, portfolio_items, trades, orders
+        )
+
+    
+    def run(self):
+        """Run the client to listen for updates continuously."""
+        init_db()
+        self.connect()
+        sleep(2)
+        self.subscribe_events()
+        self.on_pnl_update(self.pnl)
+        no_update_counter = 0
+        try:
+            while True:
+                if self.ib.waitOnUpdate(timeout=1):
+                    no_update_counter = 0
+                else:
+                    no_update_counter += 1
+                    if no_update_counter >= 60:
+                        self.logger.info("No updates for the last 60 seconds.")
+                        no_update_counter = 0
+        except KeyboardInterrupt:
+            print("Interrupted by user; shutting down...")
+        finally:
+            self.disconnect()
+
+    def disconnect(self):
+        """Disconnect from IB Gateway and clean up."""
+        if self.account:
+            self.ib.cancelPnL(self.account)  # Cancel PnL subscription if active
+
+        # Unsubscribe from events
+        self.ib.newOrderEvent -= self.on_new_order
+        self.ib.pnlEvent -= self.on_pnl_update
+
+        self.ib.disconnect()
+        self.logger.info("Disconnected from IB Gateway")
 
     def send_webhook_request(self, ticker):
         url = "https://tv.porenta.us/webhook"
@@ -274,193 +385,15 @@ class IBPortfolioTracker():
 
         except Exception as e:
             self.logger.error(f"Error in close_all_positions: {str(e)}")
+# Usage
+if __name__ == '__main__':
+    IBClient.setup_logging()
+    client = IBClient()
+    client.run()
+
+
+  
             
     
         
    
-
-    
-                    
-    def check_pnl_conditions(self, pnl: PnL) -> bool:
-        self.portfolio_items =  self.ib.portfolio(self.account)
-        for item in self.portfolio_items:
-            symbol = item.contract.symbol
-            self.logger.info(f"jengo Symbol: {symbol}")
-        
-        try:
-            # If we've already initiated closing, don't try again
-            if self.closing_initiated:
-                return False
-            
-            net_liq = self.get_net_liquidation()
-            if net_liq <= 0:
-                self.logger.warning(f"Invalid net liquidation value: ${net_liq:,.2f}")
-                return False
-        
-            self.daily_pnl =  float(pnl.dailyPnL) if pnl.dailyPnL is not None else 0.0
-            #self.risk_amount = net_liq * self.risk_percent
-            self.risk_amount = 30000 * self.risk_percent
-            
-            is_threshold_exceeded = self.daily_pnl <= -self.risk_amount
-            self.logger.info(f"Risk threshold is Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
-        
-            if is_threshold_exceeded:
-                # Insert portfolio data into the database
-                self.insert_positions_db(self.portfolio_items)
-                #self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items.contract.symbol}")
-                self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items}")
-                self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
-                self.logger.info(f"Threshold is {self.risk_percent:.1%} of ${net_liq:,.2f}")
-                self.closing_initiated = True
-                if is_symbol_eligible_for_close(symbol):
-                    
-                    self.send_webhook_request(symbol)
-                    self.close_all_positions()
-                    self.logger.info(f"Closing this bitch {symbol}")
-                    return True
-                else:
-                    self.logger.info(f"Symbol {symbol} is not eligible for closing")
-                    return False
-                
-            
-        except Exception as e:
-            self.logger.error(f"Error checking PnL conditions: {str(e)}")
-            return False
-            
-    def on_portfolio_update(self, account: str = "") -> List[PnL]:
-        """Handle portfolio updates from IB"""
-        # Get all portfolio positions
-        self.portfolio_items = self.ib.portfolio(account)
-        if not self.portfolio_items:
-            self.logger.debug("No positions to close")
-            return
-            
-        try:
-            for item in self.portfolio_items:
-                symbol = item.contract.symbol
-                self.existing_trades = self.ib.trades()
-                # Insert portfolio data into the database
-                self.insert_positions_db(self.portfolio_items)
-                
-                if self.should_log():
-                    #self.logger.info(f"Portfolio data inserted into the database: {self.portfolio_items}")  
-                    self.logger.info(
-                        f"My updatePortfolio: {item}"
-                    )
-                        
-                    # Log summary of position
-                    self.logger.info(f"""
-    Position Update for {symbol}:
-    - Position: {item.position}
-    - Market Price: ${item.marketPrice:.2f}
-    - Market Value: ${item.marketValue:.2f}
-    - Average Cost: ${item.averageCost:.2f}
-    - Unrealized P&L: ${item.unrealizedPNL:.2f}
-    - Realized P&L: ${item.realizedPNL:.2f}
-    """)
-                # remove this during market hours    
-            #self.close_all_positions()
-                
-                    
-        except Exception as e:
-            self.logger.error(f"Error processing portfolio update: {str(e)}")
-
-   
-    def on_pnl_update(self, pnl: PnL):
-        """Handle PnL updates from IB"""
-       
-        try:
-            # Convert PnL values to float to ensure they're numeric
-            self.daily_pnl =  float(pnl.dailyPnL) if pnl.dailyPnL is not None else 0.0
-            self.total_unrealized_pnl = float(pnl.unrealizedPnL) if pnl.unrealizedPnL is not None else 0.0
-            self.total_realized_pnl = float(pnl.realizedPnL) if pnl.realizedPnL is not None else 0.0
-            # Insert PnL data into the database
-            insert_pnl_data(self.daily_pnl, self.total_unrealized_pnl, self.total_realized_pnl, self.net_liquidation)
-            self.positions =  [pos for pos in self.ib.positions() if pos.position != 0]
-            
-            orders = self.ib.openOrders()
-            for trade in orders:
-                #insert_order(trade)
-                logger.debug(f"on_pnl_update Order inserted/updated for {trade} order type: {trade.orderType}")
-               
-            #existing_trades = self.ib.trades()
-            
-            
-            #self.ib.sleep(1)
-            self.on_portfolio_update(self.account)
-            #if self.should_log():
-           
-            #if self.should_log():
-            self.logger.info(f"""
-    PnL Update:
-    - Daily P&L: ${self.daily_pnl:,.2f}
-    - Unrealized P&L: ${self.total_unrealized_pnl:,.2f}
-    - Realized P&L: ${self.total_realized_pnl:,.2f}
-    - Current Net Liquidation: ${self.get_net_liquidation():,.2f}
-    """)
-            #self.logger.info(f"jengo Trades: {self.trade}")  
-            #self.logger.debug(f"jengo self.positions: {self.positions}")
-            
-            #self.logger.info(f"existing_trades: {self.get_trades(self.trade)}")
-            
-            # Check PnL conditions and get positions if needed
-            for item in self.portfolio_items:
-                if item.position == 0:
-                    continue
-            self.check_pnl_conditions(self.pnl)
-                
-               
-
-
-                
-             
-                    
-               
-                   
-        except Exception as e:
-            self.logger.error(f"Error processing PnL update: {str(e)}")
-            
-    def insert_positions_db(self, portfolio_items):
-        try:
-            portfolio_items = self.ib.portfolio(self.account)
-            insert_positions_data(portfolio_items)
-            
-        except Exception as e:
-            self.logger.error(f"Error processing poistions db update: {str(e)}")
-    
-    def onConnected(self):
-        self.logger.info("Connected to IB Gateway.")
-        # Request account summary when connected
-        self.request_account_summary()
-
-    def run(self):
-        """Start the event loop"""
-        init_db()
-       
-        try:
-            self.logger.info("Starting IB event loop...")
-            self.ib.run()
-           
-            
-                   
-                                                                    
-        except KeyboardInterrupt:
-            self.logger.info("Shutting down...")
-      
-   
-
-if __name__ == "__main__":
-    logger = logging.getLogger(__name__)
-    logger.debug("Starting IBPortfolioTracker...")
-    try:
-        
-      
-       
-        portfolio_tracker = IBPortfolioTracker()
-        portfolio_tracker.run()
-        
-        
-    
-    except Exception as e:
-        logger.error(f"Error in main: {str(e)}")
-        raise  
