@@ -21,17 +21,23 @@ class IBClient:
     def __init__(self):
         self.ib = IB()
         self.account: Optional[str] = None
-        self.daily_pnl: float = 0.0
-        self.total_unrealized_pnl: float = 0.0
-        self.total_realized_pnl: float = 0.0
+        self.daily_pnl = 0.0
+        self.total_unrealized_pnl = 0.0
+        self.total_realized_pnl = 0.0
+        self.net_liquidation = 0.0
         self.positions: List = []
         self.portfolio_items = []
         self.data_handler = DataHandler()
         self.pnl = PnL()
         self.risk_percent = 0.01
+        self.risk_amount = 0.0
+        self.closing_initiated = False
         
         # Logger setup
         self.logger = logging.getLogger(__name__)
+        # Subscribe to account value updates
+        self.ib.accountValueEvent += self.on_account_value_update
+        self.ib.pnlEvent += self.on_pnl_update
     
     @staticmethod
     def setup_logging():
@@ -43,7 +49,7 @@ class IBClient:
     def connect(self):
         """Establish connection to IB Gateway."""
         try:
-            self.ib.connect('127.0.0.1', 4002, clientId=1)
+            self.ib.connect('127.0.0.1', 4002, clientId=7)
             self.logger.info("Connected to IB Gateway")
         except Exception as e:
             self.logger.error(f"Failed to connect to IB Gateway: {e}")
@@ -51,7 +57,6 @@ class IBClient:
     def subscribe_events(self):
         """Subscribe to order and PnL events, and initialize account."""
         self.ib.newOrderEvent += self.on_new_order
-        self.ib.pnlEvent += self.on_pnl_update
         accounts = self.ib.managedAccounts()
         
         if not accounts:
@@ -63,40 +68,51 @@ class IBClient:
             self.ib.reqPnL(self.account)
         else:
             self.logger.error("Account not found; cannot subscribe to PnL updates.")
-    
+            
+    def on_account_value_update(self, account_value: AccountValue):
+        """Update stored NetLiquidation whenever it changes."""
+        if account_value.tag == "NetLiquidation":
+            self.net_liquidation = float(account_value.value)
+            self.logger.debug(f"NetLiquidation updated: ${self.net_liquidation:,.2f}")
+        
     def on_new_order(self, trade: Trade):
         """Callback for new orders."""
         self.logger.info(f"New order placed: {trade}")
     
     def on_pnl_update(self, pnl: PnL):
-        """Handle PnL updates by inserting and logging data."""
-        self.daily_pnl = float(pnl.dailyPnL or 0.0)
-        self.total_unrealized_pnl = float(pnl.unrealizedPnL or 0.0)
-        self.total_realized_pnl = float(pnl.realizedPnL or 0.0)
-        #net_liquidation = 10000.0  # Replace with the actual net liquidation value
+       """Handle PnL updates by inserting and logging data, using dynamic NetLiquidation."""
+       self.daily_pnl = float(pnl.dailyPnL or 0.0)
+       self.total_unrealized_pnl = float(pnl.unrealizedPnL or 0.0)
+       self.total_realized_pnl = float(pnl.realizedPnL or 0.0)
         
-    
-        # Fetch positions, trades, and open orders
-        portfolio_items = self.ib.portfolio(self.account)
-        trades = self.ib.trades()
-        orders = self.ib.openOrders()
-        insert_trades_data(trades)
-    
-        # Debugging step: log trades fetched
-        if trades:
-            self.logger.info(f"Fetched trades: {[trade.contract.symbol for trade in trades]}")
-        else:
-            self.logger.warning("No trades fetched; check connection or trade subscriptions.")
+       # Use the latest net_liquidation value from account updates
+       self.logger.info(f"Daily PnL: ${self.daily_pnl:,.2f}, Net Liquidation: ${self.net_liquidation:,.2f}")
 
-        # Use DataHandler to insert and log the data
-        self.data_handler.insert_all_data(
-            self.daily_pnl, self.total_unrealized_pnl, self.total_realized_pnl, 
-            net_liquidation, portfolio_items, trades, orders
-        )
-        for item in self.portfolio_items:
-            if item.position == 0:
-                continue
-            self.check_pnl_conditions(pnl)
+       # Fetch positions, trades, and open orders
+       self.logger.debug("Jengo Getting portfolio items from IB..")    
+       portfolio_items = self.ib.portfolio(self.account)
+       self.logger.debug(f"Jengo Portfolio items: {portfolio_items}")
+      
+       trades = self.ib.trades()
+       orders = self.ib.openOrders()
+       insert_trades_data(trades)
+
+       # Debugging step: log trades fetched
+       if trades:
+           self.logger.debug(f"Fetched trades: {[trade.contract.symbol for trade in trades]}")
+       else:
+           self.logger.debug("No trades fetched; check connection or trade subscriptions.")
+
+       # Use DataHandler to insert and log the data
+       self.data_handler.insert_all_data(
+           self.daily_pnl, self.total_unrealized_pnl, self.total_realized_pnl, 
+           self.net_liquidation, portfolio_items, trades, orders
+       )
+
+       # Process positions for conditions check
+       for item in portfolio_items:
+           if item.position != 0:
+               self.check_pnl_conditions(pnl)
         
     def send_webhook_request(self, symbol: str):
         """Send a webhook request with a specific payload for closing positions."""
@@ -128,24 +144,26 @@ class IBClient:
         self.logger.info(f"Webhook response: {response.text}")
         
     def check_pnl_conditions(self, pnl: PnL) -> bool:
+        
         self.portfolio_items =  self.ib.portfolio(self.account)
+        portfolio_items = self.portfolio_items
         for item in self.portfolio_items:
             symbol = item.contract.symbol
             self.logger.info(f"jengo Symbol: {symbol}")
         
         try:
             # If we've already initiated closing, don't try again
-            if self.closing_initiated:
-                return False
+            #if self.closing_initiated:
+                #return False
             
-            net_liq = self.get_net_liquidation()
-            if net_liq <= 0:
-                self.logger.warning(f"Invalid net liquidation value: ${net_liq:,.2f}")
+            
+            if self.net_liquidation <= 0:
+                self.logger.warning(f"Invalid net liquidation value: ${self.net_liquidation:,.2f}")
                 return False
         
             self.daily_pnl =  float(pnl.dailyPnL) if pnl.dailyPnL is not None else 0.0
-            #self.risk_amount = net_liq * self.risk_percent
-            self.risk_amount = 30000 * self.risk_percent
+            #self.risk_amount = self.net_liquidation * self.risk_percent
+            self.risk_amount = self.net_liquidation * self.risk_percent
             
             is_threshold_exceeded = self.daily_pnl <= -self.risk_amount
             self.logger.info(f"Risk threshold is Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
@@ -154,15 +172,16 @@ class IBClient:
                 # Insert portfolio data into the database
                 #self.insert_positions_db(self.portfolio_items)
                 #self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items.contract.symbol}")
-                self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items}")
+                self.logger.debug(f"insert symbol to db Portfolio items: {self.portfolio_items}")
                 self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
-                self.logger.info(f"Threshold is {self.risk_percent:.1%} of ${net_liq:,.2f}")
+                self.logger.info(f"Threshold is {self.risk_percent:.1%} of ${self.net_liquidation:,.2f}")
                 self.closing_initiated = True
-                if is_symbol_eligible_for_close(symbol):
-                    
-                    self.send_webhook_request(symbol)
-                    self.close_all_positions()
+                if is_symbol_eligible_for_close(symbol, portfolio_items):
                     self.logger.info(f"Closing this bitch {symbol}")
+                    
+                    #self.send_webhook_request(symbol)
+                    self.close_all_positions()
+                    
                     return True
                 else:
                     self.logger.info(f"Symbol {symbol} is not eligible for closing")
@@ -189,7 +208,7 @@ class IBClient:
                 continue
 
             symbol = item['symbol']
-            if not is_symbol_eligible_for_close(symbol):
+            if not is_symbol_eligible_for_close(symbol, portfolio_items):
                 self.logger.info(f"Skipping {symbol} - not eligible for closing")
                 continue
 
@@ -201,8 +220,9 @@ class IBClient:
             
             try:
                 if is_after_hours:
-                    order = MarketOrder(action=action, totalQuantity=quantity, tif='GTC')
                     self.logger.debug(f"Placing MarketOrder for {symbol}")
+                    order = MarketOrder(action=action, totalQuantity=quantity, tif='GTC')
+                    
                 else:
                     limit_price = self.get_market_data(contract)  # Placeholder for a method to fetch market data
                     order = LimitOrder(
@@ -213,6 +233,7 @@ class IBClient:
 
                 # Place the order and update the order fill in the database
                 trade = self.ib.placeOrder(contract, order)
+                #self.ib.sleep(30)
                 update_order_fill(trade)
                 self.logger.info(f"Order placed and recorded for {symbol}")
 
@@ -234,7 +255,7 @@ class IBClient:
                 else:
                     no_update_counter += 1
                     if no_update_counter >= 60:
-                        self.logger.info("No updates for the last 60 seconds.")
+                        self.logger.debug("No updates for the last 60 seconds.")
                         no_update_counter = 0
         except KeyboardInterrupt:
             print("Interrupted by user; shutting down...")
