@@ -15,7 +15,7 @@ import time
 from time import sleep
 import logging
 from typing import Optional, List
-from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
+from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill, fetch_latest_positions_data
 
 class IBClient:
     def __init__(self):
@@ -25,8 +25,10 @@ class IBClient:
         self.total_unrealized_pnl: float = 0.0
         self.total_realized_pnl: float = 0.0
         self.positions: List = []
+        self.portfolio_items = []
         self.data_handler = DataHandler()
         self.pnl = PnL()
+        self.risk_percent = 0.01
         
         # Logger setup
         self.logger = logging.getLogger(__name__)
@@ -71,12 +73,14 @@ class IBClient:
         self.daily_pnl = float(pnl.dailyPnL or 0.0)
         self.total_unrealized_pnl = float(pnl.unrealizedPnL or 0.0)
         self.total_realized_pnl = float(pnl.realizedPnL or 0.0)
-        net_liquidation = 10000.0  # Replace with the actual net liquidation value
+        #net_liquidation = 10000.0  # Replace with the actual net liquidation value
+        
     
         # Fetch positions, trades, and open orders
         portfolio_items = self.ib.portfolio(self.account)
         trades = self.ib.trades()
         orders = self.ib.openOrders()
+        insert_trades_data(trades)
     
         # Debugging step: log trades fetched
         if trades:
@@ -89,13 +93,19 @@ class IBClient:
             self.daily_pnl, self.total_unrealized_pnl, self.total_realized_pnl, 
             net_liquidation, portfolio_items, trades, orders
         )
-    def send_webhook_request(self, ticker):
+        for item in self.portfolio_items:
+            if item.position == 0:
+                continue
+            self.check_pnl_conditions(pnl)
+        
+    def send_webhook_request(self, symbol: str):
+        """Send a webhook request with a specific payload for closing positions."""
         url = "https://tv.porenta.us/webhook"
-        timenow = int(datetime.now().timestamp() * 1000)  # Convert to Unix timestamp in milliseconds
+        timenow = int(datetime.now().timestamp() * 1000)  # Unix timestamp in milliseconds
 
         payload = {
             "timestamp": timenow,
-            "ticker": ticker,
+            "ticker": symbol,
             "currency": "USD",
             "timeframe": "S",
             "clientId": 1,
@@ -113,89 +123,101 @@ class IBClient:
             ]
         }
 
-        headers = {
-            'Content-Type': 'application/json'
-        }
-
+        headers = {'Content-Type': 'application/json'}
         response = requests.post(url, headers=headers, data=json.dumps(payload))
-        print(response.text)
+        self.logger.info(f"Webhook response: {response.text}")
+        
+    def check_pnl_conditions(self, pnl: PnL) -> bool:
+        self.portfolio_items =  self.ib.portfolio(self.account)
+        for item in self.portfolio_items:
+            symbol = item.contract.symbol
+            self.logger.info(f"jengo Symbol: {symbol}")
+        
+        try:
+            # If we've already initiated closing, don't try again
+            if self.closing_initiated:
+                return False
+            
+            net_liq = self.get_net_liquidation()
+            if net_liq <= 0:
+                self.logger.warning(f"Invalid net liquidation value: ${net_liq:,.2f}")
+                return False
+        
+            self.daily_pnl =  float(pnl.dailyPnL) if pnl.dailyPnL is not None else 0.0
+            #self.risk_amount = net_liq * self.risk_percent
+            self.risk_amount = 30000 * self.risk_percent
+            
+            is_threshold_exceeded = self.daily_pnl <= -self.risk_amount
+            self.logger.info(f"Risk threshold is Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
+        
+            if is_threshold_exceeded:
+                # Insert portfolio data into the database
+                #self.insert_positions_db(self.portfolio_items)
+                #self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items.contract.symbol}")
+                self.logger.info(f"insert symbol to db Portfolio items: {self.portfolio_items}")
+                self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} <= -${self.risk_amount:,.2f}")
+                self.logger.info(f"Threshold is {self.risk_percent:.1%} of ${net_liq:,.2f}")
+                self.closing_initiated = True
+                if is_symbol_eligible_for_close(symbol):
+                    
+                    self.send_webhook_request(symbol)
+                    self.close_all_positions()
+                    self.logger.info(f"Closing this bitch {symbol}")
+                    return True
+                else:
+                    self.logger.info(f"Symbol {symbol} is not eligible for closing")
+                    return False
+        except Exception as e:
+            self.logger.error(f"Error checking PnL conditions: {str(e)}")
+            return False
+            
   
     def close_all_positions(self):
-        """Close all positions and monitor fills"""
-        self.portfolio_items = self.ib.portfolio()
-        openOrders = self.ib.openOrders()
-        for trade in openOrders:
-            #insert_order(trade)
-            self.logger.debug(f"Order inserted/updated for {trade} order type: {trade.orderType}")
-            self.ib.sleep(2)
-            self.logger.debug(f"After sleep - Order inserted/updated for {trade} order type: {trade.orderType}")
+        """Close all positions based on the data in the database."""
+        # Fetch positions data from the database instead of using `self.ib.portfolio()`
+        portfolio_items = fetch_latest_positions_data()
+        if not portfolio_items:
+            self.logger.info("No positions to close.")
+            return
+
+        ny_tz = pytz.timezone('America/New_York')
+        ny_time = datetime.now(ny_tz)
+        is_after_hours = True  # or any logic to set trading hours based on `ny_time`
+
+        for item in portfolio_items:
+            if item['position'] == 0:
+                continue
+
+            symbol = item['symbol']
+            if not is_symbol_eligible_for_close(symbol):
+                self.logger.info(f"Skipping {symbol} - not eligible for closing")
+                continue
+
+            action = 'BUY' if item['position'] < 0 else 'SELL'
+            quantity = abs(item['position'])
+
+            # Example contract setup - modify as needed
+            contract = Contract(symbol=symbol, exchange='SMART', secType='STK', currency='USD')
             
-    
-        try:
-            if not self.portfolio_items:
-                self.logger.info("No positions to close")
-                return
+            try:
+                if is_after_hours:
+                    order = MarketOrder(action=action, totalQuantity=quantity, tif='GTC')
+                    self.logger.debug(f"Placing MarketOrder for {symbol}")
+                else:
+                    limit_price = self.get_market_data(contract)  # Placeholder for a method to fetch market data
+                    order = LimitOrder(
+                        action=action, totalQuantity=quantity, lmtPrice=round(limit_price, 2), 
+                        tif='GTC', outsideRth=True
+                    )
+                    self.logger.debug(f"Placing LimitOrder for {symbol} at {limit_price}")
 
-            ny_tz = pytz.timezone('America/New_York')
-            ny_time = datetime.now(ny_tz)
-            is_after_hours = True
+                # Place the order and update the order fill in the database
+                trade = self.ib.placeOrder(contract, order)
+                update_order_fill(trade)
+                self.logger.info(f"Order placed and recorded for {symbol}")
 
-            for item in self.portfolio_items:
-                if item.position == 0:
-                    continue
-                
-                # Get the contract from portfolio item
-                contract = item.contract
-            
-                # Check if symbol is eligible for closing
-                if not is_symbol_eligible_for_close(contract.symbol):
-                    self.logger.info(f"Skipping {contract.symbol} - not eligible for closing")
-                    self.on_pnl_update(PnL)
-                
-                self.insert_positions_db(self.portfolio_items)
-
-                action = 'BUY' if item.position < 0 else 'SELL'
-                quantity = abs(item.position)
-
-                try:
-                    # Set the exchange
-                    contract.exchange = contract.primaryExchange
-
-                    if is_after_hours:
-                        self.logger.debug(f"Closing {contract.symbol} during market hours")
-                        order = MarketOrder(
-                            action=action,
-                            totalQuantity=quantity,
-                            tif='GTC'
-                        )
-                    else:
-                        self.logger.debug(f"Getting market data for {contract.symbol}")
-                        limit_price = self.get_market_data(contract)
-                        self.logger.debug(f"Got market data for {contract.symbol}: {limit_price}")
-
-                        self.logger.debug(f"Closing {contract.symbol} after hours")
-                        order = LimitOrder(
-                            action=action,
-                            totalQuantity=quantity,
-                            lmtPrice=round(limit_price, 2),
-                            tif='GTC',
-                            outsideRth=True
-                        )
-                        self.logger.debug(f"Limit order for {contract.symbol}: {order}")
-
-                    trade = self.ib.placeOrder(contract, order)
-                    update_order_fill(trade)
-                    
-                    
-                    self.logger.info(f"jengo2orders inserted: {trade}")
-                    self.on_pnl_update(PnL)
-
-                except Exception as e:
-                    self.logger.error(f"Error creating order for position: {str(e)}")
-
-        except Exception as e:
-            self.logger.error(f"Error in close_all_positions: {str(e)}")
-
+            except Exception as e:
+                self.logger.error(f"Error creating order for {symbol}: {str(e)}")
     
     def run(self):
         """Run the client to listen for updates continuously."""
