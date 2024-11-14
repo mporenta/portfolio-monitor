@@ -12,8 +12,7 @@ import pytz
 import os
 from dotenv import load_dotenv
 import time
-from db import *
-from db import is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill
+from db import DataHandler, init_db
 from app import app as flask_app
 
 load_dotenv()
