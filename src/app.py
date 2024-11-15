@@ -1,13 +1,17 @@
 from flask import Flask, jsonify, render_template, redirect, url_for, request
+
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
 import logging
 import signal
 import requests
+import asyncio
 from flask_cors import CORS
 from werkzeug import *
 from waitress import serve
 from werkzeug.serving import *
 import os
+close_positions = ""
+#from flask_close_pnl import close_positions
 
 # Initialize the database to ensure tables are created
 init_db()
@@ -80,6 +84,59 @@ def get_trades():
     except Exception as e:
         logger.error(f"Error fetching trades: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch trades data'}), 500
+    
+
+@app.route('/close_positions', methods=['POST'])
+def close_positions_route():
+    try:
+        # Parse incoming JSON payload
+        data = request.get_json()
+        if not data or 'positions' not in data:
+            raise ValueError("Invalid payload: 'positions' field is missing.")
+
+        # Transform positions into the expected format for close_positions
+        active_positions = []
+        for position in data['positions']:
+            symbol = position.get('symbol')
+            action = position.get('action')
+            quantity = position.get('quantity')
+
+            if not symbol or not action or not quantity:
+                raise ValueError(f"Invalid position data: {position}")
+
+            # Convert action and quantity to match long/short logic
+            if action == 'SELL':
+                position_size = quantity  # Selling indicates a long position
+            elif action == 'BUY':
+                position_size = -quantity  # Buying indicates a short position
+            else:
+                raise ValueError(f"Invalid action '{action}' in position: {position}")
+
+            active_positions.append({'symbol': symbol, 'position': position_size})
+
+        # Prepare the payload for close_positions
+        ib_data = {
+            'host': '127.0.0.1',  # Assuming default host
+            'port': 4002,         # Assuming default port
+            'clientId': 23,       # Default client ID
+            'active_positions': active_positions,
+        }
+
+        logger.info("Transformed data for IB: %s", ib_data)
+
+        # Run the async function in a new event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(close_positions(ib_data))
+        
+        logger.info("Positions closed successfully")
+        return jsonify({'status': 'success', 'message': 'Positions closed successfully'})
+
+    except ValueError as e:
+        logger.error(f"ValueError in close_positions_route: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+    
+
 def str2bool(value):
     """Convert string to boolean, accepting various common string representations"""
     value = value.lower()
@@ -102,4 +159,3 @@ else:
     # This ensures the port is set correctly when running with 'flask run'
     app.config['ENV'] = os.getenv('FLASK_ENV', 'development')
     app.config['DEBUG'] = not str2bool(os.getenv("TBOT_PRODUCTION", "False"))
-
