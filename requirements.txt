@@ -2,7 +2,7 @@ ib_async
 python-dotenv
 pytz
 pathlib
-flask
+flask[async]
 flask_cors
 requests
 datetime
