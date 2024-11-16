@@ -1,7 +1,6 @@
-# pnl_monitor.py
+# pnl.py
 
 from operator import is_
-import flask
 import requests
 import json
 from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade
@@ -38,7 +37,13 @@ class IBClient:
         self.risk_amount = 0.0
         self.closing_initiated = False
         self.closed_positions = set()  # Track which positions have been closed
+               # Load environment variables first
         load_dotenv()
+        
+       # Then set connection parameters
+        self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Default to localhost if not set
+        self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
+        self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
         
         # Logger setup
         self.logger = None
@@ -60,8 +65,15 @@ class IBClient:
                 ]
             )
             self.logger = logging.getLogger(__name__)
-            self.ib.connect('127.0.0.1', 4002, clientId=7)
-            self.logger.info("Connected to IB Gateway")
+            
+            # Correct connection syntax
+            self.ib.connect(
+                host=self.host,
+                port=self.port,
+                clientId=self.client_id
+            )
+            
+            self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
             return True
         except Exception as e:
             if self.logger:
@@ -169,40 +181,76 @@ class IBClient:
             return False
 
     def send_webhook_request(self, portfolio_item: PortfolioItem):
-        """Send webhook request to close position."""
+        """Send webhook request to close position with different logic for market/after hours."""
         try:
+            # Get current NY time
+            ny_tz = pytz.timezone('America/New_York')
+            current_time = datetime.now(ny_tz)
+            market_open = current_time.replace(hour=9, minute=30, second=0, microsecond=0)
+            market_close = current_time.replace(hour=16, minute=0, second=0, microsecond=0)
+        
+            timenow = int(current_time.timestamp() * 1000)
+            position_size = abs(portfolio_item.position)
+            is_long_position = portfolio_item.position > 0
+        
             url = "https://tv.porenta.us/webhook"
-            timenow = int(datetime.now().timestamp() * 1000)
-
-            payload = {
-                "timestamp": timenow,
-                "ticker": portfolio_item.contract.symbol,
-                "currency": "USD",
-                "timeframe": "S",
-                "clientId": 1,
-                "key": "WebhookReceived:fcbd3d",
-                "contract": "stock",
-                "orderRef": f"close-all-{portfolio_item.contract.symbol}-{timenow}",
-                "direction": "strategy.close_all",
-                "metrics": [
-                    {"name": "entry.limit", "value": 0},
-                    {"name": "entry.stop", "value": 0},
-                    {"name": "exit.limit", "value": 0},
-                    {"name": "exit.stop", "value": 0},
-                    {"name": "qty", "value": -10000000000},  # Large number to ensure full position close
-                    {"name": "price", "value": portfolio_item.marketPrice or 0}
-                ]
-            }
+        
+            if market_open <= current_time <= market_close:
+                # During market hours - use close_all strategy
+                self.logger.info(f"Market hours close for {portfolio_item.contract.symbol}")
+                payload = {
+                    "timestamp": timenow,
+                    "ticker": portfolio_item.contract.symbol,
+                    "currency": "USD",
+                    "timeframe": "S",
+                    "clientId": 1,
+                    "key": "WebhookReceived:fcbd3d",
+                    "contract": "stock",
+                    "orderRef": f"close-all-{portfolio_item.contract.symbol}-{timenow}",
+                    "direction": "strategy.close_all",
+                    "metrics": [
+                        {"name": "entry.limit", "value": 0},
+                        {"name": "entry.stop", "value": 0},
+                        {"name": "exit.limit", "value": 0},
+                        {"name": "exit.stop", "value": 0},
+                        {"name": "qty", "value": -10000000000},
+                        {"name": "price", "value": portfolio_item.marketPrice or 0}
+                    ]
+                }
+            else:
+                # After hours - use position-specific payload
+                self.logger.info(f"After hours close for {portfolio_item.contract.symbol} ({'LONG' if is_long_position else 'SHORT'} position)")
+                payload = {
+                    "timestamp": timenow,
+                    "ticker": portfolio_item.contract.symbol,
+                    "currency": "USD",
+                    "timeframe": "S",
+                    "clientId": 1,
+                    "key": "WebhookReceived:fcbd3d",
+                    "contract": "stock",
+                    "orderRef": f"close-all-{portfolio_item.contract.symbol}-{timenow}",
+                    "direction": "strategy.entryshort" if is_long_position else "strategy.entrylong",
+                    "metrics": [
+                        {"name": "entry.limit", "value": portfolio_item.marketPrice},
+                        {"name": "entry.stop", "value": 0},
+                        {"name": "exit.limit", "value": 0},
+                        {"name": "exit.stop", "value": 0},
+                        {"name": "qty", "value": position_size},
+                        {"name": "price", "value": portfolio_item.marketPrice}
+                    ]
+                }
 
             headers = {'Content-Type': 'application/json'}
+            self.logger.debug(f"Sending webhook for {portfolio_item.contract.symbol} - Payload: {payload}")
+        
             response = requests.post(url, headers=headers, data=json.dumps(payload))
-            
+        
             if response.status_code == 200:
                 self.logger.info(f"Successfully sent close request for {portfolio_item.contract.symbol}")
                 self.logger.debug(f"Webhook response: {response.text}")
             else:
                 self.logger.error(f"Failed to send webhook for {portfolio_item.contract.symbol}. Status: {response.status_code}")
-                
+            
         except Exception as e:
             self.logger.error(f"Error sending webhook for {portfolio_item.contract.symbol}: {str(e)}")
             
