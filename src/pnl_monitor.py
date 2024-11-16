@@ -33,17 +33,18 @@ class IBClient:
         self.portfolio_items = []
         self.data_handler = DataHandler()
         self.pnl = PnL()
-        self.risk_percent = 0.0013
+    
         self.risk_amount = 0.0
         self.closing_initiated = False
         self.closed_positions = set()  # Track which positions have been closed
                # Load environment variables first
         load_dotenv()
-        
+    
        # Then set connection parameters
         self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Default to localhost if not set
         self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
         self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
+        self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
         
         # Logger setup
         self.logger = None
