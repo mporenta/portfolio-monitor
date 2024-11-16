@@ -7,7 +7,14 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from ib_async import PortfolioItem, Trade, IB, Order
 # Set up logging to file
-log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
+# Set the specific paths
+DATABASE_PATH = '/app/data/pnl_data_jengo'
+log_file_path = '/app/logs/db.log'
+
+# Ensure the log directory exists
+os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -18,8 +25,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_PATH = os.path.join(BASE_DIR, 'pnl_data_jengo.db')
 
 # db.py
 def init_db():
@@ -261,11 +266,7 @@ def insert_positions_data(portfolio_items: List[PortfolioItem]):
 
         # Get current symbols from portfolio
         current_symbols = {item.contract.symbol for item in portfolio_items}
-<<<<<<< HEAD
         #print(f"insert_positions_data print Jengo Current symbols: {current_symbols}")
-=======
-        print(f"insert_positions_data print Jengo Current symbols: {current_symbols}")
->>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
 
         # Delete records for symbols not in current portfolio
         cursor.execute('''
@@ -486,28 +487,65 @@ def get_order_status(symbol: str) -> Optional[dict]:
         logger.error(f"Error fetching order status: {e}")
         return None
     
-def is_symbol_eligible_for_close(symbol: str, portfolio_items: List[PortfolioItem]) -> bool:
-    """Check if a symbol is eligible for closing based on presence in positions table."""
+def is_symbol_eligible_for_close(symbol: str) -> bool:
+    """
+    Check if a symbol is eligible for closing based on database conditions:
+    - Must be in positions table
+    - No recent orders (within 60 seconds)
+    - No recent trades (within 60 seconds)
+    """
     try:
-        insert_positions_data(portfolio_items)
-        
+        current_time = datetime.now()
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
-        cursor.execute('SELECT COUNT(*) FROM positions WHERE symbol = ?', (symbol,))
+        # Add debug logging
+        cursor.execute('SELECT * FROM positions WHERE symbol = ?', (symbol,))
+        position_record = cursor.fetchone()
+        logger.debug(f" is_symbol_eligible_for_closePosition record for {symbol}: {position_record}")
+
+        # Check if symbol exists in positions table
+        cursor.execute('''
+            SELECT COUNT(*) FROM positions 
+            WHERE symbol = ?
+        ''', (symbol,))
         position_exists = cursor.fetchone()[0] > 0
 
+        if not position_exists:
+            logger.debug(f"{symbol} not found in positions table is_symbol_eligible_for_close")
+            return False
+
+        # Check for recent orders (within last 60 seconds)
+        cursor.execute('''
+            SELECT COUNT(*) FROM orders 
+            WHERE symbol = ? 
+            AND datetime(created_at) >= datetime(?, 'unixepoch')
+        ''', (symbol, current_time.timestamp() - 60))
+        recent_orders = cursor.fetchone()[0] > 0
+
+        if recent_orders:
+            logger.debug(f"{symbol} has recent orders is_symbol_eligible_for_close")
+            return False
+
+        # Check for recent trades (within last 60 seconds)
+        cursor.execute('''
+            SELECT COUNT(*) FROM trades 
+            WHERE symbol = ? 
+            AND datetime(trade_time) >= datetime(?, 'unixepoch')
+        ''', (symbol, current_time.timestamp() - 60))
+        recent_trades = cursor.fetchone()[0] > 0
+
+        if recent_trades:
+            logger.debug(f"{symbol} has recent trades is_symbol_eligible_for_close")
+            return False
+
         conn.close()
-        logger.debug(f"{symbol} position exists: {position_exists}")
-        return position_exists
+        logger.debug(f"{symbol} is eligible for closing")
+        return True
 
     except Exception as e:
         logger.error(f"Error checking symbol eligibility: {e}")
         return False
-<<<<<<< HEAD
-=======
-   
->>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
     
     
 
@@ -525,11 +563,7 @@ class DataHandler:
         insert_pnl_data(daily_pnl, total_unrealized_pnl, total_realized_pnl, net_liquidation)
         
         # Insert positions data
-<<<<<<< HEAD
         #print(f"Jengo Portfolio data inserted successfully {portfolio_items}")
-=======
-        print(f"Jengo Portfolio data inserted successfully {portfolio_items}")
->>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
         insert_positions_data(portfolio_items)
         
         # Insert trades data
@@ -587,8 +621,4 @@ class DataHandler:
 
         except Exception as e:
             self.logger.error(f"Error fetching data for logging: {e}")
-<<<<<<< HEAD
 '''
-=======
-'''
->>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
