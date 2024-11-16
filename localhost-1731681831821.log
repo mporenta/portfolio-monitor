@@ -1,0 +1,23 @@
+localhost/:1 Access to fetch at 'https://tv.porenta.us/webhook' from origin 'http://localhost:5001' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.
+(index):742 
+        
+        
+       POST https://tv.porenta.us/webhook net::ERR_FAILED
+(anonymous) @ (index):742
+dispatch @ jquery-3.6.0.min.js:2
+v.handle @ jquery-3.6.0.min.js:2
+(index):787 Error closing position: TypeError: Failed to fetch
+    at HTMLButtonElement.<anonymous> ((index):742:7)
+    at HTMLTableElement.dispatch (jquery-3.6.0.min.js:2:43064)
+    at v.handle (jquery-3.6.0.min.js:2:41048)
+(anonymous) @ (index):787
+await in (anonymous)
+dispatch @ jquery-3.6.0.min.js:2
+v.handle @ jquery-3.6.0.min.js:2
+(index):767 
+        
+        
+       POST http://localhost:5001/close_positions 500 (INTERNAL SERVER ERROR)
+(anonymous) @ (index):767
+dispatch @ jquery-3.6.0.min.js:2
+v.handle @ jquery-3.6.0.min.js:2

@@ -1,0 +1,30 @@
+2024-11-13 13:24:38,816 ib_async.client INFO Connecting to ib-gateway:4002 with clientId 8...
+2024-11-13 13:24:38,819 ib_async.client INFO Connected
+2024-11-13 13:24:38,824 ib_async.client INFO Logged on to server version 177
+2024-11-13 13:24:38,876 ib_async.wrapper INFO Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2024-11-13 13:24:38,877 ib_async.wrapper INFO Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2024-11-13 13:24:38,877 ib_async.wrapper INFO Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2024-11-13 13:24:38,877 ib_async.client INFO API connection ready
+2024-11-13 13:24:39,087 ib_async.ib INFO Synchronization complete
+2024-11-13 13:26:12,813 ib_async.ib INFO Disconnecting from ib-gateway:4002, 730 B sent in 10 messages, 22.8 kB received in 496 messages, session time 94.0 s.
+2024-11-13 13:26:12,814 ib_async.client INFO Disconnecting
+2024-11-13 13:30:32,117 ib_async.client INFO Connecting to ib-gateway:4002 with clientId 8...
+2024-11-13 13:30:32,120 ib_async.client INFO Connected
+2024-11-13 13:30:32,125 ib_async.client INFO Logged on to server version 177
+2024-11-13 13:30:32,172 ib_async.wrapper INFO Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2024-11-13 13:30:32,173 ib_async.wrapper INFO Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2024-11-13 13:30:32,173 ib_async.wrapper INFO Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2024-11-13 13:30:32,174 ib_async.client INFO API connection ready
+2024-11-13 13:30:32,636 ib_async.ib INFO Synchronization complete
+2024-11-13 13:31:41,858 ib_async.ib INFO Disconnecting from ib-gateway:4002, 730 B sent in 10 messages, 22.8 kB received in 496 messages, session time 69.7 s.
+2024-11-13 13:31:41,858 ib_async.client INFO Disconnecting
+2024-11-13 13:31:43,918 ib_async.client INFO Connecting to ib-gateway:4002 with clientId 8...
+2024-11-13 13:31:43,921 ib_async.client INFO Connected
+2024-11-13 13:31:43,930 ib_async.client INFO Logged on to server version 177
+2024-11-13 13:31:43,976 ib_async.wrapper INFO Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+2024-11-13 13:31:43,977 ib_async.wrapper INFO Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+2024-11-13 13:31:43,977 ib_async.wrapper INFO Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+2024-11-13 13:31:43,977 ib_async.client INFO API connection ready
+2024-11-13 13:31:44,479 ib_async.ib INFO Synchronization complete
+2024-11-13 13:32:24,914 ib_async.ib INFO Disconnecting from ib-gateway:4002, 730 B sent in 10 messages, 22.8 kB received in 496 messages, session time 41.0 s.
+2024-11-13 13:32:24,914 ib_async.client INFO Disconnecting

@@ -21,12 +21,18 @@
 
 
 
+
   <!-- Custom styles -->
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
     }
+
+    .numeric-value {
+      color: var(--text-primary) !important;
+    }
+
 
     .dashboard-container {
       max-width: 1200px;
@@ -603,6 +609,27 @@
       </tbody>
     </table>
   </div>
+  <div class="positions-container">
+    <h2>Past Trades</h2>
+    <table id="past-trades-table" class="display responsive nowrap" width="100%">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Symbol</th>
+          <th>Action</th>
+          <th>Quantity</th>
+          <th>Price</th>
+          <th>Commission</th>
+          <th>Realized P&L</th>
+          <th>Account</th>
+          <th>Order Ref</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
   </div>
 
   <!-- JavaScript -->
@@ -696,9 +723,9 @@
         }
       });
 
+
       // Add click handler for close position buttons
       $('#active-positions').on('click', '.close-position-btn', async function () {
-        const symbol = $(this).data('symbol');
         const button = $(this);
 
         try {
@@ -706,41 +733,60 @@
             .addClass('loading')
             .text('Closing...');
 
-          const response = await fetch("https://tv.porenta.us//webhook", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              timestamp: Date.now(),
-              ticker: symbol,
-              currency: "USD",
-              timeframe: "S",
-              clientId: 1,
-              key: "WebhookReceived:fcbd3d",
-              contract: "stock",
-              orderRef: "close_all",
-              direction: "strategy.close_all",
-              metrics: [
-                { name: "entry.limit", value: 0 },
-                { name: "entry.stop", value: 0 },
-                { name: "exit.limit", value: 0 },
-                { name: "exit.stop", value: 0 },
-                { name: "qty", value: -10000000000 },
-                { name: "price", value: 5.00 }
-              ]
-            })
-          });
+          // Get data for the row where the button was clicked
+          const rowData = activePositionsTable.row($(this).closest('tr')).data();
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
+          // Determine action and quantity based on position
+          const quantity = Math.abs(rowData.position);
+          const action = rowData.position > 0 ? 'SELL' : 'BUY';
+
+          const positionToClose = {
+            symbol: rowData.symbol,
+            action: action,
+            quantity: quantity
+          };
+
+          // Call both endpoints asynchronously
+          await Promise.all([
+            // Original webhook call
+            fetch("/proxy/webhook", {  // Using local proxy endpoint instead of direct webhook URL
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                timestamp: Date.now(),
+                ticker: rowData.symbol,
+                currency: "USD",
+                timeframe: "S",
+                clientId: 1,
+                key: "WebhookReceived:fcbd3d",
+                contract: "stock",
+                orderRef: "close_all",
+                direction: "strategy.close_all",
+                metrics: [
+                  { name: "entry.limit", value: 0 },
+                  { name: "entry.stop", value: 0 },
+                  { name: "exit.limit", value: 0 },
+                  { name: "exit.stop", value: 0 },
+                  { name: "qty", value: -10000000000 },
+                  { name: "price", value: 5.00 }
+                ]
+              })
+            }),
+
+            // New close_positions endpoint call
+            fetch("/close_positions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                positions: [positionToClose]
+              })
+            })
+          ]);
 
           button.removeClass('loading')
             .addClass('success')
             .text('Closed');
 
-          // Refresh data after successful close
           setTimeout(() => {
             refreshData();
           }, 2000);
@@ -751,7 +797,6 @@
             .addClass('error')
             .text('Failed');
 
-          // Reset button after 3 seconds
           setTimeout(() => {
             button.removeClass('error')
               .prop('disabled', false)
@@ -759,6 +804,7 @@
           }, 3000);
         }
       });
+
 
       async function updatePositions() {
         try {
@@ -797,17 +843,84 @@
         try {
           const response = await fetch('/api/trades');
           const result = await response.json();
-          if (result.status === 'success' && result.data.trades.status === 'success') {
+          if (result.status === 'success') {
+            const today = new Date().setHours(0, 0, 0, 0);
+
+            // Split trades into today and past
+            const todayTrades = result.data.trades.filter(trade => {
+              const tradeDate = new Date(trade.trade_time).setHours(0, 0, 0, 0);
+              return tradeDate === today;
+            });
+
+            const pastTrades = result.data.trades.filter(trade => {
+              const tradeDate = new Date(trade.trade_time).setHours(0, 0, 0, 0);
+              return tradeDate < today;
+            });
+
+            // Update today's trades table
             tradesTable.clear();
-            tradesTable.rows.add(result.data.trades.data).draw();
+            tradesTable.rows.add(todayTrades).draw();
+
+            // Initialize and update past trades table
+            if (!window.pastTradesTable) {
+              window.pastTradesTable = new DataTable('#past-trades-table', {
+                responsive: true,
+                order: [[0, 'desc']],
+                deferRender: true,
+                processing: true,
+                columns: [
+                  {
+                    data: 'trade_time',
+                    render: (data) => {
+                      const date = new Date(data);
+                      return `<span class="trade-time">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>`;
+                    }
+                  },
+                  { data: 'symbol' },
+                  {
+                    data: 'action',
+                    render: (data) => `<span class="${data === 'BUY' ? 'positive' : 'negative'}">${data}</span>`
+                  },
+                  { data: 'quantity' },
+                  {
+                    data: 'fill_price',
+                    render: (data) => `$${parseFloat(data).toFixed(2)}`
+                  },
+                  {
+                    data: 'commission',
+                    render: (data) => data ? `$${parseFloat(data).toFixed(2)}` : '-'
+                  },
+                  {
+                    data: 'realized_pnl',
+                    render: (data) => {
+                      if (!data) return '-';
+                      const value = parseFloat(data);
+                      const color = value >= 0 ? 'positive' : 'negative';
+                      return `<span class="${color}">$${value.toFixed(2)}</span>`;
+                    }
+                  },
+                  { data: 'exchange' },
+                  { data: 'order_ref' },
+                  {
+                    data: 'status',
+                    render: (data) => `<span class="position-status ${data === 'Filled' ? 'position-active' : ''}">${data}</span>`
+                  }
+                ],
+                createdRow: function (row, data, dataIndex) {
+                  $(row).addClass(`trade-${data.action.toLowerCase()}`);
+                }
+              });
+            }
+            // Update past trades
+            pastTradesTable.clear();
+            pastTradesTable.rows.add(pastTrades).draw();
           } else {
-            console.error('Error fetching trades data:', result.data.trades.message || 'Unknown error');
+            console.error('Error fetching trades data:', result.message);
           }
         } catch (error) {
           console.error('Error fetching trades data:', error);
         }
       }
-
       // Make refreshData available globally
       window.refreshData = function () {
         updatePositions();
