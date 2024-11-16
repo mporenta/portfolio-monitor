@@ -1,4 +1,5 @@
 ib_async
+asyncio
 python-dotenv
 pytz
 pathlib
@@ -10,4 +11,9 @@ werkzeug
 dataclasses
 setuptools
 waitress
-tzdata
+fastapi 
+uvicorn 
+pydantic 
+jinja2 
+python-multipart 
+aiofiles
