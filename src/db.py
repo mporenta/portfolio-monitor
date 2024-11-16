@@ -9,7 +9,7 @@ from ib_async import PortfolioItem, Trade, IB, Order
 # Set up logging to file
 log_file_path = os.path.join(os.path.dirname(__file__), 'db.log')
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path),
@@ -261,7 +261,11 @@ def insert_positions_data(portfolio_items: List[PortfolioItem]):
 
         # Get current symbols from portfolio
         current_symbols = {item.contract.symbol for item in portfolio_items}
+<<<<<<< HEAD
+        #print(f"insert_positions_data print Jengo Current symbols: {current_symbols}")
+=======
         print(f"insert_positions_data print Jengo Current symbols: {current_symbols}")
+>>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
 
         # Delete records for symbols not in current portfolio
         cursor.execute('''
@@ -500,7 +504,10 @@ def is_symbol_eligible_for_close(symbol: str, portfolio_items: List[PortfolioIte
     except Exception as e:
         logger.error(f"Error checking symbol eligibility: {e}")
         return False
+<<<<<<< HEAD
+=======
    
+>>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
     
     
 
@@ -518,7 +525,11 @@ class DataHandler:
         insert_pnl_data(daily_pnl, total_unrealized_pnl, total_realized_pnl, net_liquidation)
         
         # Insert positions data
+<<<<<<< HEAD
+        #print(f"Jengo Portfolio data inserted successfully {portfolio_items}")
+=======
         print(f"Jengo Portfolio data inserted successfully {portfolio_items}")
+>>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
         insert_positions_data(portfolio_items)
         
         # Insert trades data
@@ -576,4 +587,8 @@ class DataHandler:
 
         except Exception as e:
             self.logger.error(f"Error fetching data for logging: {e}")
+<<<<<<< HEAD
 '''
+=======
+'''
+>>>>>>> 3d6eaf7d64c9c3f31da10b108dd5d68a295db634
