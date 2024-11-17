@@ -1,5 +1,6 @@
 ib_async
 asyncio
+sqlalchemy
 python-dotenv
 pytz
 pathlib
