@@ -17,13 +17,3 @@ from src.db import (
 )
 
 
-from dotenv import load_dotenv
-from ib_async import Contract, PortfolioItem, IB
-import logging
-import signal
-import requests
-import asyncio
-import os
-from src.db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
-from dev3 import IBClient
-from fastapi.middleware.cors import CORSMiddleware
