@@ -68,9 +68,13 @@ class IBClient:
             self.logger = logging.getLogger(__name__)
             
             # Correct connection syntax
-            self.ib.connect('127.0.0.1', 4002, clientId=8)
+            self.ib.connect(
+                host=self.host,
+                port=self.port,
+                clientId=self.client_id
+            )
             
-            self.logger.info(f"Connected to IB Gateway ")
+            self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
             return True
         except Exception as e:
             if self.logger:
@@ -310,8 +314,11 @@ class IBClient:
                 return
                 
             sleep(2)  # Allow connection to stabilize
+         
             self.subscribe_events()
+            print("jengo calling on_pnl_update initial run...")
             self.on_pnl_update(self.pnl)  # Initial update
+            print("jengo called on_pnl_update from run")
             
             no_update_counter = 0
             while True:
