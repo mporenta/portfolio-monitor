@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Union, Any
 from sqlalchemy.orm import Session
 # Import SQLAlchemy models with different names to avoid conflicts
-from src.db import (
+from db import (
     SessionLocal, 
     Position as DBPosition,  # Rename the SQLAlchemy model import
     PnLData,
