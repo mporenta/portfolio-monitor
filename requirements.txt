@@ -1,10 +1,9 @@
+redis
 ib_async
 asyncio
 python-dotenv
 pytz
 pathlib
-flask[async]
-flask_cors
 requests
 datetime
 werkzeug
