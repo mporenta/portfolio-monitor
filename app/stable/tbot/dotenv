@@ -1,0 +1,78 @@
+TWS_USERID=none
+TWS_PASSWORD=none
+TRADING_MODE=paper
+TRADING_MODE=paper
+READ_ONLY_API=no
+VNC_SERVER_PASSWORD=myVncPassword
+
+#-------------------------------------------------------------------
+# Global loglevel
+#-------------------------------------------------------------------
+TBOT_LOGLEVEL=INFO
+TBOT_IB_LOGLEVEL=DEBUG
+TBOT_LOGFILE=/tmp/tbot_log.txt
+
+#-------------------------------------------------------------------
+# Configure FLASK
+#-------------------------------------------------------------------
+# Change TVWB_UNIQUE_KEY
+TVWB_UNIQUE_KEY=1111-2222-3333-4444
+TVWB_HTTPS_PORT=5000
+TBOT_PRODUCTION=False
+
+#-------------------------------------------------------------------
+# Configure Redis
+#-------------------------------------------------------------------
+TBOT_REDIS_PASSWORD=
+# Redis Unix Domain Socket instead of TCP/IP
+TBOT_REDIS_HOST=redis
+TBOT_REDIS_PORT=6379
+# Choose either Redis Stream or RedisPubSub
+TBOT_USES_REDIS_STREAM=False
+TBOT_REDIS_READ_TIMEOUT_MS=10
+
+#-------------------------------------------------------------------
+# SQLITE3: Database for Alerts, Order
+#-------------------------------------------------------------------
+TBOT_DB_HOME=/home/tbot/tbot_sqlite3
+TBOT_DB_OFFICE=/home/tbot/tbot_sqlite3
+
+#-------------------------------------------------------------------
+# Interactive Broker
+#-------------------------------------------------------------------
+TBOT_IBKR_PORT=4002
+TBOT_IBKR_CLIENTID=1
+TBOT_IBKR_IPADDR=localhost
+
+#-------------------------------------------------------------------
+# Debugging timestamp only for development
+#-------------------------------------------------------------------
+TBOT_VALIDATE_TIMESTAMP_DUPLICATES=False
+
+#-------------------------------------------------------------------
+# Discord Webhook
+#-------------------------------------------------------------------
+TBOT_DISCORD_WEBHOOK=
+
+#-------------------------------------------------------------------
+# Telegram BOT
+#-------------------------------------------------------------------
+TBOT_TELEGRAM_TOKEN=
+TBOT_TELEGRAM_CHAT_ID=
+
+#-------------------------------------------------------------------
+# TBOT PYTEST
+#-------------------------------------------------------------------
+TBOT_PYTEST_SLEEP_WAITALL=5
+
+#-------------------------------------------------------------------
+# TBOT PROFILE
+#-------------------------------------------------------------------
+TBOT_PROFILER=True
+
+#-------------------------------------------------------------------
+# TBOT NGROK
+#-------------------------------------------------------------------
+TBOT_NGROK=http://127.0.0.1:4040
+NGROK_AUTH=
+NGROK_PORT=ib-gateway:5000

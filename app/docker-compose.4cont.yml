@@ -1,0 +1,133 @@
+
+
+services:
+  ib-gateway:
+    restart: always
+    container_name: tbot-on-tradingboat
+    build:
+      context: ./stable
+      args:
+        TBOT_TRADINGBOAT_GIT_REPO: "${TBOT_TRADINGBOAT_GIT_REPO:-https://github.com/mporenta/tbot-tradingboat.git}"
+        TBOT_TRADINGBOAT_GIT_BRANCH: "${TBOT_TRADINGBOAT_GIT_BRANCH:-main}"
+    environment:
+      TWS_USERID: "${TWS_USERID}"
+      TWS_PASSWORD: "${TWS_PASSWORD}"
+      TRADING_MODE: "${TRADING_MODE:-paper}"
+      READ_ONLY_API: "${READ_ONLY_API:-}"
+      VNC_SERVER_PASSWORD: "${VNC_SERVER_PASSWORD:-}"
+      PNL_THRESHOLD: "${TBOT_PNL_THRESHOLD:--0.05}"
+      TVWB_UNIQUE_KEY: "${TVWB_UNIQUE_KEY:-}"
+      TVWB_HTTPS_PORT: "${TVWB_HTTPS_PORT:-5000}"
+      TBOT_LOGLEVEL: "${TBOT_LOGLEVEL:-DEBUG}"
+      TBOT_IB_LOGLEVEL: "${TBOT_IB_LOGLEVEL:-DEBUG}"
+      TBOT_PRODUCTION: "${TBOT_PRODUCTION:-False}"
+      TBOT_REDIS_HOST: "${TBOT_REDIS_HOST:-redis}"
+      TBOT_REDIS_PORT: "${TBOT_REDIS_PORT:-6379}"
+      TBOT_REDIS_PASSWORD: "${TBOT_REDIS_PASSWORD:-}"
+      TBOT_USES_REDIS_STREAM: "${TBOT_USES_REDIS_STREAM:-False}"
+      TBOT_REDIS_READ_TIMEOUT_MS: "${TBOT_REDIS_READ_TIMEOUT_MS:-10}"
+      TBOT_IBKR_PORT: "${TBOT_IBKR_PORT:-4001}"
+      TBOT_IBKR_CLIENTID: "${TBOT_IBKR_CLIENTID:-1}"
+      TBOT_IBKR_IPADDR: "${TBOT_IBKR_IPADDR:-127.0.0.1}"
+      TBOT_DB_HOME: "${TBOT_DB_HOME:-}"
+      TBOT_DB_OFFICE: "${TBOT_DB_OFFICE:-}"
+      TBOT_DISCORD_WEBHOOK: "${TBOT_DISCORD_WEBHOOK:-}"
+      TBOT_TELEGRAM_TOKEN: "${TBOT_TELEGRAM_TOKEN:-}"
+      TBOT_TELEGRAM_CHAT_ID: "${TBOT_TELEGRAM_CHAT_ID:-}"
+      TBOT_NGROK: "${TBOT_NGROK:-}"
+      TBOT_PROFILER: "${TBOT_PROFILER:-False}"
+    ports:
+      - "127.0.0.1:4001:4001"
+      - "127.0.0.1:4002:4002"
+      - "0.0.0.0:5900:5900"
+      - "0.0.0.0:5000:5000"
+    networks:
+      - tbot-network
+    depends_on:
+      - redis
+      - ngrok
+
+  
+  redis:
+    image: redis:7.0.10-alpine
+    restart: always
+    container_name: redis-on-tradingboat
+    ports:
+      - "0.0.0.0:6379:6379"
+    networks:
+      - tbot-network
+
+  ngrok:
+    image: ngrok/ngrok:3.5.0-alpine
+    restart: always
+    container_name: ngrok-on-tradingboat
+    command: tunnel --label edge="${NGROK_EDGE_TBOT}" ib-gateway:5000
+    ports:
+      - '4040:4040'
+    networks:
+      - tbot-network
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTH}
+      NGROK_REGION: us
+
+  pnl-monitor-frontend:
+    container_name: pnl-monitor-frontend
+    build:
+      context: ./stable
+      dockerfile: Dockerfile.pnl_frontend
+    
+    depends_on:
+      - ngrok-pnl
+      - ib-gateway
+      - pnl-monitor-backend
+    ports:
+      - 5001:5001
+    networks:
+      - tbot-network
+    environment:
+      PYTHONUNBUFFERED: 1
+      DATABASE_PATH: "${DATABASE_PATH:-/app/data/portfolio.db}"
+    volumes:
+      - ./data:/app/data
+      
+
+  pnl-monitor-backend:
+    container_name: pnl-monitor-backend
+    build:
+      context: ./stable
+      dockerfile: Dockerfile.pnl_backend
+    
+    depends_on:
+      - ngrok-pnl
+      - ib-gateway
+    ports:
+      - 5002:5002
+    networks:
+      - tbot-network
+    environment:
+      PYTHONUNBUFFERED: 1
+      IB_GATEWAY_PORT: "${IB_GATEWAY_PORT:-4002}" 
+      IB_GATEWAY_HOST: "${IB_GATEWAY_HOST:-ib-gateway}"
+      DATABASE_PATH: "${DATABASE_PATH:-/app/data/portfolio.db}"
+    volumes:
+      - ./data:/app/data
+
+
+    
+  ngrok-pnl:
+    image: ngrok/ngrok:3.5.0-alpine
+    restart: always
+    container_name: ngrok-pnl-monitor
+    command: tunnel --label edge="${NGROK_EDGE_PNL}" pnl-monitor:5001
+    ports:
+    - 80:80
+    networks:
+      - tbot-network
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTH}
+      NGROK_REGION: us
+
+networks:
+  tbot-network:
+    driver: bridge
+    
