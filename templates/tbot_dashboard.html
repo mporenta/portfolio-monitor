@@ -1,5 +1,7 @@
 <!DOCTYPE html>
+<!-- Claude's HTML -->
 <html lang="en">
+
 
 <head>
   <meta charset="UTF-8">
@@ -810,9 +812,18 @@
         try {
           const response = await fetch('/api/positions');
           const result = await response.json();
-          if (result.status === 'success') {
+          if (result.status === 'success' && result.data.active_positions) {
+            // Format data before adding to table
+            const formattedPositions = result.data.active_positions.map(pos => ({
+              ...pos,
+              market_price: pos.market_price || 0,
+              market_value: pos.market_value || 0,
+              average_cost: pos.average_cost || 0,
+              unrealized_pnl: pos.unrealized_pnl || 0,
+              position: pos.position || 0
+            }));
             activePositionsTable.clear();
-            activePositionsTable.rows.add(result.data.active_positions).draw();
+            activePositionsTable.rows.add(formattedPositions).draw();
           } else {
             console.error('Error fetching positions data:', result.message);
           }
@@ -827,10 +838,20 @@
           const result = await response.json();
           if (result.status === 'success') {
             const pnlData = result.data;
-            document.getElementById('daily-pnl').textContent = `$${pnlData.daily_pnl.toFixed(2)}`;
-            document.getElementById('unrealized-pnl').textContent = `$${pnlData.total_unrealized_pnl.toFixed(2)}`;
-            document.getElementById('realized-pnl').textContent = `$${pnlData.total_realized_pnl.toFixed(2)}`;
-            document.getElementById('net-liquidation').textContent = `$${pnlData.net_liquidation.toFixed(2)}`;
+
+            // Format function to handle null values and add commas
+            const formatValue = (value) => {
+              if (value === null || value === undefined) return '$0.00';
+              return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+              }).format(value);
+            };
+
+            document.getElementById('daily-pnl').textContent = formatValue(pnlData.daily_pnl);
+            document.getElementById('unrealized-pnl').textContent = formatValue(pnlData.total_unrealized_pnl);
+            document.getElementById('realized-pnl').textContent = formatValue(pnlData.total_realized_pnl);
+            document.getElementById('net-liquidation').textContent = formatValue(pnlData.net_liquidation);
           } else {
             console.error('Error fetching current PnL data:', result.message);
           }
@@ -846,74 +867,27 @@
           if (result.status === 'success') {
             const today = new Date().setHours(0, 0, 0, 0);
 
-            // Split trades into today and past
-            const todayTrades = result.data.trades.filter(trade => {
-              const tradeDate = new Date(trade.trade_time).setHours(0, 0, 0, 0);
-              return tradeDate === today;
+            // Format trades data to handle null values
+            const formatTrade = trade => ({
+              ...trade,
+              fill_price: trade.fill_price || 0,
+              commission: trade.commission || null,
+              realized_pnl: trade.realized_pnl || null,
+              quantity: trade.quantity || 0,
+              trade_time: trade.trade_time || new Date().toISOString()
             });
 
-            const pastTrades = result.data.trades.filter(trade => {
+            // Filter and format trades
+            const trades = result.data.trades;
+            const todayTrades = trades.filter(trade => {
               const tradeDate = new Date(trade.trade_time).setHours(0, 0, 0, 0);
-              return tradeDate < today;
-            });
+              return tradeDate === today;
+            }).map(formatTrade);
 
             // Update today's trades table
             tradesTable.clear();
             tradesTable.rows.add(todayTrades).draw();
 
-            // Initialize and update past trades table
-            if (!window.pastTradesTable) {
-              window.pastTradesTable = new DataTable('#past-trades-table', {
-                responsive: true,
-                order: [[0, 'desc']],
-                deferRender: true,
-                processing: true,
-                columns: [
-                  {
-                    data: 'trade_time',
-                    render: (data) => {
-                      const date = new Date(data);
-                      return `<span class="trade-time">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>`;
-                    }
-                  },
-                  { data: 'symbol' },
-                  {
-                    data: 'action',
-                    render: (data) => `<span class="${data === 'BUY' ? 'positive' : 'negative'}">${data}</span>`
-                  },
-                  { data: 'quantity' },
-                  {
-                    data: 'fill_price',
-                    render: (data) => `$${parseFloat(data).toFixed(2)}`
-                  },
-                  {
-                    data: 'commission',
-                    render: (data) => data ? `$${parseFloat(data).toFixed(2)}` : '-'
-                  },
-                  {
-                    data: 'realized_pnl',
-                    render: (data) => {
-                      if (!data) return '-';
-                      const value = parseFloat(data);
-                      const color = value >= 0 ? 'positive' : 'negative';
-                      return `<span class="${color}">$${value.toFixed(2)}</span>`;
-                    }
-                  },
-                  { data: 'exchange' },
-                  { data: 'order_ref' },
-                  {
-                    data: 'status',
-                    render: (data) => `<span class="position-status ${data === 'Filled' ? 'position-active' : ''}">${data}</span>`
-                  }
-                ],
-                createdRow: function (row, data, dataIndex) {
-                  $(row).addClass(`trade-${data.action.toLowerCase()}`);
-                }
-              });
-            }
-            // Update past trades
-            pastTradesTable.clear();
-            pastTradesTable.rows.add(pastTrades).draw();
           } else {
             console.error('Error fetching trades data:', result.message);
           }
