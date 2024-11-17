@@ -1,3 +1,6 @@
+# pnl.py
+
+from operator import is_
 import requests
 import json
 from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade
@@ -11,11 +14,12 @@ import time
 from time import sleep
 import logging
 from typing import Optional, List
-
-# Import the new Redis database implementation
-from db import RedisDB, DataHandler
-
+from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill, fetch_latest_positions_data
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
+
+
+
+
 
 class IBClient:
     def __init__(self):
@@ -27,39 +31,28 @@ class IBClient:
         self.net_liquidation = 0.0
         self.positions: List = []
         self.portfolio_items = []
+        self.data_handler = DataHandler()
         self.pnl = PnL()
+    
         self.risk_amount = 0.0
         self.closing_initiated = False
         self.closed_positions = set()  # Track which positions have been closed
-        
-        # Load environment variables
+               # Load environment variables first
         load_dotenv()
-        
-        # Initialize Redis connection
-        redis_host = os.getenv('TBOT_PNL_REDIS_HOST', 'redis-pnl')
-        redis_port = int(os.getenv('TBOT_PNL_REDIS_PORT', '6379'))
-        redis_password = os.getenv('TBOT_PNL_REDIS_PASSWORD', '')
-        
-        # Initialize Redis DB and DataHandler
-        self.redis_db = RedisDB(
-            host=redis_host,
-            port=redis_port,
-            password=redis_password
-        )
-        self.data_handler = DataHandler(self.redis_db)
     
-        # Set IB connection parameters
-        self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')
+       # Then set connection parameters
+        self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Default to localhost if not set
         self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
         self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
         self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
         
         # Logger setup
         self.logger = None
-        
         # Subscribe to account value updates
         self.ib.accountValueEvent += self.on_account_value_update
         self.ib.pnlEvent += self.on_pnl_update
+    
+  
     
     def connect(self):
         """Establish connection to IB Gateway."""
@@ -74,10 +67,7 @@ class IBClient:
             )
             self.logger = logging.getLogger(__name__)
             
-            # Initialize Redis database
-            self.redis_db.init_db()
-            
-            # Connect to IB Gateway
+            # Correct connection syntax
             self.ib.connect(
                 host=self.host,
                 port=self.port,
@@ -90,6 +80,8 @@ class IBClient:
             if self.logger:
                 self.logger.error(f"Failed to connect to IB Gateway: {e}")
             return False
+
+    
     def subscribe_events(self):
         """Subscribe to order and PnL events, and initialize account."""
         self.ib.newOrderEvent += self.on_new_order
@@ -104,27 +96,17 @@ class IBClient:
             self.ib.reqPnL(self.account)
         else:
             self.logger.error("Account not found; cannot subscribe to PnL updates.")
+            
     def on_account_value_update(self, account_value: AccountValue):
         """Update stored NetLiquidation whenever it changes."""
         if account_value.tag == "NetLiquidation":
             self.net_liquidation = float(account_value.value)
-            self.logger.debug(f"NetLiquidation updated: ${self.net_liquidation:,.2f}")    
-
-    def is_symbol_eligible_for_close(self, symbol: str) -> bool:
-        """Check if a symbol is eligible for closing."""
-        try:
-            positions = self.redis_db.fetch_latest_positions_data()
-            position_exists = any(p['symbol'] == symbol for p in positions)
-            
-            if not position_exists:
-                self.logger.debug(f"{symbol} not found in positions")
-                return False
-
-            return True
-        except Exception as e:
-            self.logger.error(f"Error checking symbol eligibility: {e}")
-            return False
-
+            self.logger.debug(f"NetLiquidation updated: ${self.net_liquidation:,.2f}")
+        
+    def on_new_order(self, trade: Trade):
+        """Callback for new orders."""
+        self.logger.info(f"New order placed: {trade}")
+    
     def on_pnl_update(self, pnl: PnL):
         """Handle PnL updates and check conditions."""
         try:
@@ -142,7 +124,10 @@ class IBClient:
             trades = self.ib.trades()
             orders = self.ib.openOrders()
             
-            # Update Redis database
+            # Insert trade data
+            insert_trades_data(trades)
+            
+            # Update database
             self.data_handler.insert_all_data(
                 self.daily_pnl, 
                 self.total_unrealized_pnl, 
@@ -161,85 +146,7 @@ class IBClient:
                         
         except Exception as e:
             self.logger.error(f"Error in PnL update handler: {str(e)}")
-
-    def close_all_positions(self):
-        """Close all positions based on the data in Redis."""
-        try:
-            positions = self.redis_db.fetch_latest_positions_data()
-            
-            if not positions:
-                self.logger.info("No positions to close.")
-                return
-
-            ny_tz = pytz.timezone('America/New_York')
-            ny_time = datetime.now(ny_tz)
-
-            for position in positions:
-                if position['position'] == 0:
-                    continue
-
-                symbol = position['symbol']
-                quantity = abs(position['position'])
-                action = 'BUY' if position['position'] < 0 else 'SELL'
-
-                contract = Contract(symbol=symbol, exchange='SMART', secType='STK', currency='USD')
-                
-                try:
-                    if self.is_market_hours(ny_time):
-                        order = MarketOrder(action=action, totalQuantity=quantity, tif='GTC')
-                    else:
-                        market_price = position.get('market_price', 0)
-                        order = LimitOrder(
-                            action=action, 
-                            totalQuantity=quantity, 
-                            lmtPrice=round(market_price, 2), 
-                            tif='GTC', 
-                            outsideRth=True
-                        )
-
-                    trade = self.ib.placeOrder(contract, order)
-                    self.redis_db.insert_order(trade)
-                    self.logger.info(f"Order placed and recorded for {symbol}")
-
-                except Exception as e:
-                    self.logger.error(f"Error creating order for {symbol}: {str(e)}")
-
-        except Exception as e:
-            self.logger.error(f"Error in close_all_positions: {str(e)}")
         
-
-
-    def run(self):
-        """Main run loop with improved error handling."""
-        try:
-            if not self.connect():
-                return
-                
-            sleep(2)  # Allow connection to stabilize
-            self.subscribe_events()
-            self.on_pnl_update(self.pnl)  # Initial update
-            
-            no_update_counter = 0
-            while True:
-                try:
-                    if self.ib.waitOnUpdate(timeout=1):
-                        no_update_counter = 0
-                    else:
-                        no_update_counter += 1
-                        if no_update_counter >= 60:
-                            self.logger.debug("No updates for 60 seconds")
-                            no_update_counter = 0
-                except Exception as e:
-                    self.logger.error(f"Error in main loop: {str(e)}")
-                    sleep(1)
-                    
-        except KeyboardInterrupt:
-            self.logger.info("Shutting down by user request...")
-        except Exception as e:
-            self.logger.error(f"Critical error in run loop: {str(e)}")
-        finally:
-            self.ib.disconnect()
-
     def check_pnl_conditions(self, pnl: PnL) -> bool:
         """Check if PnL conditions warrant closing positions."""
         try:
@@ -273,6 +180,7 @@ class IBClient:
         except Exception as e:
             self.logger.error(f"Error in PnL conditions check: {str(e)}")
             return False
+
     def send_webhook_request(self, portfolio_item: PortfolioItem):
         """Send webhook request to close position with different logic for market/after hours."""
         try:
@@ -346,16 +254,93 @@ class IBClient:
             
         except Exception as e:
             self.logger.error(f"Error sending webhook for {portfolio_item.contract.symbol}: {str(e)}")
+            
+  
+    def close_all_positions(self):
+        """Close all positions based on the data in the database."""
+        # Fetch positions data from the database instead of using `self.ib.portfolio()`
+        #portfolio_items = fetch_latest_positions_data()
+        portfolio_items =  self.ib.portfolio(self.account)
+        for item in portfolio_items:
+            symbol = item.contract.symbol
+            pos = item.position
+            #self.logger.info("No positions to close.")
+            #return
 
-    @staticmethod
-    def is_market_hours(ny_time: datetime) -> bool:
-        """Check if it's during market hours."""
-        market_open = ny_time.replace(hour=9, minute=30, second=0, microsecond=0)
-        market_close = ny_time.replace(hour=16, minute=0, second=0, microsecond=0)
-        return market_open <= ny_time <= market_close
+        ny_tz = pytz.timezone('America/New_York')
+        ny_time = datetime.now(ny_tz)
+        is_after_hours = True  # or any logic to set trading hours based on `ny_time`
+
+        for item in portfolio_items:
+            if item['position'] == 0:
+                continue
+           
+            
+
+            action = 'BUY' if item['position'] < 0 else 'SELL'
+            quantity = abs(item['position'])
+
+            # Example contract setup - modify as needed
+            contract = Contract(symbol=symbol, exchange='SMART', secType='STK', currency='USD')
+            
+            try:
+                if pos != 0:
+                    self.logger.debug(f"Placing MarketOrder for {symbol}")
+                    order = MarketOrder(action=action, totalQuantity=quantity, tif='GTC')
+                    
+                else:
+                    limit_price = self.get_market_data(contract)  # Placeholder for a method to fetch market data
+                    order = LimitOrder(
+                        action=action, totalQuantity=quantity, lmtPrice=round(limit_price, 2), 
+                        tif='GTC', outsideRth=True
+                    )
+                    self.logger.debug(f"Placing LimitOrder for {symbol} at {limit_price}")
+
+                # Place the order and update the order fill in the database
+                trade = self.ib.placeOrder(contract, order)
+                #self.ib.sleep(30)
+                update_order_fill(trade)
+                self.logger.info(f"Order placed and recorded for {symbol}")
+
+            except Exception as e:
+                self.logger.error(f"Error creating order for {symbol}: {str(e)}")
+    
+    def run(self):
+        """Main run loop with improved error handling."""
+        try:
+            load_dotenv()
+            init_db()
+            if not self.connect():
+                return
+                
+            sleep(2)  # Allow connection to stabilize
+            self.subscribe_events()
+            self.on_pnl_update(self.pnl)  # Initial update
+            
+            no_update_counter = 0
+            while True:
+                try:
+                    if self.ib.waitOnUpdate(timeout=1):
+                        no_update_counter = 0
+                    else:
+                        no_update_counter += 1
+                        if no_update_counter >= 60:
+                            self.logger.debug("No updates for 60 seconds")
+                            no_update_counter = 0
+                except Exception as e:
+                    self.logger.error(f"Error in main loop: {str(e)}")
+                    sleep(1)  # Prevent tight error loop
+                    
+        except KeyboardInterrupt:
+            self.logger.info("Shutting down by user request...")
+        except Exception as e:
+            self.logger.error(f"Critical error in run loop: {str(e)}")
+        finally:
+            self.ib.disconnect()
 
 
-
+# Usage
 if __name__ == '__main__':
+    #IBClient.setup_logging()
     client = IBClient()
     client.run()
