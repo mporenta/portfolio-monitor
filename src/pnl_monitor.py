@@ -68,13 +68,9 @@ class IBClient:
             self.logger = logging.getLogger(__name__)
             
             # Correct connection syntax
-            self.ib.connect(
-                host=self.host,
-                port=self.port,
-                clientId=self.client_id
-            )
+            self.ib.connect('127.0.0.1', 4002, clientId=8)
             
-            self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
+            self.logger.info(f"Connected to IB Gateway ")
             return True
         except Exception as e:
             if self.logger:
