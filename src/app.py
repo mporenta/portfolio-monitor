@@ -11,14 +11,25 @@ import signal
 import requests
 import asyncio
 import os
-from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
+from db import RedisDB, DataHandler  # Updated import for Redis
 from pnl_monitor import IBClient
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
-# Initialize the database
-init_db()
+
+# Initialize Redis connection
+redis_host = os.getenv('TBOT_PNL_REDIS_HOST', 'redis-pnl')
+redis_port = int(os.getenv('TBOT_PNL_REDIS_PORT', '6379'))
+redis_password = os.getenv('TBOT_PNL_REDIS_PASSWORD', '')
+
+# Initialize Redis DB
+redis_db = RedisDB(
+    host=redis_host,
+    port=redis_port,
+    password=redis_password
+)
+redis_db.init_db()
 
 # Set up logging
 log_file_path = '/app/logs/app.log'
@@ -35,7 +46,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Pydantic models for request/response validation
+# Pydantic models
 class Position(BaseModel):
     symbol: str
     action: str
@@ -66,7 +77,7 @@ app = FastAPI(title="PnL Monitor")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -90,56 +101,48 @@ async def home(request: Request):
 async def get_positions():
     try:
         logger.info("API call to /api/positions")
-        positions = fetch_latest_positions_data()
-        logger.info("Successfully fetched positions data.")
+        positions = redis_db.fetch_latest_positions_data()
+        logger.info("Successfully fetched positions data from Redis")
         return {"status": "success", "data": {"active_positions": positions}}
     except Exception as e:
-        logger.error(f"Error fetching positions: {str(e)}")
+        logger.error(f"Error fetching positions from Redis: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch positions data")
 
 @app.get("/api/current-pnl")
 async def get_current_pnl():
     try:
         logger.info("API call to /api/current-pnl")
-        data = fetch_latest_pnl_data()
-        logger.info("Successfully fetched current PnL data.")
+        data = redis_db.fetch_latest_pnl_data()
+        logger.info("Successfully fetched current PnL data from Redis")
         return {"status": "success", "data": data}
     except Exception as e:
-        logger.error(f"Error fetching current PnL: {str(e)}")
+        logger.error(f"Error fetching current PnL from Redis: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch current PnL data")
 
 @app.get("/api/trades")
 async def get_trades():
     try:
         logger.info("API call to /api/trades")
-        trades = fetch_latest_trades_data()
-        logger.info("Successfully fetched trades data.")
+        trades = redis_db.fetch_latest_trades_data()
+        logger.info("Successfully fetched trades data from Redis")
         return {"status": "success", "data": {"trades": trades}}
     except Exception as e:
-        logger.error(f"Error fetching trades: {str(e)}")
+        logger.error(f"Error fetching trades from Redis: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch trades data")
 
 @app.post("/close_positions")
-async def close_positions_route(self):
+async def close_positions_route():
     try:
-        ib_client = IBClient(self)  # Initialize IBClient
-        ib = IB
-
+        ib_client = IBClient()  # Initialize IBClient with Redis already configured
         
-        portfolio_items =  ib.portfolio()
-        for item in portfolio_items:
-            symbol = item.contract.symbol
-            pos = item.position
-            # Create a PortfolioItem from the position data
-            
-            
-            item.contract.secType = 'STK'  # Assuming stocks, adjust if needed
-            item.contract.currency = 'USD'
-            item.contract.exchange = 'SMART'
-            
-         
-            # Call the IBClient method to close the position
-            await ib_client.close_all_positions()
+        # Get positions from Redis
+        positions = redis_db.fetch_latest_positions_data()
+        if not positions:
+            logger.info("No positions to close")
+            return {'status': 'success', 'message': 'No positions to close'}
+
+        # Close positions
+        await ib_client.close_all_positions()
         
         logger.info("Positions closed successfully")
         return {'status': 'success', 'message': 'Positions closed successfully'}
@@ -157,7 +160,6 @@ async def proxy_webhook(webhook_data: WebhookRequest):
         logger.info("Proxying webhook request")
         webhook_url = "https://tv.porenta.us/webhook"
         
-        # Forward the request to the webhook
         response = requests.post(
             webhook_url,
             json=webhook_data.dict(),
@@ -173,6 +175,25 @@ async def proxy_webhook(webhook_data: WebhookRequest):
         logger.error(f"Error in proxy webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Redis connection on startup"""
+    try:
+        redis_db.init_db()
+        logger.info("Redis connection initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis connection: {e}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up Redis connection on shutdown"""
+    try:
+        # Add any cleanup needed for Redis connection
+        logger.info("Cleaning up Redis connection")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
 def str2bool(value: str) -> bool:
     """Convert string to boolean, accepting various common string representations"""
     value = value.lower()
@@ -187,6 +208,6 @@ if __name__ == "__main__":
     import uvicorn
     production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))
     if production:
-        uvicorn.run("app:app", host="0.0.0.0", port=PORT)  # Changed from "main:app"
+        uvicorn.run("app:app", host="0.0.0.0", port=PORT)
     else:
-        uvicorn.run("app:app", host="0.0.0.0", port=PORT, reload=True)  # Changed from "main:app"
+        uvicorn.run("app:app", host="0.0.0.0", port=PORT, reload=True)
