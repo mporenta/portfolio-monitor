@@ -55,7 +55,10 @@ class IBClient:
   
     
     def connect(self):
-        """Establish connection to IB Gateway."""
+        """
+        Establish connection to IB Gateway.
+        Retries with localhost (127.0.0.1) if initial connection fails with getaddrinfo error.
+        """
         try:
             logging.basicConfig(
                 level=logging.DEBUG,
@@ -66,16 +69,32 @@ class IBClient:
                 ]
             )
             self.logger = logging.getLogger(__name__)
+        
+            try:
+                # First attempt with original host
+                self.ib.connect(
+                    host=self.host,
+                    port=self.port,
+                    clientId=self.client_id
+                )
+                self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
+                return True
             
-            # Correct connection syntax
-            self.ib.connect(
-                host=self.host,
-                port=self.port,
-                clientId=self.client_id
-            )
-            
-            self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
-            return True
+            except Exception as e:
+                # Check if the error message contains the getaddrinfo failed message
+                if 'getaddrinfo failed' in str(e):
+                    self.logger.warning(f"Connection failed with {self.host}, retrying with localhost (127.0.0.1)")
+                    self.host = '127.0.0.1'  # Update host to localhost
+                    self.ib.connect(
+                        host=self.host,
+                        port=self.port,
+                        clientId=self.client_id
+                    )
+                    self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port} with client ID {self.client_id}")
+                    return True
+                else:
+                    raise  # Re-raise if it's a different error
+                
         except Exception as e:
             if self.logger:
                 self.logger.error(f"Failed to connect to IB Gateway: {e}")
