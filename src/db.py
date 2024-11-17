@@ -1,15 +1,26 @@
 # db.py
 import sqlite3
 import logging
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, Table, MetaData
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 from dataclasses import asdict
 from datetime import datetime
 from typing import List, Dict, Optional
 from ib_async import PortfolioItem, Trade, IB, Order
-# Set up logging to file
+
 # Set the specific paths
-DATABASE_PATH = '/app/data/pnl_data_jengo'
-log_file_path = '/app/logs/db.log'
+load_dotenv()
+DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo')
+DATABASE_URL = f"sqlite:///{os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo')}"
+# Set up logging to file
+log_file_path = os.getenv('DATABASE_LOG_PATH', '/app/logs/db.log')
+# Setup the database connection
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 # Ensure the log directory exists
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
@@ -25,138 +36,95 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+class PnLData(Base):
+    __tablename__ = 'pnl_data'
+    
+    id = Column(Integer, primary_key=True)
+    daily_pnl = Column(Float)
+    total_unrealized_pnl = Column(Float)
+    total_realized_pnl = Column(Float)
+    net_liquidation = Column(Float)
+    timestamp = Column(DateTime, default=datetime.utcnow)
 
-# db.py
+class Position(Base):
+    __tablename__ = 'positions'
+    
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, unique=True)
+    position = Column(Float)
+    market_price = Column(Float)
+    market_value = Column(Float)
+    average_cost = Column(Float)
+    unrealized_pnl = Column(Float)
+    realized_pnl = Column(Float)
+    account = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+class Trade(Base):
+    __tablename__ = 'trades'
+    
+    id = Column(Integer, primary_key=True)
+    trade_time = Column(DateTime, nullable=False)
+    symbol = Column(String, unique=True)
+    action = Column(String, nullable=False)
+    quantity = Column(Float, nullable=False)
+    fill_price = Column(Float, nullable=False)
+    commission = Column(Float)
+    realized_pnl = Column(Float)
+    order_ref = Column(String)
+    exchange = Column(String)
+    order_type = Column(String)
+    status = Column(String)
+    order_id = Column(Integer)
+    perm_id = Column(Integer)
+    account = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+class Order(Base):
+    __tablename__ = 'orders'
+    
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, nullable=False)
+    order_id = Column(Integer)
+    perm_id = Column(Integer)
+    action = Column(String, nullable=False)
+    order_type = Column(String, nullable=False)
+    total_quantity = Column(Float, nullable=False)
+    limit_price = Column(Float)
+    status = Column(String, nullable=False)
+    filled_quantity = Column(Float, default=0)
+    average_fill_price = Column(Float)
+    last_fill_time = Column(DateTime)
+    commission = Column(Float)
+    realized_pnl = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 def init_db():
     """Initialize the SQLite database and create the necessary tables."""
-    logger.debug("Starting database initialization...")  # Basic console output for immediate feedback
+    logger.debug("Starting database initialization...")
     
     try:
-        # First verify we can create/access the database directory
-        if not os.path.exists(os.path.dirname(DATABASE_PATH)):
-            os.makedirs(os.path.dirname(DATABASE_PATH))
-            logger.debug(f"Created database directory at {os.path.dirname(DATABASE_PATH)}")
-            
-        logger.debug(f"Attempting to connect to database at: {DATABASE_PATH}")
+        # Create database directory if it doesn't exist
+        db_dir = os.path.dirname(os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo'))
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+            logger.debug(f"Created database directory at {db_dir}")
         
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
+        # Create all tables
+        Base.metadata.create_all(bind=engine)
         
-        # Test if we can write to the database
-        try:
-            cursor.execute("SELECT 1")
-            logger.debug("Successfully connected to database")
-        except sqlite3.Error as e:
-            logger.debug(f"Database connection test failed: {e}")
-            raise
-
-        # Create tables with individual try-except blocks for better error isolation
-        tables = {
-            'pnl_data': '''
-                CREATE TABLE IF NOT EXISTS pnl_data (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    daily_pnl REAL,
-                    total_unrealized_pnl REAL,
-                    total_realized_pnl REAL,
-                    net_liquidation REAL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ''',
-            'positions': '''
-                CREATE TABLE IF NOT EXISTS positions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    symbol TEXT UNIQUE,
-                    position REAL,
-                    market_price REAL,
-                    market_value REAL,
-                    average_cost REAL,
-                    unrealized_pnl REAL,
-                    realized_pnl REAL,
-                    account TEXT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ''',
-            'trades': '''
-                CREATE TABLE IF NOT EXISTS trades (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    trade_time TIMESTAMP NOT NULL,
-                    symbol TEXT UNIQUE,
-                    action TEXT NOT NULL,
-                    quantity REAL NOT NULL,
-                    fill_price REAL NOT NULL,
-                    commission REAL,
-                    realized_pnl REAL,
-                    order_ref TEXT,
-                    exchange TEXT,
-                    order_type TEXT,
-                    status TEXT,
-                    order_id INTEGER,
-                    perm_id INTEGER,
-                    account TEXT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ''',
-            'orders': '''
-                CREATE TABLE IF NOT EXISTS orders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    symbol TEXT NOT NULL,
-                    order_id INTEGER,
-                    perm_id INTEGER,
-                    action TEXT NOT NULL,
-                    order_type TEXT NOT NULL,
-                    total_quantity REAL NOT NULL,
-                    limit_price REAL,
-                    status TEXT NOT NULL,
-                    filled_quantity REAL DEFAULT 0,
-                    average_fill_price REAL,
-                    last_fill_time TIMESTAMP,
-                    commission REAL,
-                    realized_pnl REAL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(symbol, order_id)
-                )
-            '''
-        }
-
-        for table_name, create_statement in tables.items():
-            try:
-                logger.debug(f"Creating table: {table_name}")
-                cursor.execute(create_statement)
-                logger.debug(f"Successfully created/verified table: {table_name}")
-            except sqlite3.Error as e:
-                logger.debug(f"Error creating table {table_name}: {e}")
-                raise
-
-        # Clear orders table and create trigger
-        try:
-            cursor.execute('DELETE FROM orders')
+        # Clear orders table
+        with SessionLocal() as session:
+            session.query(Order).delete()
+            session.commit()
             logger.debug("Cleared orders table")
-            
-            cursor.execute('''
-                CREATE TRIGGER IF NOT EXISTS update_orders_timestamp 
-                AFTER UPDATE ON orders
-                BEGIN
-                    UPDATE orders SET updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = NEW.id;
-                END;
-            ''')
-            logger.debug("Created/verified orders timestamp trigger")
-            
-        except sqlite3.Error as e:
-            logger.debug(f"Error in orders table cleanup or trigger creation: {e}")
-            raise
-
-        conn.commit()
-        logger.debug("Successfully committed all database changes")
         
-        conn.close()
         logger.debug("Database initialization completed successfully")
         
     except Exception as e:
-        logger.debug(f"Critical error during database initialization: {str(e)}")
         logger.error(f"Critical error during database initialization: {str(e)}")
-        raise  # Re-raise the exception after logging
+        raise
 
 
 def insert_trades_data(trades):
