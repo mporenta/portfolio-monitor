@@ -23,7 +23,7 @@ import requests
 import asyncio
 import os
 from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
-from dev3 import IBClient
+from pnl_monitor import IBClient
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
