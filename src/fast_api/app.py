@@ -95,11 +95,11 @@ app.mount("/static", StaticFiles(directory=os.path.join(ROOT_DIR, "static")), na
 
 # dependency to get DB session
 def get_db():
-    db = SessionLocal()
+    dbSQL = SessionLocal()
     try:
-        yield db
+        yield dbSQL
     finally:
-        db.close()
+        dbSQL.close()
 
 # Routes
 @app.get("/", response_class=HTMLResponse)
@@ -252,6 +252,6 @@ if __name__ == "__main__":
     import uvicorn
     production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))
     if production:
-        uvicorn.run("app:app", host="0.0.0.0", port=PORT)  # Changed from "main:app"
+        uvicorn.run("main:app", host="0.0.0.0", port=PORT)  # Changed from "main:app"
     else:
-        uvicorn.run("app:app", host="0.0.0.0", port=PORT, reload=True)  # Changed from "main:app"
+        uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)  # Changed from "main:app"
