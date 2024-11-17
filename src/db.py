@@ -13,21 +13,21 @@ from ib_async import PortfolioItem, Trade, IB, Order
 
 # Set the specific paths
 load_dotenv()
-DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo')
-DATABASE_URL = f"sqlite:///{os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo')}"
+DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo.db')
+DATABASE_URL = f"sqlite:///{os.getenv('DATABASE_PATH', '/data/pnl_data_jengo.db')}"
+
 # Set up logging to file
 log_file_path = os.getenv('DATABASE_LOG_PATH', '/app/logs/db.log')
 # Setup the database connection
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
 # Ensure the log directory exists
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path),
@@ -44,7 +44,7 @@ class PnLData(Base):
     total_unrealized_pnl = Column(Float)
     total_realized_pnl = Column(Float)
     net_liquidation = Column(Float)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
 class Position(Base):
     __tablename__ = 'positions'
@@ -58,7 +58,7 @@ class Position(Base):
     unrealized_pnl = Column(Float)
     realized_pnl = Column(Float)
     account = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
 class Trade(Base):
     __tablename__ = 'trades'
@@ -78,7 +78,7 @@ class Trade(Base):
     order_id = Column(Integer)
     perm_id = Column(Integer)
     account = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
 class Order(Base):
     __tablename__ = 'orders'
@@ -97,8 +97,8 @@ class Order(Base):
     last_fill_time = Column(DateTime)
     commission = Column(Float)
     realized_pnl = Column(Float)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.now(datetime.timezone.utc))
 
 def init_db():
     """Initialize the SQLite database and create the necessary tables."""
@@ -222,7 +222,7 @@ def insert_pnl_data(daily_pnl: float, total_unrealized_pnl: float, total_realize
         ''', (daily_pnl, total_unrealized_pnl, total_realized_pnl, net_liquidation))
         conn.commit()
         conn.close()
-        logger.debug("PnL data inserted into the database.")
+        logger.debug("jengo PnL data inserted into the database.")
     except Exception as e:
         logger.error(f"Error inserting PnL data into the database: {e}")
 
@@ -284,6 +284,7 @@ def fetch_latest_pnl_data() -> Dict[str, float]:
                 'total_realized_pnl': row[2],
                 'net_liquidation': row[3]
             }
+        logger.debug("jengo Fetching PnL data from the database.")
         return {}
     except Exception as e:
         logger.error(f"Error fetching latest PnL data from the database: {e}")
@@ -538,6 +539,11 @@ class DataHandler:
        
         #print(f"Jengo Trades data inserted successfully {trades}")
         insert_trades_data(trades)
+
+        logger.debug(f"Jengo insert_all_data  inserted successfully {daily_pnl, total_unrealized_pnl, total_realized_pnl, trades, orders,portfolio_items}")
+
+
+        return daily_pnl, total_unrealized_pnl, total_realized_pnl, trades, orders,portfolio_items
         
         # Insert/update each order
         #for trade in orders:
