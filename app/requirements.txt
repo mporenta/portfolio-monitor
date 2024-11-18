@@ -15,4 +15,8 @@ uvicorn
 pydantic 
 jinja2 
 python-multipart 
+<<<<<<< HEAD:app/requirements.txt
 aiofiles
+=======
+aiofiles
+>>>>>>> 266b87f041c957ce02b4e51a83c47383528edc85:requirements.txt
