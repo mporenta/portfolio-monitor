@@ -6,3 +6,5 @@ id_rsa*
 #Ignore logs
 **/.logs
 **/.log
+#Ignore db
+**/.db
