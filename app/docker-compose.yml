@@ -86,9 +86,10 @@ services:
       - tbot-network
     environment:
       PYTHONUNBUFFERED: 1
-      DATABASE_PATH: "${DATABASE_PATH:-/app/data/portfolio.db}"
+      DATABASE_PATH: "${DATABASE_PATH:-/app/data/pnl_data_jengo.db}"
     volumes:
       - ./data:/app/data
+      - ./models:/app/models  
       
 
   pnl-monitor-backend:
@@ -108,17 +109,17 @@ services:
       PYTHONUNBUFFERED: 1
       IB_GATEWAY_PORT: "${IB_GATEWAY_PORT:-4002}" 
       IB_GATEWAY_HOST: "${IB_GATEWAY_HOST:-ib-gateway}"
-      DATABASE_PATH: "${DATABASE_PATH:-/app/data/portfolio.db}"
+      DATABASE_PATH: "${DATABASE_PATH:-/app/data/pnl_data_jengo.db}"
     volumes:
       - ./data:/app/data
-
+      - ./models:/app/models  
 
     
   ngrok-pnl:
     image: ngrok/ngrok:3.5.0-alpine
     restart: always
     container_name: ngrok-pnl-monitor
-    command: tunnel --label edge="${NGROK_EDGE_PNL}" pnl-monitor:5001
+    command: tunnel --label edge="${NGROK_EDGE_PNL}" pnl-monitor-frontend:5001
     ports:
     - 80:80
     networks:

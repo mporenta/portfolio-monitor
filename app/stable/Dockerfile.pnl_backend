@@ -23,22 +23,28 @@ WORKDIR /app/portfolio-monitor
 # Copy files to override repository files
 COPY ./requirements.txt /app/portfolio-monitor/requirements.txt
 COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
-#COPY ./app.py /app/portfolio-monitor/src/app.py
 COPY ./db.py /app/portfolio-monitor/src/db.py
+COPY ./entrypoint.sh /app/portfolio-monitor/src/entrypoint.sh
+COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
+COPY ./models.py /app/portfolio-monitor/src/models.py
+
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV REDIS_DECODE_RESPONSES=True
 ENV PYTHONPATH=/app/portfolio-monitor:/app/portfolio-monitor/src
 
 # Change working directory to src
 WORKDIR /app/portfolio-monitor/src
 
+# Copy the entrypoint script
+
+RUN chmod +x entrypoint.sh
+
 # Expose port for the application
 EXPOSE 5002
 
-# Run the application with uvicorn
-CMD ["python", "pnl_monitor.py"]
+# Use the entrypoint script
+ENTRYPOINT ["./entrypoint.sh"]

@@ -1,6 +1,7 @@
 # db.py
 import sqlite3
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, Table, MetaData
 from sqlalchemy.ext.declarative import declarative_base
@@ -13,15 +14,29 @@ from ib_async import PortfolioItem, Trade, IB, Order
 
 # Set the specific paths
 load_dotenv()
-DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo.db')
-DATABASE_URL = f"sqlite:///{os.getenv('DATABASE_PATH', '/data/pnl_data_jengo.db')}"
+DATA_DIR = "/app/data"
+os.makedirs(DATA_DIR, exist_ok=True)
+# Define database path
+DATABASE_PATH = os.path.join(DATA_DIR, "pnl_data_jengo.db")
+DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 # Set up logging to file
 log_file_path = os.getenv('DATABASE_LOG_PATH', '/app/logs/db.log')
 # Setup the database connection
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Create engine with correct path
+engine = create_engine(
+    DATABASE_URL, 
+    connect_args={
+        "check_same_thread": False,
+        "timeout": 30
+    }
+)
+# Create sessionmaker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Create Base class for declarative models
 Base = declarative_base()
+
 # Ensure the log directory exists
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
@@ -100,30 +115,114 @@ class Order(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.now(datetime.timezone.utc))
 
-def init_db():
-    """Initialize the SQLite database and create the necessary tables."""
-    logger.debug("Starting database initialization...")
+def migrate_database(db_path):
+    """Create or update database schema"""
+    
+    # Ensure database directory exists
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
     
     try:
-        # Create database directory if it doesn't exist
-        db_dir = os.path.dirname(os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo'))
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-            logger.debug(f"Created database directory at {db_dir}")
-        
-        # Create all tables
-        Base.metadata.create_all(bind=engine)
-        
-        # Clear orders table
-        with SessionLocal() as session:
-            session.query(Order).delete()
-            session.commit()
-            logger.debug("Cleared orders table")
-        
-        logger.debug("Database initialization completed successfully")
+        # Create pnl_data table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pnl_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                daily_pnl REAL,
+                total_unrealized_pnl REAL,
+                total_realized_pnl REAL,
+                net_liquidation REAL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Create positions table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS positions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                position REAL,
+                market_price REAL,
+                market_value REAL,
+                average_cost REAL,
+                unrealized_pnl REAL,
+                realized_pnl REAL,
+                account TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(symbol)
+            )
+        ''')
+
+        # Create trades table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trade_time DATETIME NOT NULL,
+                symbol TEXT NOT NULL,
+                action TEXT NOT NULL,
+                quantity REAL NOT NULL,
+                fill_price REAL NOT NULL,
+                commission REAL,
+                realized_pnl REAL,
+                order_ref TEXT,
+                exchange TEXT,
+                order_type TEXT,
+                status TEXT,
+                order_id INTEGER,
+                perm_id INTEGER,
+                account TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Create orders table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                order_id INTEGER,
+                perm_id INTEGER,
+                action TEXT NOT NULL,
+                order_type TEXT NOT NULL,
+                total_quantity REAL NOT NULL,
+                limit_price REAL,
+                status TEXT NOT NULL,
+                filled_quantity REAL DEFAULT 0,
+                average_fill_price REAL,
+                last_fill_time DATETIME,
+                commission REAL,
+                realized_pnl REAL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(symbol, order_id)
+            )
+        ''')
+
+        # Create indexes for better query performance
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_pnl_timestamp ON pnl_data(timestamp)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_positions_symbol ON positions(symbol)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_orders_symbol ON orders(symbol)')
+
+        conn.commit()
+        logging.info("Database migration completed successfully")
         
     except Exception as e:
-        logger.error(f"Critical error during database initialization: {str(e)}")
+        logging.error(f"Error during database migration: {e}")
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+def init_db():
+    """Initialize the database with proper schema"""
+    try:
+        db_path = 'pnl_data_jengo.db'
+        migrate_database(db_path)
+        logging.info("Database initialized successfully")
+    except Exception as e:
+        logging.error(f"Failed to initialize database: {e}")
         raise
 
 

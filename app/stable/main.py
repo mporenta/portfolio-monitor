@@ -4,15 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Union, Any
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 # Import SQLAlchemy models with different names to avoid conflicts
-from db import (
-    SessionLocal, 
-    Position as DBPosition,  # Rename the SQLAlchemy model import
-    PnLData,
-    Trade,
-    Order
-)
 
 
 from dotenv import load_dotenv
@@ -22,19 +16,34 @@ import signal
 import requests
 import asyncio
 import os
-from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
-from dev3 import IBClient
+from models import Base, Position, PnLData, Trade, Order
+from pnl_monitor import IBClient
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 # Initialize the database
-init_db()
+
 
 # Get the src directory path
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory (project root)
 ROOT_DIR = os.path.dirname(SRC_DIR)
+DATA_DIR = "/app/data"
+
+
+DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo.db')
+DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Set up logging
 log_file_path = '/app/logs/app.log'
@@ -116,8 +125,7 @@ async def home(request: Request):
 async def get_positions(db: Session = Depends(get_db)):
     try:
         logger.info("API call to /api/positions")
-        # Use the renamed DBPosition model here
-        positions = db.query(DBPosition).all()
+        positions = db.query(Position).all()
         positions_data = [
             {
                 'symbol': pos.symbol,
@@ -131,10 +139,10 @@ async def get_positions(db: Session = Depends(get_db)):
             }
             for pos in positions
         ]
-        logger.info("Successfully fetched positions data.")
         return {"status": "success", "data": {"active_positions": positions_data}}
     except Exception as e:
         logger.error(f"Error fetching positions: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch positions data")
         raise HTTPException(status_code=500, detail="Failed to fetch positions data")
 
 @app.get("/api/current-pnl")
