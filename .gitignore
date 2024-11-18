@@ -1,10 +1,11 @@
 # Ignore .env files in the entire repository
 **/.env
-
+*.env
 # Ignore SSH private keys in the entire repository
 id_rsa*
-#Ignore logs
-**/.logs
-**/.log
-#Ignore db
-**/.db
+## Ignore logs
+*.log
+*.logs
+
+# Ignore db files
+*.db
