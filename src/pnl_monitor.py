@@ -1,4 +1,4 @@
-# pnl.py
+# pnl_monitor.py
 
 from operator import is_
 import requests
@@ -16,6 +16,14 @@ import logging
 from typing import Optional, List
 from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill, fetch_latest_positions_data
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
+logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file_path),
+                logging.StreamHandler()
+            ]
+        )
 
 
 
@@ -60,14 +68,7 @@ class IBClient:
         Retries with localhost (127.0.0.1) if initial connection fails with getaddrinfo error.
         """
         try:
-            logging.basicConfig(
-                level=logging.DEBUG,
-                format='%(asctime)s - %(levelname)s - %(message)s',
-                handlers=[
-                    logging.FileHandler(log_file_path),
-                    logging.StreamHandler()
-                ]
-            )
+           
             self.logger = logging.getLogger(__name__)
         
             try:
@@ -103,6 +104,7 @@ class IBClient:
     
     def subscribe_events(self):
         """Subscribe to order and PnL events, and initialize account."""
+        self.ib.pnlEvent += self.on_pnl_update
         self.ib.newOrderEvent += self.on_new_order
         accounts = self.ib.managedAccounts()
         
@@ -328,6 +330,7 @@ class IBClient:
         """Main run loop with improved error handling."""
         try:
             load_dotenv()
+            logging.info("Starting Database fucker from run...")
             init_db()
             if not self.connect():
                 return
@@ -347,16 +350,16 @@ class IBClient:
                     else:
                         no_update_counter += 1
                         if no_update_counter >= 60:
-                            self.logger.debug("No updates for 60 seconds")
+                            logging.debug("No updates for 60 seconds")
                             no_update_counter = 0
                 except Exception as e:
-                    self.logger.error(f"Error in main loop: {str(e)}")
+                    logging.error(f"Error in main loop: {str(e)}")
                     sleep(1)  # Prevent tight error loop
                     
         except KeyboardInterrupt:
-            self.logger.info("Shutting down by user request...")
+            logging.info("Shutting down by user request...")
         except Exception as e:
-            self.logger.error(f"Critical error in run loop: {str(e)}")
+            logging.error(f"Critical error in run loop: {str(e)}")
         finally:
             self.ib.disconnect()
 
