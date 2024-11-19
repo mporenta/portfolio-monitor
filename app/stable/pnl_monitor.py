@@ -4,7 +4,7 @@ from operator import is_
 import requests
 import json
 from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade
-from ib_async import util
+from ib_async import util, Position
 from typing import *
 from datetime import datetime
 import pytz 

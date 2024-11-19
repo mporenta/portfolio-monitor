@@ -10,15 +10,16 @@ import os
 from dataclasses import asdict
 from datetime import datetime
 from typing import List, Dict, Optional
-from ib_async import PortfolioItem, Trade, IB, Order
+from ib_async import PortfolioItem, Trade, Contract, IB, Order
 
 # Set the specific paths
 load_dotenv()
-DATA_DIR = "/app/data"
+DATA_DIR = os.path.join('DATA_DIR', "/app/data")
+
 os.makedirs(DATA_DIR, exist_ok=True)
 # Define database path
 DATABASE_PATH = os.path.join(DATA_DIR, "pnl_data_jengo.db")
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+DATABASE_URL = os.getenv(f'DATABASE_URL', 'sqlite:///{DATABASE_PATH}')
 
 # Set up logging to file
 log_file_path = os.getenv('DATABASE_LOG_PATH', '/app/logs/db.log')
@@ -61,7 +62,7 @@ class PnLData(Base):
     net_liquidation = Column(Float)
     timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
-class Position(Base):
+class Positions(Base):
     __tablename__ = 'positions'
     
     id = Column(Integer, primary_key=True)
@@ -73,9 +74,10 @@ class Position(Base):
     unrealized_pnl = Column(Float)
     realized_pnl = Column(Float)
     account = Column(String)
+    exchange = Column(String)
     timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
-class Trade(Base):
+class Trades(Base):
     __tablename__ = 'trades'
     
     id = Column(Integer, primary_key=True)
@@ -95,7 +97,7 @@ class Trade(Base):
     account = Column(String)
     timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
-class Order(Base):
+class Orders(Base):
     __tablename__ = 'orders'
     
     id = Column(Integer, primary_key=True)
@@ -115,13 +117,13 @@ class Order(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.now(datetime.timezone.utc))
 
-def migrate_database(db_path):
+def migrate_database(DATABASE_PATH):
     """Create or update database schema"""
     
     # Ensure database directory exists
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(DATABASE_PATH).parent.mkdir(parents=True, exist_ok=True)
     
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     
     try:
@@ -149,6 +151,7 @@ def migrate_database(db_path):
                 unrealized_pnl REAL,
                 realized_pnl REAL,
                 account TEXT,
+                exchange TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(symbol)
             )
@@ -218,8 +221,8 @@ def migrate_database(db_path):
 def init_db():
     """Initialize the database with proper schema"""
     try:
-        db_path = 'pnl_data_jengo.db'
-        migrate_database(db_path)
+        DATABASE_PATH
+        migrate_database(DATABASE_PATH)
         logging.info("Database initialized successfully")
     except Exception as e:
         logging.error(f"Failed to initialize database: {e}")
@@ -326,28 +329,24 @@ def insert_pnl_data(daily_pnl: float, total_unrealized_pnl: float, total_realize
         logger.error(f"Error inserting PnL data into the database: {e}")
 
 def insert_positions_data(portfolio_items: List[PortfolioItem]):
-    """Insert or update positions data and remove stale records."""
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
-        # Get current symbols from portfolio
         current_symbols = {item.contract.symbol for item in portfolio_items}
-        #print(f"insert_positions_data print Jengo Current symbols: {current_symbols}")
 
-        # Delete records for symbols not in current portfolio
         cursor.execute('''
             DELETE FROM positions 
             WHERE symbol NOT IN ({})
         '''.format(','.join('?' * len(current_symbols))), 
         tuple(current_symbols))
 
-        # Insert or update current positions
         for item in portfolio_items:
             cursor.execute('''
                 INSERT OR REPLACE INTO positions 
-                (symbol, position, market_price, market_value, average_cost, unrealized_pnl, realized_pnl, account)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (symbol, position, market_price, market_value, average_cost, 
+                unrealized_pnl, realized_pnl, account, exchange)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 item.contract.symbol,
                 item.position,
@@ -356,7 +355,8 @@ def insert_positions_data(portfolio_items: List[PortfolioItem]):
                 item.averageCost,
                 item.unrealizedPNL,
                 item.realizedPNL,
-                item.account
+                item.account,
+                item.contract.primaryExchange  # Map primaryExchange to exchange column
             ))
 
         conn.commit()
@@ -406,7 +406,7 @@ def fetch_latest_positions_data() -> List[Dict[str, float]]:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute('SELECT symbol, position, market_price, market_value, average_cost, unrealized_pnl, realized_pnl, account FROM positions ORDER BY timestamp DESC')
+        cursor.execute('SELECT symbol, position, market_price, market_value, average_cost, unrealized_pnl, realized_pnl, account, exchange, timestamp FROM positions ORDER BY timestamp DESC')
         rows = cursor.fetchall()
         conn.close()
         return [
@@ -418,7 +418,9 @@ def fetch_latest_positions_data() -> List[Dict[str, float]]:
                 'average_cost': row[4],
                 'unrealized_pnl': row[5],
                 'realized_pnl': row[6],
-                'exchange': row[7]  # Ensure 'exchange' is included
+                'account': row[7],
+                'exchange': row[8],
+                'timestamp': row[9]
             }
             for row in rows
         ]

@@ -1,3 +1,4 @@
+#models.py
 from sqlalchemy import Column, Integer, Float, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -14,7 +15,7 @@ class PnLData(Base):
     net_liquidation = Column(Float)
     timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
-class Position(Base):
+class Positions(Base):
     __tablename__ = 'positions'
     
     id = Column(Integer, primary_key=True)
@@ -26,9 +27,10 @@ class Position(Base):
     unrealized_pnl = Column(Float)
     realized_pnl = Column(Float)
     account = Column(String)
+    exchange = Column(String)  # Keep as 'exchange' in the database
     timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
-class Trade(Base):
+class Trades(Base):
     __tablename__ = 'trades'
     
     id = Column(Integer, primary_key=True)
@@ -48,7 +50,7 @@ class Trade(Base):
     account = Column(String)
     timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 
-class Order(Base):
+class Orders(Base):
     __tablename__ = 'orders'
     
     id = Column(Integer, primary_key=True)
