@@ -16,15 +16,15 @@ import logging
 from typing import Optional, List
 from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill, fetch_latest_positions_data
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
+log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
 logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file_path),
-                logging.StreamHandler()
-            ]
-        )
-
+    level=getattr(logging, log_level),
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()
+    ]
+)
 
 
 
@@ -368,5 +368,6 @@ class IBClient:
 # Usage
 if __name__ == '__main__':
     #IBClient.setup_logging()
+    load_dotenv()
     client = IBClient()
     client.run()

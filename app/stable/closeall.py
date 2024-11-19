@@ -13,19 +13,22 @@ import time
 from time import sleep
 import logging
 from typing import Optional, List
+load_dotenv()
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
+log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
 logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file_path),
-                logging.StreamHandler()
-            ]
-        )
+    level=getattr(logging, log_level),
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()
+    ]
+)
+
 logger = logging.getLogger(__name__)
 
 ib = IB()
-load_dotenv()
+
     
        # Then set connection parameters
 host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Default to localhost if not set

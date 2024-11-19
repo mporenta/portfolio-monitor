@@ -42,12 +42,13 @@ Base = declarative_base()
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 
 # Configure logging
+log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=getattr(logging, log_level),
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path),
-        logging.StreamHandler()  # Optional: to also output logs to the console
+        logging.StreamHandler()
     ]
 )
 
