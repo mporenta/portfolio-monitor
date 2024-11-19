@@ -53,6 +53,7 @@ class IBClient:
         self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
         self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
         self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
+        self.token = os.getenv('TVWB_UNIQUE_KEY')
         
         # Logger setup
         self.logger = None
@@ -226,7 +227,7 @@ class IBClient:
                     "currency": "USD",
                     "timeframe": "S",
                     "clientId": 1,
-                    "key": "WebhookReceived:fcbd3d",
+                    "key": self.token,
                     "contract": "stock",
                     "orderRef": f"close-all-{portfolio_item.contract.symbol}-{timenow}",
                     "direction": "strategy.close_all",
