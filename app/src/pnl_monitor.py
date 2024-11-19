@@ -4,7 +4,7 @@ from operator import is_
 import requests
 import json
 from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade
-from ib_async import util
+from ib_async import util, Position
 from typing import *
 from datetime import datetime
 import pytz 
@@ -16,15 +16,15 @@ import logging
 from typing import Optional, List
 from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill, fetch_latest_positions_data
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
+log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
 logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file_path),
-                logging.StreamHandler()
-            ]
-        )
-
+    level=getattr(logging, log_level),
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()
+    ]
+)
 
 
 
@@ -52,7 +52,8 @@ class IBClient:
         self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Default to localhost if not set
         self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
         self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
-        self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
+        self.risk_percent = 0.11
+        self.token = os.getenv('TVWB_UNIQUE_KEY')
         
         # Logger setup
         self.logger = None
@@ -178,7 +179,7 @@ class IBClient:
                 self.logger.warning(f"Invalid net liquidation value: ${self.net_liquidation:,.2f}")
                 return False
             
-            self.risk_amount = self.net_liquidation  * self.risk_percent
+            self.risk_amount = 50000  * self.risk_percent
             is_threshold_exceeded = self.daily_pnl >= self.risk_amount
             
             if is_threshold_exceeded:
@@ -226,7 +227,7 @@ class IBClient:
                     "currency": "USD",
                     "timeframe": "S",
                     "clientId": 1,
-                    "key": "WebhookReceived:fcbd3d",
+                    "key": self.token,
                     "contract": "stock",
                     "orderRef": f"close-all-{portfolio_item.contract.symbol}-{timenow}",
                     "direction": "strategy.close_all",
@@ -367,5 +368,6 @@ class IBClient:
 # Usage
 if __name__ == '__main__':
     #IBClient.setup_logging()
+    load_dotenv()
     client = IBClient()
     client.run()
