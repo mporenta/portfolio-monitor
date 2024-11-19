@@ -52,7 +52,7 @@ class IBClient:
         self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Default to localhost if not set
         self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
         self.client_id = int(os.getenv('IB_GATEWAY_CLIENT_ID', '8'))
-        self.risk_percent = float(os.getenv('RISK_PERCENT', 0.01))
+        self.risk_percent = 0.11
         self.token = os.getenv('TVWB_UNIQUE_KEY')
         
         # Logger setup
@@ -179,7 +179,7 @@ class IBClient:
                 self.logger.warning(f"Invalid net liquidation value: ${self.net_liquidation:,.2f}")
                 return False
             
-            self.risk_amount = self.net_liquidation  * self.risk_percent
+            self.risk_amount = 50000  * self.risk_percent
             is_threshold_exceeded = self.daily_pnl >= self.risk_amount
             
             if is_threshold_exceeded:
