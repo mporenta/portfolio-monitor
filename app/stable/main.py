@@ -17,10 +17,11 @@ import signal
 import requests
 import asyncio
 import os
-from models import Base, Positions, PnLData, Trades, Orders
-from closeall import close_all_positions as ca
+from models import Base, Positions, PnLData, Trades, Orders, PositionClose
+from closeall import ClosePositionsRequestSchema, close_positions
 from fastapi.middleware.cors import CORSMiddleware
-
+ib = IB()
+portfolio_items = ib.portfolio()
 load_dotenv()
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 # Initialize the database
@@ -64,6 +65,21 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+class PositionCloseRequest(BaseModel, PortfolioItem):
+    contract: Contract
+    position: float
+    marketPrice: float
+    marketValue: float
+    averageCost: float
+    unrealizedPNL: float
+    realizedPNL: float
+    account: str
+    symbol: str
+    action: str
+    quantity: int
+
+class ClosePositionsRequestSchema(BaseModel):
+    positions: List[PositionCloseRequest]
 # Pydantic models for request/response validation
 class PositionCreate(BaseModel):
     symbol: str
@@ -218,31 +234,20 @@ async def get_trades(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to fetch trades data")
 
 
-@app.post("/close_positions")
-async def close_positions_route(self):
-    try:
-         # Initialize IBClient
-        ib = IB
 
-        
-        portfolio_items =  ib.portfolio()
-        for item in portfolio_items:
-            symbol = item.contract.symbol
-            pos = item.position
-            # Create a PortfolioItem from the position data
-            
-            
-            item.contract.secType = 'STK'  # Assuming stocks, adjust if needed
-            item.contract.currency = 'USD'
-            item.contract.exchange = 'SMART'
-            
-         
-            # Call the IBClient method to close the position
-            await ca.close_all_positions(portfolio_items)
-        
-        logger.info("Positions closed successfully")
-        return {'status': 'success', 'message': 'Positions closed successfully'}
-        
+
+
+
+
+@app.post("/close_positions")
+async def close_positions_route(sybmol, request: Request, db: Session = Depends(get_db)):
+    """
+    FastAPI route to handle position closing requests.
+    """
+    try:
+
+        result = await close_positions(portfolio_items)
+        return result
     except ValueError as e:
         logger.error(f"ValueError in close_positions_route: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
