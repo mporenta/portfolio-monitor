@@ -18,7 +18,7 @@ import requests
 import asyncio
 import os
 from models import Base, Positions, PnLData, Trades, Orders, PositionClose
-from closeall import ClosePositionsRequestSchema, close_positions
+from closeall import close_positions
 from fastapi.middleware.cors import CORSMiddleware
 ib = IB()
 portfolio_items = ib.portfolio()
