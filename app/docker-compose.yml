@@ -19,8 +19,8 @@ services:
       TVWB_UNIQUE_KEY: "${TVWB_UNIQUE_KEY:-}"
       TOKEN_KEY: "${TOKEN_KEY:-}"
       TVWB_HTTPS_PORT: "${TVWB_HTTPS_PORT:-5000}"
-      TBOT_LOGLEVEL: "${TBOT_LOGLEVEL:-DEBUG}"
-      TBOT_IB_LOGLEVEL: "${TBOT_IB_LOGLEVEL:-DEBUG}"
+      TBOT_LOGLEVEL: "${TBOT_LOGLEVEL:-INFO}"
+      TBOT_IB_LOGLEVEL: "${TBOT_IB_LOGLEVEL:-INFO}"
       TBOT_PRODUCTION: "${TBOT_PRODUCTION:-False}"
       TBOT_REDIS_HOST: "${TBOT_REDIS_HOST:-redis}"
       TBOT_REDIS_PORT: "${TBOT_REDIS_PORT:-6379}"
@@ -110,6 +110,8 @@ services:
       PYTHONUNBUFFERED: 1
       IB_GATEWAY_PORT: "${IB_GATEWAY_PORT:-4002}" 
       IB_GATEWAY_HOST: "${IB_GATEWAY_HOST:-ib-gateway}"
+      TVWB_UNIQUE_KEY: ${TVWB_UNIQUE_KEY:-}
+      TOKEN_KEY: ${TOKEN_KEY:-}
       DATABASE_PATH: "${DATABASE_PATH:-/app/data/pnl_data_jengo.db}"
     volumes:
       - ./data:/app/data

@@ -170,6 +170,8 @@ RUN chmod -R 755 /home/tbot/develop/github/tbot-tradingboat/twsapi
 RUN git clone -b ${TBOT_TVWB_GIT_BRANCH} ${TBOT_TVWB_GIT_REPO} /home/tbot/develop/github/tradingview-webhooks-bot
 WORKDIR /home/tbot/develop/github/tradingview-webhooks-bot/src
 
+COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
+
 # Copy the local version of orders into the container
 #COPY ./order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/order_base.html
 #COPY ./order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/orders.html

@@ -33,7 +33,7 @@ COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
 COPY ./models.py /app/portfolio-monitor/src/models.py
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

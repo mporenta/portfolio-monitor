@@ -3,8 +3,19 @@ from sqlalchemy import Column, Integer, Float, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
+
+
 Base = declarative_base()
 
+
+class PositionClose(Base):
+    __tablename__ = 'position_close'
+    
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String(50), nullable=False)
+    action = Column(String(10), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
 class PnLData(Base):
     __tablename__ = 'pnl_data'
     

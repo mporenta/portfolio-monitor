@@ -4,15 +4,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Union, Any
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from datetime import datetime
 # Import SQLAlchemy models with different names to avoid conflicts
-from db import (
-    SessionLocal, 
-    Position as DBPosition,  # Rename the SQLAlchemy model import
-    PnLData,
-    Trade,
-    Order
-)
 
 
 from dotenv import load_dotenv
@@ -22,19 +17,35 @@ import signal
 import requests
 import asyncio
 import os
-from db import init_db, fetch_latest_pnl_data, fetch_latest_positions_data, fetch_latest_trades_data
-from pnl_monitor import IBClient
+from models import Base, Positions, PnLData, Trades, Orders
+from closeall import close_all_positions as ca
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 # Initialize the database
-init_db()
+
 
 # Get the src directory path
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory (project root)
 ROOT_DIR = os.path.dirname(SRC_DIR)
+DATA_DIR = "/app/data"
+
+
+DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo.db')
+DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+Base.metadata.create_all(bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 # Set up logging
 log_file_path = '/app/logs/app.log'
@@ -52,13 +63,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Pydantic models for request/response validation
-class Position(BaseModel):
+class PositionCreate(BaseModel):
     symbol: str
     action: str
     quantity: int
 
+class PositionResponse(BaseModel):
+    symbol: str
+    position: float
+    market_price: float
+    market_value: float
+    average_cost: float
+    unrealized_pnl: float
+    realized_pnl: float
+    account: str
+    exchange: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
 class PositionsRequest(BaseModel):
-    positions: List[Position]
+    positions: List[PositionCreate]
 
 class WebhookMetric(BaseModel):
     name: str
@@ -91,15 +117,10 @@ app.add_middleware(
 # Set up templates
 templates = Jinja2Templates(directory=os.path.join(ROOT_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(ROOT_DIR, "static")), name="static")
+print(f"global Connecting to database at {DATABASE_PATH}")
 
 
-# dependency to get DB session
-def get_db():
-    dbSQL = SessionLocal()
-    try:
-        yield dbSQL
-    finally:
-        dbSQL.close()
+
 
 # Routes
 @app.get("/", response_class=HTMLResponse)
@@ -116,8 +137,17 @@ async def home(request: Request):
 async def get_positions(db: Session = Depends(get_db)):
     try:
         logger.info("API call to /api/positions")
-        # Use the renamed DBPosition model here
-        positions = db.query(DBPosition).all()
+        print(f"Connecting to database at {DATABASE_PATH}")
+        print(f"Database URL: {DATABASE_URL}")
+        print(f"Database engine: {engine}")
+        print(f"Database session: {SessionLocal}")
+        print(f"def Database session: {db}")
+        print(f"Depends(get_db)): {get_db}")
+        print(f"Database query: {db.query(Positions).all()}")
+        
+        
+
+        positions = db.query(Positions).all()
         positions_data = [
             {
                 'symbol': pos.symbol,
@@ -127,11 +157,13 @@ async def get_positions(db: Session = Depends(get_db)):
                 'average_cost': pos.average_cost,
                 'unrealized_pnl': pos.unrealized_pnl,
                 'realized_pnl': pos.realized_pnl,
-                'exchange': pos.account
+                'account': pos.account,
+                'exchange': pos.exchange,  # Already correctly named in database
+                'timestamp': pos.timestamp
             }
             for pos in positions
         ]
-        logger.info("Successfully fetched positions data.")
+        logger.info(f"Successfully fetched positions data.{positions_data}")
         return {"status": "success", "data": {"active_positions": positions_data}}
     except Exception as e:
         logger.error(f"Error fetching positions: {str(e)}")
@@ -161,7 +193,7 @@ async def get_current_pnl(db: Session = Depends(get_db)):
 async def get_trades(db: Session = Depends(get_db)):
     try:
         logger.info("API call to /api/trades")
-        trades = db.query(Trade).order_by(Trade.trade_time.desc()).all()
+        trades = db.query(Trades).order_by(Trades.trade_time.desc()).all()
         trades_data = [
             {
                 'trade_time': trade.trade_time,
@@ -187,7 +219,7 @@ async def get_trades(db: Session = Depends(get_db)):
 @app.post("/close_positions")
 async def close_positions_route(self):
     try:
-        ib_client = IBClient(self)  # Initialize IBClient
+         # Initialize IBClient
         ib = IB
 
         
@@ -204,7 +236,7 @@ async def close_positions_route(self):
             
          
             # Call the IBClient method to close the position
-            await ib_client.close_all_positions()
+            await ca.close_all_positions(portfolio_items)
         
         logger.info("Positions closed successfully")
         return {'status': 'success', 'message': 'Positions closed successfully'}

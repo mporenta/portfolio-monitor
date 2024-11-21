@@ -1,0 +1,37 @@
+{
+    "timestamp": 1732030290158,
+    "ticker": "AI",
+    "currency": "USD",
+    "timeframe": "15S",
+    "clientId": 1,
+    "key": "WebhookReceived:f1fc1c",
+    "contract": "stock",
+    "orderRef": "Scalp L",
+    "direction": "strategy.entrylong",
+    "metrics": [
+        {
+            "name": "entry.limit",
+            "value": 0
+        },
+        {
+            "name": "entry.stop",
+            "value": 0
+        },
+        {
+            "name": "exit.limit",
+            "value": 32.61
+        },
+        {
+            "name": "exit.stop",
+            "value": 31.09
+        },
+        {
+            "name": "qty",
+            "value": 512
+        },
+        {
+            "name": "price",
+            "value": 31.6
+        }
+    ]
+}

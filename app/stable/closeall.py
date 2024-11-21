@@ -1,19 +1,18 @@
+# closeall.py
 
-from operator import is_
-import requests
-import json
-from ib_async import *
-from ib_async import util
-from typing import *
-from datetime import datetime
-import pytz 
+from pydantic import BaseModel
+import asyncio
 import os
-from dotenv import load_dotenv
-import time
-from time import sleep
 import logging
-from typing import Optional, List
+from ib_async import *
+from dotenv import load_dotenv
+from typing import List, Optional
+ib = IB()
+   
+# Load environment variables
 load_dotenv()
+
+# Configure logging
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
 log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
 logging.basicConfig(
@@ -27,81 +26,52 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-ib = IB()
-
-    
-       # Then set connection parameters
-host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  # Default to localhost if not set
+# Define IB parameters
+host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')
 port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
 client_id = 33
 
+# Define request models with unique names to avoid conflicts
+def positions_to_close(portfolio_items: PortfolioItem):
+    portfolio_items = ib.portfolio()
+    for item in portfolio_items:
+        if item.position != 0:
+            positions_to_close.append({
+                'symbol': item.contract.symbol,
+                'action': 'SELL' if item.position > 0 else 'BUY',
+                'quantity': abs(item.position)
+            })
 
+async def close_positions(positions_to_close) -> dict:
+  
+    """
+    Closes specified positions based on the request.
 
-
-
-
-
-def close_all_positions(portfolio_items):
-    try:
-        # First attempt with original host
-        ib.connect(
-            host=host,
-            port=port,
-            clientId=client_id
-        )
-        logger.info(f"Connected to IB Gateway at {host}:{port} with client ID {client_id}")
-       
-            
-    
-        
-        """Close all positions based on the data in the database."""
-        # Fetch positions data from the database instead of using `ib.portfolio()`
-        #portfolio_items = fetch_latest_positions_data()
-        portfolio_items
-        for item in portfolio_items:
-            symbol = item.contract.symbol
-            pos = item.position
-        if pos == 0:
-         
-            #logger.info("No positions to close.")
-            #return
-            
-       
-            logger.info(f" No Positions for {symbol}")
-
-            action = 'BUY' if pos < 0 else 'SELL'
-            quantity = abs(pos)
-
-            # Example contract setup - modify as needed
-            contract = Contract(symbol=symbol, exchange='SMART', secType='STK', currency='USD')
-                
-            logger.debug(f"Placing MarketOrder for {symbol}")
-            order = MarketOrder(action=action, totalQuantity=quantity, tif='GTC', outsideRth = True)
-                    
-            # Place the order and update the order fill in the database
-            trade = ib.placeOrder(contract, order)
-            #ib.sleep(30)
-                
-            logger.info(f"Order placed and recorded for {trade}")
-        
-        ib.sleep(3)
-        logger.info("Positions closed successfully")
-        logger.info("Disconnecting from IB Gateway")
-        return ib.disconnect()
    
-       
+
+    Args:
+        positions_to_close: List of positions to close with their details
+    
+    Returns:
+        dict: Status of the operation
+    """
+    
+    try:
+        await ib.connectAsync(host=host, port=port, clientId=client_id)
+        logger.info(f"Connected to IB Gateway at {host}:{port} with client ID {client_id}")
+
+
+        # Gracefully disconnect
+        await ib.disconnect()
+        logger.info("Disconnected from IB Gateway")
+        
+        return {
+            'status': 'success',
+            'message': 'Positions closed successfully'
+        }
 
     except Exception as e:
-            logger.error(f"Error creating order for {symbol}: {str(e)}")
+        logger.error(f"Error while processing positions: {str(e)}")
+        await ib.disconnect()
+        raise Exception(f"Error processing positions: {str(e)}")
 
-            
-
-    
-    
-
-
-
-
-
-
-ib.run()
