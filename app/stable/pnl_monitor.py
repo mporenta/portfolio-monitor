@@ -250,7 +250,7 @@ class IBClient:
                     "currency": "USD",
                     "timeframe": "S",
                     "clientId": 1,
-                    "key": "WebhookReceived:fcbd3d",
+                    "key": self.token,
                     "contract": "stock",
                     "orderRef": f"close-all-{portfolio_items.contract.symbol}-{timenow}",
                     "direction": "strategy.entryshort" if is_long_position else "strategy.entrylong",
