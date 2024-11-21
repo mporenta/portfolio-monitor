@@ -110,8 +110,6 @@ services:
       PYTHONUNBUFFERED: 1
       IB_GATEWAY_PORT: "${IB_GATEWAY_PORT:-4002}" 
       IB_GATEWAY_HOST: "${IB_GATEWAY_HOST:-ib-gateway}"
-      TVWB_UNIQUE_KEY: ${TVWB_UNIQUE_KEY:-}
-      TOKEN_KEY: ${TOKEN_KEY:-}
       DATABASE_PATH: "${DATABASE_PATH:-/app/data/pnl_data_jengo.db}"
     volumes:
       - ./data:/app/data

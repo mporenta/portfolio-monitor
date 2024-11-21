@@ -1,0 +1,26 @@
+float shortLimitPrice = na
+
+
+
+
+
+
+if short_entry
+    shortStopPrice := ss + atrStop
+    shortLimitPrice := LL - atrLimit
+    shortEntry := close*0.9985
+    perShareRisk = math.abs((shortEntry) + shortStopPrice) 
+
+    positionSize = math.min(toleratedRisk / perShareRisk, math.floor(accountBalance / shortEntry))
+    qtySize = math.round(positionSize)
+    // TBOT: creates a bracket IBKR order
+
+    msg = tv.makeWebhookJson(webhookKey=webhookKey, direction = 'strategy.entryshort',
+      qty=qty, exitLimit=shortLimitPrice, exitStop=shortStopPrice, orderRef='Div13', clientId=clientId)
+    strategy.entry("Enter Short #1", strategy.short, alert_message=msg)
+    strategy.exit("Exit Short#A", from_entry="Enter Short #1", stop=shortStopPrice, limit=shortLimitPrice)
+
+
+
+
+takeProfitPrice := math.round(entryPlusSlip - rewardRiskRatio * (stopLossPrice - entryPlusSlip), 2)
