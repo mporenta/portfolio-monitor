@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+  <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
+
 
   <!-- DataTables -->
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.css">
@@ -636,6 +638,7 @@
 
   <!-- JavaScript -->
   <script>
+ 
     document.addEventListener('DOMContentLoaded', () => {
       const activePositionsTable = new DataTable('#active-positions', {
         responsive: true,
@@ -747,32 +750,34 @@
             action: action,
             quantity: quantity
           };
+          const webhookPayload = {
+            timestamp: Date.now(),
+            ticker: rowData.symbol,
+            currency: "USD",
+            timeframe: "S",
+            clientId: 1, // Use the dynamic key
+            contract: "stock",
+            orderRef: "close_all",
+            direction: "strategy.close_all",
+            metrics: [
+              { name: "entry.limit", value: 0 },
+              { name: "entry.stop", value: 0 },
+              { name: "exit.limit", value: 0 },
+              { name: "exit.stop", value: 0 },
+              { name: "qty", value: -10000000000 },
+              { name: "price", value: 5.00 }
+            ]
+          };
 
           // Call both endpoints asynchronously
           await Promise.all([
             // Original webhook call
-            fetch("https://tv.porenta.us/webhook", {
+            // In your close position button handler, update the webhook JSON:
+            fetch("/proxy/webhook", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                timestamp: Date.now(),
-                ticker: rowData.symbol,
-                currency: "USD",
-                timeframe: "S",
-                clientId: 1,
-                key: "mrsprinkles",
-                contract: "stock",
-                orderRef: "close_all",
-                direction: "strategy.close_all",
-                metrics: [
-                  { name: "entry.limit", value: 0 },
-                  { name: "entry.stop", value: 0 },
-                  { name: "exit.limit", value: 0 },
-                  { name: "exit.stop", value: 0 },
-                  { name: "qty", value: -10000000000 },
-                  { name: "price", value: 5.00 }
-                ]
-              })
+              body: JSON.stringify(webhookPayload)
+
             }),
 
             // New close_positions endpoint call
@@ -784,6 +789,7 @@
               })
             })
           ]);
+
 
           button.removeClass('loading')
             .addClass('success')
