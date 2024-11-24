@@ -6,6 +6,8 @@ id_rsa*
 ## Ignore logs
 *.log
 *.logs
+# vscode
+*.code-workspace
 
 # Ignore db files
 *.db
