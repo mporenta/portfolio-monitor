@@ -28,7 +28,7 @@ COPY ./main.py /app/portfolio-monitor/src/main.py
 COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
 
 #Copy static web page files
-COPY ./favicons/favicon.ico  /app/portfolio-monitor/static/favicon.ico
+COPY ./static/favicon.ico  /app/portfolio-monitor/static/img/favicon.ico
 
 COPY .static/tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashboard.html
 COPY ./static/dashboard.js /app/portfolio-monitor/static/css/dashboard.js
