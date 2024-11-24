@@ -964,7 +964,7 @@
           // Call both endpoints asynchronously
           await Promise.all([
             // Original webhook call
-            fetch("https://tv.porenta.us/webhook", {
+            fetch("/proxy/webhook", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
