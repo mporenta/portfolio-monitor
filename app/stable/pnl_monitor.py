@@ -181,8 +181,8 @@ class IBClient:
             
             #self.risk_amount = self.net_liquidation  * self.risk_percent
             self.risk_amount = 30000  * self.risk_percent
-            is_threshold_exceeded = self.daily_pnl >= 0
-            print(f"is_threshold_exceeded {is_threshold_exceeded}")
+            is_threshold_exceeded = self.daily_pnl >= self.risk_amount
+            
             if is_threshold_exceeded:
                 self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} >= ${self.risk_amount:,.2f}")
                 self.closing_initiated = True
@@ -281,8 +281,7 @@ class IBClient:
   
     def close_all_positions(self):
         """Close all positions based on the data in the database."""
-        # Fetch positions data from the database instead of using `self.ib.portfolio()`
-        #portfolio_items = fetch_latest_positions_data()
+        
         portfolio_items =  self.ib.portfolio(self.account)
         for item in portfolio_items:
             symbol = item.contract.symbol

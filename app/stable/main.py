@@ -1,36 +1,39 @@
-#main.py
 from fastapi import FastAPI, HTTPException, Request, Response, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+from contextlib import asynccontextmanager
 from typing import List, Dict, Optional, Union, Any
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+import pytz
+import time
 from datetime import datetime
 from dotenv import load_dotenv
-from ib_async import Contract, PortfolioItem, IB
+from ib_async import *
 import logging
 import signal
 import requests
 import asyncio
 import os
 from models import Base, Positions, PnLData, Trades, Orders, PositionClose
-from closeall import close_positions
 from fastapi.middleware.cors import CORSMiddleware
+
 ib = IB()
 portfolio_items = ib.portfolio()
 load_dotenv()
+tbotKey = os.getenv("TVWB_UNIQUE_KEY", "WebhookReceived:ac1a2d")
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
-# Initialize the database
-
+IB_CLIENT_ID = 40
+IB_HOST = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  
+IB_PORT = int(os.getenv('TBOT_IBKR_PORT', '4002'))
 
 # Get the src directory path
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory (project root)
 ROOT_DIR = os.path.dirname(SRC_DIR)
 DATA_DIR = "/app/data"
-
 
 DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo.db')
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
@@ -45,7 +48,6 @@ def get_db():
     finally:
         db.close()
 
-
 # Set up logging
 log_file_path = '/app/logs/app.log'
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
@@ -59,7 +61,6 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -76,14 +77,15 @@ class PositionCloseRequest(BaseModel):
     action: str
     quantity: int
 
-
 class ClosePositionsRequestSchema(BaseModel):
     positions: List[PositionCloseRequest]
+
 # Pydantic models for request/response validation
 class PositionCreate(BaseModel):
     symbol: str
     action: str
     quantity: int
+    price: float
 
 class PositionResponse(BaseModel):
     symbol: str
@@ -96,6 +98,7 @@ class PositionResponse(BaseModel):
     account: str
     exchange: str
     timestamp: datetime
+    permId: int
 
     class Config:
         from_attributes = True
@@ -103,9 +106,9 @@ class PositionResponse(BaseModel):
 class PositionsRequest(BaseModel):
     positions: List[PositionCreate]
 
-class WebhookMetric(BaseModel):
+class Metric(BaseModel):
     name: str
-    value: Union[int, float]
+    value: float
 
 class WebhookRequest(BaseModel):
     timestamp: int
@@ -113,22 +116,43 @@ class WebhookRequest(BaseModel):
     currency: str
     timeframe: str
     clientId: int
-    key: str
     contract: str
     orderRef: str
     direction: str
-    metrics: List[WebhookMetric]
+    metrics: List[Metric]
 
-# Initialize FastAPI app
-app = FastAPI(title="PnL Monitor")
+# Initialize FastAPI app with lifespan
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        logger.info("Connecting to IB Gateway...")
+        await ib.connectAsync(IB_HOST, IB_PORT, IB_CLIENT_ID)
+        logger.info("Connected to IB Gateway.")
+    except Exception as e:
+        logger.error(f"Failed to connect to IB Gateway: {e}")
+        raise RuntimeError("IB Gateway connection failed.")
+    
+    yield
+    
+    # Shutdown
+    if ib.isConnected():
+        await ib.disconnect()
+        logger.info("Disconnected from IB Gateway.")
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="PnL Monitor",
+    lifespan=lifespan
+)
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this appropriately for production
+    allow_origins=["https://portfolio.porenta.us", "https://tv.porenta.us"],  # List all trusted origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],  # Limit methods if possible
+    allow_headers=["*"],  # Adjust headers as needed
 )
 
 # Set up templates
@@ -136,8 +160,16 @@ templates = Jinja2Templates(directory=os.path.join(ROOT_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(ROOT_DIR, "static")), name="static")
 print(f"global Connecting to database at {DATABASE_PATH}")
 
-
-
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    return Response(
+        headers={
+            "Access-Control-Allow-Origin": "*",  # Change '*' to specific origins in production
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+        status_code=204,  # No content
+    )
 
 # Routes
 @app.get("/", response_class=HTMLResponse)
@@ -154,16 +186,6 @@ async def home(request: Request):
 async def get_positions(db: Session = Depends(get_db)):
     try:
         logger.info("API call to /api/positions")
-        print(f"Connecting to database at {DATABASE_PATH}")
-        print(f"Database URL: {DATABASE_URL}")
-        print(f"Database engine: {engine}")
-        print(f"Database session: {SessionLocal}")
-        print(f"def Database session: {db}")
-        print(f"Depends(get_db)): {get_db}")
-        print(f"Database query: {db.query(Positions).all()}")
-        
-        
-
         positions = db.query(Positions).all()
         positions_data = [
             {
@@ -232,49 +254,247 @@ async def get_trades(db: Session = Depends(get_db)):
         logger.error(f"Error fetching trades: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch trades data")
 
+from fastapi import FastAPI, HTTPException
+from ib_async import IB, Contract, LimitOrder, MarketOrder
+from datetime import datetime
+import pytz
+import logging
 
+logger = logging.getLogger(__name__)
+ib = IB()
 
-
-
-
-
-@app.post("/close_positions")
-async def close_positions_route(symbol: str, request: Request):
+@app.post("/close_positions", response_model=List[PositionResponse])
+async def place_order(positions_request: PositionsRequest):
     """
-    FastAPI route to handle position closing requests.
+    Place an order with Interactive Brokers based on the positions request.
     """
+    logger.info(f"Received positions request: {positions_request}")
+    
+    if not ib.isConnected():
+        logger.error("IB Gateway not connected")
+        raise HTTPException(status_code=503, detail="IB Gateway not connected")
+
+    response_data = []
     try:
-        result = await close_positions(portfolio_items)  # Make sure close_positions is correctly implemented
-        return {"status": "success", "result": result}
-    except ValueError as e:
-        logger.error(f"ValueError in close_positions_route: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error in close_positions_route: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        ny_tz = pytz.timezone('America/New_York')
+        current_time = datetime.now(ny_tz)
+        market_open = current_time.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = current_time.replace(hour=16, minute=0, second=0, microsecond=0)
+        is_market_hours = market_open <= current_time <= market_close
 
+        for position in positions_request.positions:
+            try:
+                logger.info(f"Processing order for {position.symbol}")
+                
+                # Create contract
+                contract = Contract(
+                    symbol=position.symbol,
+                    exchange='SMART',
+                    secType='STK',
+                    currency='USD'
+                )
+
+                
+
+                # Create order based on market hours
+                if is_market_hours:
+                    logger.info(f"Creating market order for {position.symbol}")
+                    order = MarketOrder(
+                        action=position.action,
+                        totalQuantity=position.quantity,
+                        tif='GTC'
+                    )
+                else:
+                    logger.info(f"Creating limit order for {position.symbol}")
+                    # Get current market price from IB
+                    
+                     # Wait for price data
+                    limit_price = position.price
+                    if not limit_price:
+                        raise ValueError(f"Could not get market price for {position.symbol}")
+                        
+                    order = LimitOrder(
+                        action=position.action,
+                        totalQuantity=position.quantity,
+                        lmtPrice=round(limit_price, 2),
+                        tif='GTC',
+                        outsideRth=True
+                    )
+
+                # Place the order
+                trade = ib.placeOrder(contract, order)
+                logger.info(f"Order placed for {position.symbol}: {trade}")
+
+                # Create PositionResponse
+                position_response = PositionResponse(
+                    symbol=position.symbol,
+                    position=float(position.quantity),
+                    market_price=trade.orderStatus.lastFillPrice or 0.0,
+                    market_value=(trade.orderStatus.lastFillPrice or 0.0) * position.quantity,
+                    average_cost=trade.orderStatus.avgFillPrice or 0.0,
+                    unrealized_pnl=0.0,  # Will be updated when filled
+                    realized_pnl=0.0,    # Will be updated when filled
+                    account=trade.order.account or "",
+                    exchange=contract.exchange,
+                    timestamp=current_time,
+                    
+                )
+                
+                response_data.append(position_response)
+
+            except Exception as e:
+                logger.error(f"Error processing order for {position.symbol}: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Error processing order for {position.symbol}: {str(e)}"
+                )
+
+        logger.info("All orders processed successfully")
+        return response_data
+
+    except Exception as e:
+        logger.error(f"Error processing positions request: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error processing positions request: {str(e)}"
+        )
 
 @app.post("/proxy/webhook")
 async def proxy_webhook(webhook_data: WebhookRequest):
     try:
-        logger.info("Proxying webhook request")
-        webhook_url = "https://tv.porenta.us/webhook"
+        logger.info("Received webhook request")
+        logger.debug(f"Incoming webhook data: {webhook_data.dict()}")
         
-        # Forward the request to the webhook
+        webhook_url = "https://tv.porenta.us/webhook"
+        logger.info(f"Forwarding to webhook URL: {webhook_url}")
+        
+        # Convert webhook data to dictionary and add the key
+        webhook_dict = webhook_data.dict()
+        webhook_dict["key"] = tbotKey
+        logger.info(f"Added key to webhook data, ticker: {webhook_dict.get('ticker')}")
+        logger.debug(f"Modified webhook data: {webhook_dict}")
+        
+        # Forward the request to the webhook with proper headers
+        logger.info("Sending POST request to webhook")
         response = requests.post(
             webhook_url,
-            json=webhook_data.dict(),
-            headers={'Content-Type': 'application/json'}
+            headers={'Content-Type': 'application/json'},
+            json=webhook_dict
         )
         
-        return Response(
+        logger.info(f"Webhook response status code: {response.status_code}")
+        logger.debug(f"Webhook response content: {response.content}")
+        
+        # Return the forwarded response with CORS headers
+        cors_response = Response(
             content=response.content,
             status_code=response.status_code,
-            headers=dict(response.headers)
+            headers={
+                "Access-Control-Allow-Origin": "https://portfolio.porenta.us",
+                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type",
+            },
         )
+        logger.info("Returning response to client")
+        return cors_response
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error in proxy webhook: {str(e)}")
+        raise HTTPException(status_code=503, detail="Error connecting to webhook service")
     except Exception as e:
-        logger.error(f"Error in proxy webhook: {str(e)}")
+        logger.error(f"Unexpected error in proxy webhook: {str(e)}")
+        logger.exception("Full exception details:")
         raise HTTPException(status_code=500, detail=str(e))
+
+from fastapi import FastAPI, HTTPException
+from ib_async import IB
+import logging
+
+logger = logging.getLogger(__name__)
+ib = IB()
+
+@app.get("/api/ib-data")
+async def get_ib_data():
+    """
+    Fetch positions, PnL, and trades using valid ib_async.IB methods.
+    """
+    logger.info("Fetching IB data")
+    if not ib.isConnected():
+        logger.error("IB Gateway not connected")
+        raise HTTPException(status_code=503, detail="IB Gateway not connected.")
+
+    try:
+        # Fetch positions
+        logger.debug("Fetching positions")
+        positions = await ib.reqPositionsAsync()
+        positions_data = [
+            {
+                "account": pos.account,
+                "contract": pos.contract.symbol,
+                "position": pos.position,
+                "avgCost": pos.avgCost,
+                "marketPrice": pos.marketPrice if hasattr(pos, 'marketPrice') else None,
+                "marketValue": pos.marketValue if hasattr(pos, 'marketValue') else None
+            }
+            for pos in positions
+        ]
+        logger.debug(f"Found {len(positions_data)} positions")
+
+        # Get PnL data - using existing subscriptions if available
+        logger.debug("Fetching PnL data")
+        pnl_items = ib.pnl()
+        if not pnl_items:
+            # If no subscriptions exist, create one
+            logger.debug("No existing PnL subscription found, creating new one")
+              # This ensures we have account info
+            accounts = ib.managedAccounts()
+            account = accounts[0] if accounts else ""
+            await ib.reqAccountUpdatesAsync(account)
+            pnl = ib.reqPnL(account)
+            pnl_items = [pnl] if pnl else []
+
+        pnl_data = [
+            {
+                "account": pnl.account,
+                "dailyPnL": pnl.dailyPnL,
+                "unrealizedPnL": pnl.unrealizedPnL,
+                "realizedPnL": pnl.realizedPnL,
+            }
+            for pnl in pnl_items
+        ]
+        logger.debug(f"Found {len(pnl_data)} PnL entries")
+
+        # Fetch open orders
+        logger.debug("Fetching open orders")
+        trades = await ib.reqAllOpenOrdersAsync()
+        trades_data = [
+            {
+                "tradeId": trade.order.orderId,
+                "contract": trade.contract.symbol,
+                "action": trade.order.action,
+                "quantity": trade.order.totalQuantity,
+                "status": trade.orderStatus.status,
+                "orderType": trade.order.orderType,
+                "limitPrice": trade.order.lmtPrice if hasattr(trade.order, 'lmtPrice') else None,
+                "avgFillPrice": trade.orderStatus.avgFillPrice,
+                "filled": trade.orderStatus.filled
+            }
+            for trade in trades
+        ]
+        logger.debug(f"Found {len(trades_data)} open orders")
+
+        response_data = {
+            "positions": positions_data,
+            "pnl": pnl_data,
+            "trades": trades_data,
+        }
+        
+        logger.info("Successfully fetched all IB data")
+        return response_data
+
+    except Exception as e:
+        logger.error(f"Error fetching IB data: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching data: {str(e)}")
 
 def str2bool(value: str) -> bool:
     """Convert string to boolean, accepting various common string representations"""

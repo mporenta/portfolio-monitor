@@ -117,7 +117,7 @@ ARG TBOT_TRADINGBOAT_GIT_REPO=https://github.com/mporenta/tbot-tradingboat.git
 ARG TBOT_TRADINGBOAT_GIT_BRANCH=main
 
 ARG TBOT_TVWB_GIT_REPO=https://github.com/mporenta/tradingview-webhooks-bot.git
-ARG TBOT_TVWB_GIT_BRANCH=main
+ARG TBOT_TVWB_GIT_BRANCH=key
 
 # Add GitHub to known hosts for SSH, copy SSH keys, and clone repository conditionally
 COPY ./tbot/* /home/tbot/.ssh/
@@ -151,13 +151,13 @@ RUN pip install -e .
 RUN chmod a+x /home/tbot/develop/github/tbot-tradingboat/tbottmux/*.sh
 
 # Add installation of official TWS API into /home/tbot/develop/github/tbot-tradingboat
-
+WORKDIR /home/tbot/develop/github/tbot-tradingboat
 # Define environment variables for the TWS API version
 ENV TWS_API_VERSION=1019.04
 
 # Download and install the TWS API
-WORKDIR /home/tbot/develop/github/tbot-tradingboat
-
+#WORKDIR /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
+#COPY ./tbot_order.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
 # Download, extract, and prepare the TWS API
 RUN wget https://interactivebrokers.github.io/downloads/twsapi_macunix.${TWS_API_VERSION}.zip \
   && unzip twsapi_macunix.${TWS_API_VERSION}.zip -d twsapi \
@@ -169,15 +169,17 @@ RUN chmod -R 755 /home/tbot/develop/github/tbot-tradingboat/twsapi
 
 RUN git clone -b ${TBOT_TVWB_GIT_BRANCH} ${TBOT_TVWB_GIT_REPO} /home/tbot/develop/github/tradingview-webhooks-bot
 WORKDIR /home/tbot/develop/github/tradingview-webhooks-bot/src
+COPY ./event.py /home/tbot/develop/github/tradingview-webhooks-bot/src/components/events/base/event.py
 
 COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
 
 # Copy the local version of orders into the container
 #COPY ./order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/order_base.html
 #COPY ./order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/orders.html
-#COPY ./main.py /home/tbot/develop/github/tradingview-webhooks-bot/src/main.py
+COPY ./flask/main.py /home/tbot/develop/github/tradingview-webhooks-bot/src/main.py
 #COPY ./tbot_dashboard.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/tbot_dashboard.html
 #COPY ./service_error.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/service_error.html
+COPY ./favicons/favicon.ico /home/tbot/develop/github/tradingview-webhooks-bot/src/static/img/favicon.ico
 
 # Install dependencies in the virtual environment
 RUN pip install -r requirements.txt

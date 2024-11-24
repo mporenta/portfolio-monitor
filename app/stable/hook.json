@@ -1,0 +1,1 @@
+{"timestamp":1732377832380,"ticker":"IONQ","currency":"USD","timeframe":"S","clientId":1,"contract":"stock","orderRef":"close_all","direction":"strategy.close_all","metrics":[{"name":"entry.limit","value":0},{"name":"entry.stop","value":0},{"name":"exit.limit","value":0},{"name":"exit.stop","value":0},{"name":"qty","value":-10000000000},{"name":"price","value":5}]}

@@ -26,6 +26,8 @@ COPY ./requirements.txt /app/portfolio-monitor/src/requirements.txt
 COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
 COPY ./main.py /app/portfolio-monitor/src/main.py
 COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
+COPY ./favicons/favicon.ico  /app/portfolio-monitor/static/favicon.ico
+
 COPY ./tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashboard.html
 COPY ./style.css /app/portfolio-monitor/static/style.css
 
