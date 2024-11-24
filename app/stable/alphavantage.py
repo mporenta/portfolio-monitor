@@ -16,7 +16,7 @@ import logging
 from typing import Optional, List
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
 log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
-api_key = 'LX4G4DLW7MKJ9N37'
+api_key = 'key'
 logging.basicConfig(
     level=getattr(logging, log_level),
     format='%(asctime)s - %(levelname)s - %(message)s',
