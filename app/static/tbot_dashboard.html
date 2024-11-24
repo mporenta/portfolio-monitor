@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PnL Dashboard</title>
+  
+  <!-- External CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <!-- External Dependencies -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
+  <!-- DataTables -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.css">
+  <link rel="stylesheet" type="text/css"
+    href="https://cdn.datatables.net/responsive/2.4.0/css/responsive.dataTables.min.css">
+  <script type="text/javascript" src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript"
+    src="https://cdn.datatables.net/responsive/2.4.0/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
+
+  <!-- Custom JavaScript -->
+  <script src="/static/js/dashboard.js"></script>
+</head>
+
+<body>
+  <section class="container">
+    <div class="row justify-content-center">
+      <ul class="nav nav-pills">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/alerts">Alerts</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/orders">Orders</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/tbot">Tbot</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/errors">Errors</a>
+        </li>
+      </ul>
+    </div>
+  </section>
+  <div class="dashboard-container">
+    <h1>Trading Account Dashboard</h1>
+
+    <!-- Refresh button container -->
+    <div class="refresh-container">
+      <button class="refresh-button" onclick="refreshData()">Refresh Data</button>
+    </div>
+
+    <div class="summary-panel">
+      <!-- Summary metrics -->
+      <div class="metric-card">
+        <div class="metric-label">Daily P&L</div>
+        <div id="daily-pnl" class="metric-value">$0.00</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Unrealized P&L</div>
+        <div id="unrealized-pnl" class="metric-value">$0.00</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Realized P&L</div>
+        <div id="realized-pnl" class="metric-value">$0.00</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Net Liquidation</div>
+        <div id="net-liquidation" class="metric-value">$0.00</div>
+      </div>
+    </div>
+    <div class="positions-container">
+      <h2>Recent Alerts</h2>
+      <table id="alerts-table" class="display responsive nowrap" width="100%">
+        <thead>
+          <tr>
+            <th>TV Webhook Time</th>
+            <th>TBOT Time</th>
+            <th>Status</th>
+            <th>Direction</th>
+            <th>Ticker</th>
+            <th>Order Ref</th>
+            <th>Timeframe</th>
+            <th>Qty</th>
+            <th>Entry Limit</th>
+            <th>Entry Stop</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Active positions table -->
+    <div class="positions-container">
+      <h2>Active Positions</h2>
+      <table id="active-positions" class="display responsive nowrap" width="100%">
+        <thead>
+          <tr>
+            <th>Action</th> <!-- New column -->
+            <th>Symbol</th>
+            <th>Position</th>
+            <th>Market Price</th>
+            <th>Market Value</th>
+            <th>Average Cost</th>
+            <th>Unrealized P&L</th>
+            <th>Exchange</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="positions-container">
+    <h2>Today's Trades</h2>
+    <table id="trades-table" class="display responsive nowrap" width="100%">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Symbol</th>
+          <th>Action</th>
+          <th>Quantity</th>
+          <th>Price</th>
+          <th>Commission</th>
+          <th>Realized P&L</th>
+          <th>Account</th>
+          <th>Order Ref</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+  <div class="positions-container">
+    <h2>Past Trades</h2>
+    <table id="past-trades-table" class="display responsive nowrap" width="100%">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Symbol</th>
+          <th>Action</th>
+          <th>Quantity</th>
+          <th>Price</th>
+          <th>Commission</th>
+          <th>Realized P&L</th>
+          <th>Account</th>
+          <th>Order Ref</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+ 
+
+</html>
