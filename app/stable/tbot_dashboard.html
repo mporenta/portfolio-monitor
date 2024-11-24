@@ -9,11 +9,20 @@
   <title>PnL Dashboard</title>
 
   <!-- jQuery and jQuery UI -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-  <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
-
 
   <!-- DataTables -->
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.css">
@@ -22,10 +31,56 @@
   <script type="text/javascript" src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
   <script type="text/javascript"
     src="https://cdn.datatables.net/responsive/2.4.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
 
+  <script>
+    // Format timestamps in Denver timezone
+    document.addEventListener('DOMContentLoaded', () => {
+      // Override the default rendering for these columns in any DataTable
+      $.fn.dataTable.render.denverTime = function () {
+        return function (data, type, row) {
+          if (type === 'display') {
+            return moment(data).tz('America/Denver').format('HH:mm:ss.SSS');
+          }
+          return data;
+        };
+      };
 
+      // Override the default rendering for full datetime format
+      $.fn.dataTable.render.denverDateTime = function () {
+        return function (data, type, row) {
+          if (type === 'display') {
+            return moment(data).tz('America/Denver').format('MM-DD-YYYY hh:mm:ss.SSS A');
+          }
+          return data;
+        };
+      };
 
+      // Find existing DataTables and update their column renderers
+      const tables = $.fn.dataTable.tables({ api: true });
+      tables.each(function () {
+        const table = $(this).DataTable();
+        const tableId = $(this).attr('id');
 
+        // Get column indexes
+        table.columns().every(function () {
+          const columnData = this.dataSrc();
+
+          if (['trade_time', 'tv_timestamp', 'uniquekey'].includes(columnData)) {
+            const renderer = tableId === 'past-trades-table' ?
+              $.fn.dataTable.render.denverDateTime() :
+              $.fn.dataTable.render.denverTime();
+
+            this.render(renderer);
+          }
+        });
+
+        // Redraw table with new renderers
+        table.draw();
+      });
+    });
+  </script>
   <!-- Custom styles -->
   <style>
     body {
@@ -543,6 +598,27 @@
 </head>
 
 <body>
+  <section class="container">
+    <div class="row justify-content-center">
+      <ul class="nav nav-pills">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/alerts">Alerts</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/orders">Orders</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/tbot">Tbot</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tv.porenta.us/errors">Errors</a>
+        </li>
+      </ul>
+    </div>
+  </section>
   <div class="dashboard-container">
     <h1>Trading Account Dashboard</h1>
 
@@ -569,6 +645,28 @@
         <div class="metric-label">Net Liquidation</div>
         <div id="net-liquidation" class="metric-value">$0.00</div>
       </div>
+    </div>
+    <div class="positions-container">
+      <h2>Recent Alerts</h2>
+      <table id="alerts-table" class="display responsive nowrap" width="100%">
+        <thead>
+          <tr>
+            <th>TV Webhook Time</th>
+            <th>TBOT Time</th>
+            <th>Status</th>
+            <th>Direction</th>
+            <th>Ticker</th>
+            <th>Order Ref</th>
+            <th>Timeframe</th>
+            <th>Qty</th>
+            <th>Entry Limit</th>
+            <th>Entry Stop</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
     </div>
 
     <!-- Active positions table -->
@@ -638,7 +736,6 @@
 
   <!-- JavaScript -->
   <script>
- 
     document.addEventListener('DOMContentLoaded', () => {
       const activePositionsTable = new DataTable('#active-positions', {
         responsive: true,
@@ -679,6 +776,71 @@
           { data: 'exchange' }
         ]
       });
+      // Initialize alerts table
+      const alertsTable = new DataTable('#alerts-table', {
+        responsive: true,
+        order: [[0, 'desc']], // Sort by time descending
+        deferRender: true,
+        processing: true,
+
+        columns: [
+          {
+            data: 'tv_timestamp',
+            render: (data) => {
+              const date = moment.tz(data, 'YYYY-MM-DD HH:mm:ss.SSS', 'UTC').tz('America/Denver');
+              return `<span class="trade-time">${date.format('MM-DD-YYYY h:mm:ss.SSS A')}</span>`;
+            }
+          },
+          {
+            data: 'uniquekey',
+            render: (data) => {
+              const date = moment.tz(data, 'YYYY-MM-DD HH:mm:ss.SSS', 'UTC').tz('America/Denver');
+              return `<span class="trade-time">${date.format('MM-DD-YYYY h:mm:ss.SSS A')}</span>`;
+            }
+          },
+
+
+          {
+            data: 'alertstatus',
+            render: (data) => `<span class="position-status ${data === 'SUBMITTED' ? 'position-active' : ''}">${data}</span>`
+          },
+          {
+            data: 'direction',
+            render: (data) => {
+              const isEntry = data.includes('entry');
+              const isBuy = data.includes('long');
+              const color = isEntry ? (isBuy ? 'positive' : 'negative') : '';
+              return `<span class="${color}">${data}</span>`;
+            }
+          },
+          { data: 'ticker' },
+          { data: 'orderref' },
+          { data: 'timeframe' },
+          {
+            data: 'qty',
+            render: (data) => data === -10000000000 ? 'ALL' : data
+          },
+          {
+            data: 'entrylimit',
+            render: (data) => data ? `$${parseFloat(data).toFixed(2)}` : '-'
+          },
+          {
+            data: 'entrystop',
+            render: (data) => data ? `$${parseFloat(data).toFixed(2)}` : '-'
+          },
+          {
+            data: 'tv_price',
+            render: (data) => `$${parseFloat(data).toFixed(2)}`
+          }
+        ],
+        createdRow: function (row, data, dataIndex) {
+          if (data.direction.includes('close_all') || data.direction.includes('cancel_all')) {
+            $(row).addClass('trade-sell');
+          } else if (data.direction.includes('entrylong')) {
+            $(row).addClass('trade-buy');
+          }
+        }
+      });
 
       const tradesTable = new DataTable('#trades-table', {
         responsive: true,
@@ -691,6 +853,53 @@
             render: (data) => {
               const date = new Date(data);
               return `<span class="trade-time">${date.toLocaleTimeString()}</span>`;
+            }
+          },
+          { data: 'symbol' },
+          {
+            data: 'action',
+            render: (data) => `<span class="${data === 'BUY' ? 'positive' : 'negative'}">${data}</span>`
+          },
+          { data: 'quantity' },
+          {
+            data: 'fill_price',
+            render: (data) => `$${parseFloat(data).toFixed(2)}`
+          },
+          {
+            data: 'commission',
+            render: (data) => data ? `$${parseFloat(data).toFixed(2)}` : '-'
+          },
+          {
+            data: 'realized_pnl',
+            render: (data) => {
+              if (!data) return '-';
+              const value = parseFloat(data);
+              const color = value >= 0 ? 'positive' : 'negative';
+              return `<span class="${color}">$${value.toFixed(2)}</span>`;
+            }
+          },
+          { data: 'exchange' },
+          { data: 'order_ref' },
+          {
+            data: 'status',
+            render: (data) => `<span class="position-status ${data === 'Filled' ? 'position-active' : ''}">${data}</span>`
+          }
+        ],
+        createdRow: function (row, data, dataIndex) {
+          $(row).addClass(`trade-${data.action.toLowerCase()}`);
+        }
+      });
+      const pastTradesTable = new DataTable('#past-trades-table', {
+        responsive: true,
+        order: [[0, 'desc']], // Sort by time descending
+        deferRender: true,
+        processing: true,
+        columns: [
+          {
+            data: 'trade_time',
+            render: (data) => {
+              const date = new Date(data);
+              return `<span class="trade-time">${date.toLocaleString()}</span>`; // Show full date and time for past trades
             }
           },
           { data: 'symbol' },
@@ -744,40 +953,39 @@
           // Determine action and quantity based on position
           const quantity = Math.abs(rowData.position);
           const action = rowData.position > 0 ? 'SELL' : 'BUY';
+          const marketPrice = rowData.market_price;
 
           const positionToClose = {
             symbol: rowData.symbol,
             action: action,
             quantity: quantity
           };
-          const webhookPayload = {
-            timestamp: Date.now(),
-            ticker: rowData.symbol,
-            currency: "USD",
-            timeframe: "S",
-            clientId: 1, // Use the dynamic key
-            contract: "stock",
-            orderRef: "close_all",
-            direction: "strategy.close_all",
-            metrics: [
-              { name: "entry.limit", value: 0 },
-              { name: "entry.stop", value: 0 },
-              { name: "exit.limit", value: 0 },
-              { name: "exit.stop", value: 0 },
-              { name: "qty", value: -10000000000 },
-              { name: "price", value: 5.00 }
-            ]
-          };
 
           // Call both endpoints asynchronously
           await Promise.all([
             // Original webhook call
-            // In your close position button handler, update the webhook JSON:
-            fetch("/proxy/webhook", {
+            fetch("https://tv.porenta.us/webhook", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(webhookPayload)
-
+              body: JSON.stringify({
+                timestamp: Date.now(),
+                ticker: rowData.symbol,
+                currency: "USD",
+                timeframe: "S",
+                clientId: 1,
+                key: "mrsprinkles",
+                contract: "stock",
+                orderRef: "close_all",
+                direction: "strategy.close_all",
+                metrics: [
+                  { name: "entry.limit", value: 0 },
+                  { name: "entry.stop", value: 0 },
+                  { name: "exit.limit", value: 0 },
+                  { name: "exit.stop", value: 0 },
+                  { name: "qty", value: -10000000000 },
+                  { name: "price", value: 5.00 }
+                ]
+              })
             }),
 
             // New close_positions endpoint call
@@ -812,6 +1020,28 @@
           }, 3000);
         }
       });
+
+      async function updateAlerts() {
+        try {
+          const currentTime = new Date().getTime();
+          const response = await fetch(`https://tv.porenta.us/alerts/data?_=${currentTime}`);
+          const result = await response.json();
+
+          if (result.data) {
+            const today = moment().tz('America/Denver').startOf('day');
+
+            const filteredData = result.data.filter(alert => {
+              const date = moment.tz(alert.tv_timestamp, 'YYYY-MM-DD HH:mm:ss.SSS', 'UTC').tz('America/Denver');
+              return date.isSame(today, 'day');
+            });
+
+            alertsTable.clear();
+            alertsTable.rows.add(filteredData).draw();
+          }
+        } catch (error) {
+          console.error('Error fetching alerts data:', error);
+        }
+      }
 
 
       async function updatePositions() {
@@ -871,7 +1101,8 @@
           const response = await fetch('/api/trades');
           const result = await response.json();
           if (result.status === 'success') {
-            const today = new Date().setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
             // Format trades data to handle null values
             const formatTrade = trade => ({
@@ -883,16 +1114,29 @@
               trade_time: trade.trade_time || new Date().toISOString()
             });
 
-            // Filter and format trades
-            const trades = result.data.trades;
-            const todayTrades = trades.filter(trade => {
-              const tradeDate = new Date(trade.trade_time).setHours(0, 0, 0, 0);
-              return tradeDate === today;
-            }).map(formatTrade);
+            // Split trades into today and past
+            const trades = result.data.trades.map(formatTrade);
+            const todayTrades = [];
+            const pastTrades = [];
+
+            trades.forEach(trade => {
+              const tradeDate = new Date(trade.trade_time);
+              tradeDate.setHours(0, 0, 0, 0);
+
+              if (tradeDate.getTime() === today.getTime()) {
+                todayTrades.push(trade);
+              } else {
+                pastTrades.push(trade);
+              }
+            });
 
             // Update today's trades table
             tradesTable.clear();
             tradesTable.rows.add(todayTrades).draw();
+
+            // Update past trades table
+            pastTradesTable.clear();
+            pastTradesTable.rows.add(pastTrades).draw();
 
           } else {
             console.error('Error fetching trades data:', result.message);
@@ -906,6 +1150,7 @@
         updatePositions();
         updatePnlData();
         updateTrades();
+        updateAlerts();
       };
 
       // Initial data load
@@ -916,6 +1161,6 @@
     });
   </script>
 
-</body>
+
 
 </html>
