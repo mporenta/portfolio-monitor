@@ -28,11 +28,11 @@ COPY ./main.py /app/portfolio-monitor/src/main.py
 COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
 
 #Copy static web page files
-COPY ./static/favicon.ico  /app/portfolio-monitor/static/img/favicon.ico
+COPY ./static/img/favicon.ico  /app/portfolio-monitor/static/img/favicon.ico
 
-COPY .static/tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashboard.html
-COPY ./static/dashboard.js /app/portfolio-monitor/static/css/dashboard.js
-COPY ./static/style.css /app/portfolio-monitor/static/css/style.css
+COPY ./templates/tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashboard.html
+COPY ./static/js/dashboard.js /app/portfolio-monitor/static/js/dashboard.js
+COPY ./static/css/style.css /app/portfolio-monitor/static/css/style.css
 
 COPY ./fast_api.sh /app/portfolio-monitor/src/fast_api.sh
 
