@@ -23,12 +23,6 @@
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
-  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
-
 
   <!-- DataTables -->
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.css">
@@ -37,6 +31,8 @@
   <script type="text/javascript" src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
   <script type="text/javascript"
     src="https://cdn.datatables.net/responsive/2.4.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
 
   <script>
     // Format timestamps in Denver timezone
@@ -740,7 +736,6 @@
 
   <!-- JavaScript -->
   <script>
-
     document.addEventListener('DOMContentLoaded', () => {
       const activePositionsTable = new DataTable('#active-positions', {
         responsive: true,
@@ -963,37 +958,34 @@
           const positionToClose = {
             symbol: rowData.symbol,
             action: action,
-            quantity: quantity,
-            price: marketPrice
-          };
-          const webhookPayload = {
-            timestamp: Date.now(),
-            ticker: rowData.symbol,
-            currency: "USD",
-            timeframe: "S",
-            clientId: 1, // Use the dynamic key
-            contract: "stock",
-            orderRef: "close_all",
-            direction: "strategy.close_all",
-            metrics: [
-              { name: "entry.limit", value: 0 },
-              { name: "entry.stop", value: 0 },
-              { name: "exit.limit", value: 0 },
-              { name: "exit.stop", value: 0 },
-              { name: "qty", value: -10000000000 },
-              { name: "price", value: 5.00 }
-            ]
+            quantity: quantity
           };
 
           // Call both endpoints asynchronously
           await Promise.all([
             // Original webhook call
-            // In your close position button handler, update the webhook JSON:
-            fetch("/proxy/webhook", {
+            fetch("https://tv.porenta.us/webhook", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(webhookPayload)
-
+              body: JSON.stringify({
+                timestamp: Date.now(),
+                ticker: rowData.symbol,
+                currency: "USD",
+                timeframe: "S",
+                clientId: 1,
+                key: "mrsprinkles",
+                contract: "stock",
+                orderRef: "close_all",
+                direction: "strategy.close_all",
+                metrics: [
+                  { name: "entry.limit", value: 0 },
+                  { name: "entry.stop", value: 0 },
+                  { name: "exit.limit", value: 0 },
+                  { name: "exit.stop", value: 0 },
+                  { name: "qty", value: -10000000000 },
+                  { name: "price", value: 5.00 }
+                ]
+              })
             }),
 
             // New close_positions endpoint call

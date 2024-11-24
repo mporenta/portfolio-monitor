@@ -36,7 +36,8 @@ services:
       TBOT_TELEGRAM_CHAT_ID: "${TBOT_TELEGRAM_CHAT_ID:-}"
       TBOT_NGROK: "${TBOT_NGROK:-}"
       TBOT_PROFILER: "${TBOT_PROFILER:-False}"
-  
+   
+    
     ports:
       - "127.0.0.1:4001:4001"
       - "127.0.0.1:4002:4002"

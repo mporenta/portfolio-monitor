@@ -159,12 +159,7 @@ ENV TWS_API_VERSION=1019.04
 #WORKDIR /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
 #COPY ./tbot_order.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
 # Download, extract, and prepare the TWS API
-RUN wget https://interactivebrokers.github.io/downloads/twsapi_macunix.${TWS_API_VERSION}.zip \
-  && unzip twsapi_macunix.${TWS_API_VERSION}.zip -d twsapi \
-  && rm twsapi_macunix.${TWS_API_VERSION}.zip
 
-# Ensure permissions are correct
-RUN chmod -R 755 /home/tbot/develop/github/tbot-tradingboat/twsapi
 
 
 RUN git clone -b ${TBOT_TVWB_GIT_BRANCH} ${TBOT_TVWB_GIT_REPO} /home/tbot/develop/github/tradingview-webhooks-bot
