@@ -125,19 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
           },
     {data: 'ticker' },
     {data: 'orderref' },
-    {data: 'timeframe' },
-    {
-        data: 'qty',
-            render: (data) => data === -10000000000 ? 'ALL' : data
-          },
-    {
-        data: 'entrylimit',
-            render: (data) => data ? `$${parseFloat(data).toFixed(2)}` : '-'
-          },
-    {
-        data: 'entrystop',
-            render: (data) => data ? `$${parseFloat(data).toFixed(2)}` : '-'
-          },
+   
+  
+    
     {
         data: 'tv_price',
             render: (data) => `$${parseFloat(data).toFixed(2)}`

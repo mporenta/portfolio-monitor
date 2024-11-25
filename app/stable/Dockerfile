@@ -174,7 +174,7 @@ COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons
 COPY ./flask/main.py /home/tbot/develop/github/tradingview-webhooks-bot/src/main.py
 #COPY ./tbot_dashboard.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/tbot_dashboard.html
 #COPY ./service_error.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/service_error.html
-COPY ./favicons/favicon.ico /home/tbot/develop/github/tradingview-webhooks-bot/src/static/img/favicon.ico
+COPY ./static/img/favicon.ico  /home/tbot/develop/github/tradingview-webhooks-bot/src/static/img/favicon.ico
 
 # Install dependencies in the virtual environment
 RUN pip install -r requirements.txt
