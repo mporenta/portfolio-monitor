@@ -22,10 +22,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 ib = IB()
 portfolio_items = ib.portfolio()
-load_dotenv()
+
 tbotKey = os.getenv("TVWB_UNIQUE_KEY", "WebhookReceived:ac1a2d")
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
-IB_CLIENT_ID = 40
+FASTAPI_IB_CLIENT_ID = int(os.getenv('FASTAPI_IB_CLIENT_ID', '1111'))
 IB_HOST = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  
 IB_PORT = int(os.getenv('TBOT_IBKR_PORT', '4002'))
 
@@ -98,7 +98,7 @@ class PositionResponse(BaseModel):
     account: str
     exchange: str
     timestamp: datetime
-    permId: int
+    
 
     class Config:
         from_attributes = True
@@ -124,10 +124,12 @@ class WebhookRequest(BaseModel):
 # Initialize FastAPI app with lifespan
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Loading .env in lifespan...")
+    load_dotenv()
     # Startup
     try:
         logger.info("Connecting to IB Gateway...")
-        await ib.connectAsync(IB_HOST, IB_PORT, IB_CLIENT_ID)
+        await ib.connectAsync(IB_HOST, IB_PORT, FASTAPI_IB_CLIENT_ID)
         logger.info("Connected to IB Gateway.")
     except Exception as e:
         logger.error(f"Failed to connect to IB Gateway: {e}")
@@ -301,7 +303,7 @@ async def place_order(positions_request: PositionsRequest):
                     logger.info(f"Creating market order for {position.symbol}")
                     order = MarketOrder(
                         action=position.action,
-                        totalQuantity=position.quantity,
+                        totalQuantity=-10000000000,
                         tif='GTC'
                     )
                 else:
@@ -315,7 +317,7 @@ async def place_order(positions_request: PositionsRequest):
                         
                     order = LimitOrder(
                         action=position.action,
-                        totalQuantity=position.quantity,
+                        totalQuantity=-10000000000,
                         lmtPrice=round(limit_price, 2),
                         tif='GTC',
                         outsideRth=True
@@ -413,89 +415,166 @@ import logging
 logger = logging.getLogger(__name__)
 ib = IB()
 
-@app.get("/api/ib-data")
+async def ensure_ib_connection():
+    """Ensure IB connection is active, reconnect if needed"""
+    try:
+        if not ib.isConnected():
+            logger.info("IB not connected, attempting to reconnect...")
+            await ib.connectAsync(IB_HOST, IB_PORT, FASTAPI_IB_CLIENT_ID)
+            # Wait a brief moment for connection to stabilize
+            await asyncio.sleep(1)
+            
+            if not ib.isConnected():
+                raise ConnectionError("Failed to establish IB connection")
+            logger.info("Successfully reconnected to IB")
+        return True
+    except Exception as e:
+        logger.error(f"Connection error: {str(e)}")
+        raise HTTPException(status_code=503, detail="IB Gateway connection failed")
+
+@app.get("/api/ib-data", response_model=Dict[str, List[dict]])
 async def get_ib_data():
     """
-    Fetch positions, PnL, and trades using valid ib_async.IB methods.
+    Fetch positions, PnL, and trades with robust connection handling.
     """
-    logger.info("Fetching IB data")
-    if not ib.isConnected():
-        logger.error("IB Gateway not connected")
-        raise HTTPException(status_code=503, detail="IB Gateway not connected.")
-
+    logger.info("Starting IB data fetch")
+    
     try:
-        # Fetch positions
-        logger.debug("Fetching positions")
-        positions = await ib.reqPositionsAsync()
-        positions_data = [
-            {
-                "account": pos.account,
-                "contract": pos.contract.symbol,
-                "position": pos.position,
-                "avgCost": pos.avgCost,
-                "marketPrice": pos.marketPrice if hasattr(pos, 'marketPrice') else None,
-                "marketValue": pos.marketValue if hasattr(pos, 'marketValue') else None
-            }
-            for pos in positions
-        ]
-        logger.debug(f"Found {len(positions_data)} positions")
+        # Ensure connection is active
+        await ensure_ib_connection()
+        
+        # Initialize response data
+        positions_data = []
+        pnl_data = []
+        trades_data = []
+        
+        # Fetch positions with retry logic
+        max_retries = 3
+        retry_delay = 2  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                async with asyncio.timeout(5):  # Reduced timeout
+                    if not ib.isConnected():
+                        await ensure_ib_connection()
+                    
+                    # Request positions
+                    positions = await ib.reqPositionsAsync()
+                    await asyncio.sleep(0.5)  # Allow time for data to arrive
+                    
+                    positions_data = [
+                        {
+                            "account": pos.account,
+                            "contract": pos.contract.symbol,
+                            "position": pos.position,
+                            "avgCost": pos.avgCost,
+                            "marketPrice": getattr(pos, 'marketPrice', None),
+                            "marketValue": getattr(pos, 'marketValue', None)
+                        }
+                        for pos in positions
+                    ]
+                    logger.debug(f"Successfully fetched {len(positions_data)} positions")
+                    break  # Success, exit retry loop
+                    
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout on attempt {attempt + 1} of {max_retries}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    continue
+                else:
+                    logger.error("All position fetch attempts failed")
+            except Exception as e:
+                logger.error(f"Error fetching positions: {str(e)}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    continue
+                break
 
-        # Get PnL data - using existing subscriptions if available
-        logger.debug("Fetching PnL data")
-        pnl_items = ib.pnl()
-        if not pnl_items:
-            # If no subscriptions exist, create one
-            logger.debug("No existing PnL subscription found, creating new one")
-              # This ensures we have account info
-            accounts = ib.managedAccounts()
-            account = accounts[0] if accounts else ""
-            await ib.reqAccountUpdatesAsync(account)
-            pnl = ib.reqPnL(account)
-            pnl_items = [pnl] if pnl else []
+        # Fetch PnL data with retry logic
+        for attempt in range(max_retries):
+            try:
+                async with asyncio.timeout(5):
+                    if not ib.isConnected():
+                        await ensure_ib_connection()
+                    
+                    accounts = ib.managedAccounts()
+                    if accounts:
+                        account = accounts[0]
+                        await ib.reqAccountUpdatesAsync(account)
+                        await asyncio.sleep(0.5)  # Allow time for data to arrive
+                        
+                        pnl = await ib.reqPnLAsync(account)
+                        if pnl:
+                            pnl_data = [{
+                                "account": account,
+                                "dailyPnL": getattr(pnl, 'dailyPnL', 0.0),
+                                "unrealizedPnL": getattr(pnl, 'unrealizedPnL', 0.0),
+                                "realizedPnL": getattr(pnl, 'realizedPnL', 0.0),
+                            }]
+                            logger.debug("Successfully fetched PnL data")
+                            break
+            except (asyncio.TimeoutError, Exception) as e:
+                logger.warning(f"PnL fetch attempt {attempt + 1} failed: {str(e)}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    continue
 
-        pnl_data = [
-            {
-                "account": pnl.account,
-                "dailyPnL": pnl.dailyPnL,
-                "unrealizedPnL": pnl.unrealizedPnL,
-                "realizedPnL": pnl.realizedPnL,
-            }
-            for pnl in pnl_items
-        ]
-        logger.debug(f"Found {len(pnl_data)} PnL entries")
+        # Fetch open orders with retry logic
+        for attempt in range(max_retries):
+            try:
+                async with asyncio.timeout(5):
+                    if not ib.isConnected():
+                        await ensure_ib_connection()
+                    
+                    trades = await ib.reqAllOpenOrdersAsync()
+                    await asyncio.sleep(0.5)  # Allow time for data to arrive
+                    
+                    trades_data = [
+                        {
+                            "tradeId": trade.order.orderId,
+                            "contract": trade.contract.symbol,
+                            "action": trade.order.action,
+                            "quantity": trade.order.totalQuantity,
+                            "status": trade.orderStatus.status,
+                            "orderType": trade.order.orderType,
+                            "limitPrice": getattr(trade.order, 'lmtPrice', None),
+                            "avgFillPrice": trade.orderStatus.avgFillPrice,
+                            "filled": trade.orderStatus.filled,
+                            "remaining": trade.orderStatus.remaining
+                        }
+                        for trade in trades
+                    ]
+                    logger.debug(f"Successfully fetched {len(trades_data)} open orders")
+                    break
+            except (asyncio.TimeoutError, Exception) as e:
+                logger.warning(f"Orders fetch attempt {attempt + 1} failed: {str(e)}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    continue
 
-        # Fetch open orders
-        logger.debug("Fetching open orders")
-        trades = await ib.reqAllOpenOrdersAsync()
-        trades_data = [
-            {
-                "tradeId": trade.order.orderId,
-                "contract": trade.contract.symbol,
-                "action": trade.order.action,
-                "quantity": trade.order.totalQuantity,
-                "status": trade.orderStatus.status,
-                "orderType": trade.order.orderType,
-                "limitPrice": trade.order.lmtPrice if hasattr(trade.order, 'lmtPrice') else None,
-                "avgFillPrice": trade.orderStatus.avgFillPrice,
-                "filled": trade.orderStatus.filled
-            }
-            for trade in trades
-        ]
-        logger.debug(f"Found {len(trades_data)} open orders")
-
-        response_data = {
+        response = {
             "positions": positions_data,
             "pnl": pnl_data,
             "trades": trades_data,
         }
         
-        logger.info("Successfully fetched all IB data")
-        return response_data
+        logger.info("Successfully completed IB data fetch")
+        return JSONResponse(
+            content=response,
+            status_code=200
+        )
 
     except Exception as e:
-        logger.error(f"Error fetching IB data: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error fetching data: {str(e)}")
-
+        logger.error(f"Error in get_ib_data: {str(e)}", exc_info=True)
+        # If we get here, something really went wrong
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Failed to fetch IB data",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 def str2bool(value: str) -> bool:
     """Convert string to boolean, accepting various common string representations"""
     value = value.lower()

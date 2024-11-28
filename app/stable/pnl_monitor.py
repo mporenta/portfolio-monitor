@@ -15,6 +15,8 @@ from time import sleep
 import logging
 from typing import Optional, List
 from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill, fetch_latest_positions_data
+load_dotenv()
+print(f"Global load of Dotenv {load_dotenv()}")
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
 log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
 logging.basicConfig(
@@ -181,8 +183,9 @@ class IBClient:
             
             #self.risk_amount = self.net_liquidation  * self.risk_percent
             self.risk_amount = 30000  * self.risk_percent
-            is_threshold_exceeded = self.daily_pnl >= self.risk_amount
-            
+            is_threshold_exceeded = self.daily_pnl <= self.risk_amount
+            print(f" jengo run is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl} <= {self.risk_amount}" )
+            self.logger.debug(f"is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl:,.2f}, <= risk_amount ${self.risk_amount:,.2f}")
             if is_threshold_exceeded:
                 self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} >= ${self.risk_amount:,.2f}")
                 self.closing_initiated = True
@@ -337,6 +340,10 @@ class IBClient:
                 return
                 
             sleep(2)  # Allow connection to stabilize
+            self.risk_amount = 30000  * self.risk_percent
+            print(f"jengo risk_amount ={self.risk_amount}")
+            is_threshold_exceeded = self.daily_pnl <= self.risk_amount
+            print(f" jengo run is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl} <= {self.risk_amount}" )
          
             self.subscribe_events()
             print("jengo calling on_pnl_update initial run...")

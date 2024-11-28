@@ -22,10 +22,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 ib = IB()
 portfolio_items = ib.portfolio()
-load_dotenv()
+
 tbotKey = os.getenv("TVWB_UNIQUE_KEY", "WebhookReceived:ac1a2d")
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
-IB_CLIENT_ID = 40
+FASTAPI_IB_CLIENT_ID = int(os.getenv('FASTAPI_IB_CLIENT_ID', '1111'))
 IB_HOST = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  
 IB_PORT = int(os.getenv('TBOT_IBKR_PORT', '4002'))
 
@@ -124,10 +124,12 @@ class WebhookRequest(BaseModel):
 # Initialize FastAPI app with lifespan
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Loading .env in lifespan...")
+    load_dotenv()
     # Startup
     try:
         logger.info("Connecting to IB Gateway...")
-        await ib.connectAsync(IB_HOST, IB_PORT, IB_CLIENT_ID)
+        await ib.connectAsync(IB_HOST, IB_PORT, FASTAPI_IB_CLIENT_ID)
         logger.info("Connected to IB Gateway.")
     except Exception as e:
         logger.error(f"Failed to connect to IB Gateway: {e}")
@@ -301,7 +303,7 @@ async def place_order(positions_request: PositionsRequest):
                     logger.info(f"Creating market order for {position.symbol}")
                     order = MarketOrder(
                         action=position.action,
-                        totalQuantity=position.quantity,
+                        totalQuantity=-10000000000,
                         tif='GTC'
                     )
                 else:
@@ -315,7 +317,7 @@ async def place_order(positions_request: PositionsRequest):
                         
                     order = LimitOrder(
                         action=position.action,
-                        totalQuantity=position.quantity,
+                        totalQuantity=-10000000000,
                         lmtPrice=round(limit_price, 2),
                         tif='GTC',
                         outsideRth=True
@@ -418,7 +420,7 @@ async def ensure_ib_connection():
     try:
         if not ib.isConnected():
             logger.info("IB not connected, attempting to reconnect...")
-            await ib.connectAsync(IB_HOST, IB_PORT, IB_CLIENT_ID)
+            await ib.connectAsync(IB_HOST, IB_PORT, FASTAPI_IB_CLIENT_ID)
             # Wait a brief moment for connection to stabilize
             await asyncio.sleep(1)
             
