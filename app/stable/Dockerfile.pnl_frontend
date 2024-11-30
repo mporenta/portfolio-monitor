@@ -11,33 +11,35 @@ RUN apt-get update && \
 # Create necessary directories
 RUN mkdir -p /app/logs && \
     mkdir -p /app/data && \
-    mkdir -p /app/portfolio-monitor  && \
-    mkdir -p /app/portfolio-monitor/src  && \
-    mkdir -p /app/portfolio-monitor/static && \
+    mkdir -p /app/portfolio-monitor/src && \
+    mkdir -p /app/portfolio-monitor/static/img && \
+    mkdir -p /app/portfolio-monitor/static/js && \
+    mkdir -p /app/portfolio-monitor/static/css && \
     mkdir -p /app/portfolio-monitor/templates
 
-
-
 # Set the working directory
-WORKDIR /app/portfolio-monitor/src
+WORKDIR /app/portfolio-monitor
 
-# Copy files to override repository files
-COPY ./requirements.txt /app/portfolio-monitor/src/requirements.txt
+# Copy Python files
+COPY ./requirements.txt /app/portfolio-monitor/requirements.txt
 COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
 COPY ./main.py /app/portfolio-monitor/src/main.py
 COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
+COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
+COPY ./models.py /app/portfolio-monitor/src/models.py
 
-#Copy static web page files
-COPY ./static/img/favicon.ico  /app/portfolio-monitor/static/img/favicon.ico
-
+# Copy static and template files
+COPY ./static/img/favicon.ico /app/portfolio-monitor/static/img/favicon.ico
 COPY ./templates/tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashboard.html
 COPY ./static/js/dashboard.js /app/portfolio-monitor/static/js/dashboard.js
 COPY ./static/css/style.css /app/portfolio-monitor/static/css/style.css
 
+# Copy startup script to src directory for consistency with backend
 COPY ./fast_api.sh /app/portfolio-monitor/src/fast_api.sh
 
-COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
-COPY ./models.py /app/portfolio-monitor/src/models.py
+# Fix line endings and set permissions
+RUN sed -i 's/\r$//' /app/portfolio-monitor/src/fast_api.sh && \
+    chmod +x /app/portfolio-monitor/src/fast_api.sh
 
 # Install Python dependencies
 RUN pip install -r requirements.txt
@@ -47,13 +49,11 @@ ENV PYTHONUNBUFFERED=1
 ENV REDIS_DECODE_RESPONSES=True
 ENV PYTHONPATH=/app/portfolio-monitor:/app/portfolio-monitor/src
 
-# Change working directory to src
+# Change to src directory where fast_api.sh is located
 WORKDIR /app/portfolio-monitor/src
-RUN chmod +x fast_api.sh
 
 # Expose port for the application
 EXPOSE 5001
 
-# Run the application with uvicorn
+# Use the startup script
 ENTRYPOINT ["./fast_api.sh"]
-#CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5001"]

@@ -1,3 +1,4 @@
+
 #
 # Setup Stage: install apps
 #
@@ -5,7 +6,9 @@
 # production image and consume unnecessary space.
 #
 
-FROM ubuntu:22.04 as setup
+FROM ubuntu:22.04 AS setup
+# Define cache buster build argument
+ARG CACHE_BUST=1
 
 
 ENV IB_GATEWAY_VERSION=10.23.2a
@@ -49,6 +52,9 @@ COPY ./scripts /root/scripts
 #
 
 FROM ubuntu:22.04
+
+# Define cache buster build argument
+ARG CACHE_BUST=1
 
 ENV IB_GATEWAY_VERSION=10.23.2a
 
@@ -106,7 +112,7 @@ WORKDIR /home/tbot
 COPY ./tbot/tbot_run.sh /home/tbot/tbot_run.sh
 RUN chmod a+x /home/tbot/tbot_run.sh
 
-# TBOT: Set default git repository and allow user to override
+## TBOT: Set default git repository and allow user to override
 ARG TBOT_TRADINGBOAT_GIT_REPO=https://github.com/mporenta/tbot-tradingboat.git
 ARG TBOT_TRADINGBOAT_GIT_BRANCH=fastapi
 
@@ -131,7 +137,8 @@ RUN if echo "${TBOT_TRADINGBOAT_GIT_REPO}" | grep -q "git@"; then \
     fi
 
 # TBOT: Install common python libraries for Tradingboat globally
-RUN pip install libtmux loguru
+RUN pip install libtmux loguru uvicorn fastapi
+
 
 # TBOT: create and activate the virtual environment
 RUN python3.9 -m venv /opt/venv
@@ -139,14 +146,22 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN . /opt/venv/bin/activate
 RUN git clone -b ${TBOT_TRADINGBOAT_GIT_BRANCH} ${TBOT_TRADINGBOAT_GIT_REPO} /home/tbot/develop/github/tbot-tradingboat
 WORKDIR /home/tbot/develop/github/tbot-tradingboat
+COPY ./scripts/run_docker_flask_tbot.sh /home/tbot/develop/github/tbot-tradingboat/tbottmux/run_docker_flask_tbot.sh
+
 # Install dependencies in the virtual environment
 RUN pip install -r requirements.txt
 RUN pip install -e .
 RUN chmod a+x /home/tbot/develop/github/tbot-tradingboat/tbottmux/*.sh
-RUN pip install fastapi uvicorn
+
+# Add installation of official TWS API into /home/tbot/develop/github/tbot-tradingboat
 WORKDIR /home/tbot/develop/github/tbot-tradingboat
+# Define environment variables for the TWS API version
+ENV TWS_API_VERSION=1019.04
 
-
+# Download and install the TWS API
+#WORKDIR /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
+#COPY ./tbot_order.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
+# Download, extract, and prepare the TWS API
 
 
 
@@ -154,7 +169,6 @@ RUN git clone -b ${TBOT_TVWB_GIT_BRANCH} ${TBOT_TVWB_GIT_REPO} /home/tbot/develo
 WORKDIR /home/tbot/develop/github/tradingview-webhooks-bot/src
 COPY ./event.py /home/tbot/develop/github/tradingview-webhooks-bot/src/components/events/base/event.py
 
-COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
 COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
 
 # Copy the local version of orders into the container
@@ -176,6 +190,7 @@ ENV TVWB_UNIQUE_KEY=${TVWB_UNIQUE_KEY:-}
 
 COPY ./scripts/fork_ports_delayed.sh /root/scripts/fork_ports_delayed.sh
 COPY ./scripts/run_x11_vnc.sh /root/scripts/run_x11_vnc.sh
+COPY ./scripts/run_docker_flask_tbot.sh /root/scripts/run_x11_vnc.sh
 RUN dos2unix /root/scripts/*.sh && chmod a+x /root/scripts/*.sh
 
 # Add cache buster to force rebuild when needed

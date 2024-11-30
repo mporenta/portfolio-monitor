@@ -38,8 +38,7 @@ if [ -f "/root/scripts/fork_ports_delayed.sh" ]; then
 else
   echo "ERROR: /root/scripts/fork_ports_delayed.sh not found!"
 fi
-# TBOT: Add the TWS API to the PYTHONPATH
-export PYTHONPATH=/home/tbot/develop/github/tbot-tradingboat/twsapi/source/pythonclient:${PYTHONPATH}
+
 # TBOT: run ngrok, flask and tbot
 /home/tbot/develop/github/tbot-tradingboat/tbottmux/run_docker_flask_tbot.sh &
 

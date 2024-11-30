@@ -13,27 +13,20 @@ RUN mkdir -p /app/logs && \
     mkdir -p /app/data && \
     mkdir -p /app/portfolio-monitor/src
 
-    # Set the working directory
+# Set the working directory
 WORKDIR /app/portfolio-monitor
 
-# Clone the repository
-#RUN git clone https://github.com/mporenta/portfolio-monitor.git
-
-
-
-
-# Copy files to override repository files
+# Copy files
 COPY ./requirements.txt /app/portfolio-monitor/requirements.txt
-# Set the working directory
-WORKDIR /app/portfolio-monitor/src
-
 COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
 COPY ./db.py /app/portfolio-monitor/src/db.py
 COPY ./entrypoint.sh /app/portfolio-monitor/src/entrypoint.sh
 COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
 COPY ./models.py /app/portfolio-monitor/src/models.py
-# Set the working directory
-WORKDIR /app/portfolio-monitor
+
+# Fix line endings and set permissions
+RUN sed -i 's/\r$//' /app/portfolio-monitor/src/entrypoint.sh && \
+    chmod +x /app/portfolio-monitor/src/entrypoint.sh
 
 # Install Python dependencies
 RUN pip install -r requirements.txt
@@ -42,12 +35,8 @@ RUN pip install -r requirements.txt
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/portfolio-monitor:/app/portfolio-monitor/src
 
-# Change working directory to src
+# Change working directory to src where entrypoint.sh is located
 WORKDIR /app/portfolio-monitor/src
-
-# Copy the entrypoint script
-
-RUN chmod +x entrypoint.sh
 
 # Expose port for the application
 EXPOSE 5002
