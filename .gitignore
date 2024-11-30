@@ -3,7 +3,7 @@
 *.env
 # Ignore SSH private keys in the entire repository
 id_rsa*
-## Ignore logs
+## Ignore log
 *.log
 *.logs
 # vscode
