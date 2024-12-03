@@ -23,10 +23,9 @@ COPY ./db.py /app/portfolio-monitor/src/db.py
 COPY ./entrypoint.sh /app/portfolio-monitor/src/entrypoint.sh
 COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
 COPY ./models.py /app/portfolio-monitor/src/models.py
+COPY ./bkapp.py /app/portfolio-monitor/src/bkapp.py
 
-# Fix line endings and set permissions
-RUN sed -i 's/\r$//' /app/portfolio-monitor/src/entrypoint.sh && \
-    chmod +x /app/portfolio-monitor/src/entrypoint.sh
+
 
 # Install Python dependencies
 RUN pip install -r requirements.txt
@@ -35,11 +34,23 @@ RUN pip install -r requirements.txt
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/portfolio-monitor:/app/portfolio-monitor/src
 
-# Change working directory to src where entrypoint.sh is located
+# Change working directory to src
 WORKDIR /app/portfolio-monitor/src
+
+# Copy the entrypoint script
+
+
 
 # Expose port for the application
 EXPOSE 5002
 
+
+
+RUN chmod +x /app/portfolio-monitor/src/entrypoint.sh
+
 # Use the entrypoint script
-ENTRYPOINT ["./entrypoint.sh"]
+#CMD ["./entrypoint.sh"]
+
+
+# Run the app
+CMD ["python", "./bkapp.py"]

@@ -4,7 +4,6 @@ from operator import is_
 import requests
 import json
 from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade
-from ib_async import util, Position
 from typing import *
 from datetime import datetime
 import pytz 
@@ -14,7 +13,6 @@ import time
 from time import sleep
 import logging
 from typing import Optional, List
-from db import DataHandler, init_db, is_symbol_eligible_for_close, insert_positions_data, insert_pnl_data, insert_order, insert_trades_data, update_order_fill, fetch_latest_positions_data
 load_dotenv()
 print(f"Global load of Dotenv {load_dotenv()}")
 log_file_path = os.path.join(os.path.dirname(__file__), 'pnl.log')
@@ -41,7 +39,6 @@ class IBClient:
         self.net_liquidation = 0.0
         self.positions: List = []
         self.portfolio_items = []
-        self.data_handler = DataHandler()
         self.pnl = PnL()
     
         self.risk_amount = 0.0
@@ -144,23 +141,9 @@ class IBClient:
             # Update portfolio items
             self.portfolio_items = self.ib.portfolio(self.account)
             
-            # Process trades and orders
-            trades = self.ib.trades()
-            orders = self.ib.openOrders()
             
-            # Insert trade data
-            insert_trades_data(trades)
             
-            # Update database
-            self.data_handler.insert_all_data(
-                self.daily_pnl, 
-                self.total_unrealized_pnl, 
-                self.total_realized_pnl,
-                self.net_liquidation,
-                self.portfolio_items,
-                trades,
-                orders
-            )
+            
 
             # Check positions and conditions
             for item in self.portfolio_items:
@@ -324,7 +307,6 @@ class IBClient:
                 # Place the order and update the order fill in the database
                 trade = self.ib.placeOrder(contract, order)
                 #self.ib.sleep(30)
-                update_order_fill(trade)
                 self.logger.info(f"Order placed and recorded for {symbol}")
 
             except Exception as e:
@@ -334,8 +316,6 @@ class IBClient:
         """Main run loop with improved error handling."""
         try:
             load_dotenv()
-            logging.info("Starting Database fucker from run...")
-            init_db()
             if not self.connect():
                 return
                 

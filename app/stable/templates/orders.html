@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+{% extends "order_base.html" %}
+{% block content %}
+<div class="table-responsive">
+    <table id="data_order" class="table table-info table-hover">
+        <thead>
+            <tr>
+                <th>Action</th>
+                <th>TBOT_TIME</th>
+                <th>ORD_TIME</th>
+                <th>TICKER</th>
+                <th>TV_Close</th>
+                <th>ACTION</th>
+                <th>TYPE</th>
+                <th>QTY</th>
+                <th>LIMIT</th>
+                <th>STOP</th>
+                <th>ORDERID</th>
+                <th>ORDERREF</th>
+                <th>STATUS</th>
+                <th>POS</th>
+                <th>MRKVAL</th>
+                <th>AVGF</th>
+                <th>UnrealPnL</th>
+                <th>RealPnL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- DataTables will populate this -->
+        </tbody>
+    </table>
+</div>
+{% endblock %}

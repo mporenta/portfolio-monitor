@@ -17,4 +17,5 @@ jinja2
 python-multipart 
 aiofiles
 tailwindcss
-
+httpx
+discord_webhook

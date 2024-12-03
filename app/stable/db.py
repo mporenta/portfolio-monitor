@@ -1,16 +1,19 @@
-# db.py
+from operator import is_
+from ib_async import *
+from datetime import datetime, timezone
+import os
+from time import sleep
+import logging
 import sqlite3
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, Table, MetaData
+from dataclasses import asdict
+from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, Table, MetaData, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
-from dataclasses import asdict
-from datetime import datetime
 from typing import List, Dict, Optional
-from ib_async import PortfolioItem, Trade, Contract, IB, Order
+
 
 # Set the specific paths
 load_dotenv()
@@ -32,6 +35,12 @@ engine = create_engine(
         "timeout": 30
     }
 )
+@event.listens_for(engine, 'connect')
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA timezone = 'UTC'")
+    cursor.close()
+    
 # Create sessionmaker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -61,7 +70,7 @@ class PnLData(Base):
     total_unrealized_pnl = Column(Float)
     total_realized_pnl = Column(Float)
     net_liquidation = Column(Float)
-    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Positions(Base):
     __tablename__ = 'positions'
@@ -76,7 +85,7 @@ class Positions(Base):
     realized_pnl = Column(Float)
     account = Column(String)
     exchange = Column(String)
-    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Trades(Base):
     __tablename__ = 'trades'
@@ -96,7 +105,7 @@ class Trades(Base):
     order_id = Column(Integer)
     perm_id = Column(Integer)
     account = Column(String)
-    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Orders(Base):
     __tablename__ = 'orders'
@@ -118,6 +127,8 @@ class Orders(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.now(datetime.timezone.utc))
 
+
+
 def migrate_database(DATABASE_PATH):
     """Create or update database schema"""
     
@@ -136,7 +147,7 @@ def migrate_database(DATABASE_PATH):
                 total_unrealized_pnl REAL,
                 total_realized_pnl REAL,
                 net_liquidation REAL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
             )
         ''')
 
@@ -153,7 +164,7 @@ def migrate_database(DATABASE_PATH):
                 realized_pnl REAL,
                 account TEXT,
                 exchange TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                timestamp DATETIME DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
                 UNIQUE(symbol)
             )
         ''')
@@ -176,7 +187,7 @@ def migrate_database(DATABASE_PATH):
                 order_id INTEGER,
                 perm_id INTEGER,
                 account TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
             )
         ''')
 
@@ -566,7 +577,7 @@ def is_symbol_eligible_for_close(symbol: str) -> bool:
     - No recent trades (within 60 seconds)
     """
     try:
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
@@ -698,3 +709,240 @@ class DataHandler:
         except Exception as e:
             self.logger.error(f"Error fetching data for logging: {e}")
 '''
+
+
+load_dotenv()
+init_db()
+print(f"Global load of Dotenv {load_dotenv()}")
+
+
+
+class IBClientDB:
+    def __init__(self):
+        self.ib = IB()
+        
+        self.account = None
+        self.wrapper = self.ib.wrapper
+        self.client = self.ib.client
+        self.data_handler = DataHandler()
+        init_db()
+        self.no_update_counter = 0
+        
+        # Load environment variables
+        load_dotenv()
+        self.host = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')
+        self.port = int(os.getenv('TBOT_IBKR_PORT', '4002'))
+        self.client_id = 44
+        
+        log_file_path = '/app/logs/pnl.log'
+        log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
+        logging.basicConfig(
+            level=getattr(logging, log_level),
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file_path),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+    
+    def _createEvents(self):
+        """Set up event subscriptions"""
+        # Account & PnL
+        self.ib.accountValueEvent += self.on_account_value_update
+        self.ib.pnlEvent += self.on_pnl_update
+        self.ib.updatePortfolioEvent += self.on_portfolio_update
+        
+        # Orders & Executions  
+        self.ib.orderStatusEvent += self.on_order_status
+        self.ib.execDetailsEvent += self.on_execution_details
+        self.ib.commissionReportEvent += self.on_commission_report
+
+    def on_account_value_update(self, account_value: AccountValue):
+        """Handle NetLiquidation updates"""
+        try:
+            if account_value.tag == "NetLiquidation":
+                with SessionLocal() as session:
+                    net_liq = PnLData(
+                        daily_pnl=None,
+                        total_unrealized_pnl=None,
+                        total_realized_pnl=None,
+                        net_liquidation=float(account_value.value),
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                    session.merge(net_liq)
+                    session.commit()
+                    self.logger.debug(f"NetLiquidation updated: ${float(account_value.value):,.2f}")
+        except Exception as e:
+            self.logger.error(f"Error updating net liquidation: {e}")
+
+    def on_pnl_update(self, pnl: PnL):
+        """Handle PnL updates"""
+        try:
+            with SessionLocal() as session:
+                pnl_data = PnLData(
+                    daily_pnl=float(pnl.dailyPnL or 0.0),
+                    total_unrealized_pnl=float(pnl.unrealizedPnL or 0.0),
+                    total_realized_pnl=float(pnl.realizedPNL or 0.0),
+                    net_liquidation=None,  # Don't update net_liquidation here
+                    timestamp=datetime.now(timezone.utc)
+                )
+                session.merge(pnl_data)
+                session.commit()
+                self.logger.debug("PnL data updated")
+        except Exception as e:
+            self.logger.error(f"Error updating PnL data: {e}")
+        
+    def on_portfolio_update(self, item: PortfolioItem):
+        """Handle portfolio updates"""
+        try:
+            with SessionLocal() as session:
+                position = Positions(
+                    symbol=item.contract.symbol,
+                    position=item.position,
+                    market_price=item.marketPrice,
+                    market_value=item.marketValue,
+                    average_cost=item.averageCost,
+                    unrealized_pnl=item.unrealizedPNL,
+                    realized_pnl=item.realizedPNL,
+                    account=item.account,
+                    exchange=item.contract.primaryExchange,
+                    timestamp=datetime.now(timezone.utc)
+                )
+                session.merge(position)
+                session.commit()
+        except Exception as e:
+            self.logger.error(f"Error updating portfolio: {e}")
+
+    def on_execution_details(self, trade: Trade, fill: Fill):
+        """Handle execution details"""
+        try:
+            with SessionLocal() as session:
+                trade_record = Trades(
+                    trade_time=fill.time,
+                    symbol=trade.contract.symbol,
+                    action=trade.order.action,
+                    quantity=fill.execution.shares,
+                    fill_price=fill.execution.price,
+                    exchange=fill.execution.exchange,
+                    order_type=trade.order.orderType,
+                    status=trade.orderStatus.status,
+                    order_id=trade.order.orderId,
+                    perm_id=trade.order.permId,
+                    account=trade.order.account,
+                    timestamp=datetime.now(timezone.utc)
+                )
+                session.merge(trade_record)
+                session.commit()
+        except Exception as e:
+            self.logger.error(f"Error recording execution: {e}")
+
+    def on_commission_report(self, trade: Trade, fill: Fill, report: CommissionReport):
+        """Handle commission reports"""
+        try:
+            with SessionLocal() as session:
+                session.query(Trades).filter(
+                    Trades.order_id == trade.order.orderId,
+                    Trades.symbol == trade.contract.symbol
+                ).update({
+                    'commission': report.commission,
+                    'realized_pnl': report.realizedPNL
+                })
+                session.commit()
+        except Exception as e:
+            self.logger.error(f"Error recording commission: {e}")
+
+    def on_order_status(self, trade: Trade):
+        """Handle order status updates"""
+        try:
+            with SessionLocal() as session:
+                order = Orders(
+                    symbol=trade.contract.symbol,
+                    order_id=trade.order.orderId,
+                    perm_id=trade.order.permId,
+                    action=trade.order.action,
+                    order_type=trade.order.orderType,
+                    total_quantity=trade.order.totalQuantity,
+                    limit_price=trade.order.lmtPrice if hasattr(trade.order, 'lmtPrice') else None,
+                    status=trade.orderStatus.status,
+                    filled_quantity=trade.orderStatus.filled,
+                    average_fill_price=trade.orderStatus.avgFillPrice,
+                    last_fill_time=datetime.now(timezone.utc) if trade.orderStatus.status == "Filled" else None
+                )
+                session.merge(order)
+                session.commit()
+        except Exception as e:
+            self.logger.error(f"Error updating order status: {e}")
+    def connect(self):
+        """Establish connection to IB Gateway with retry logic"""
+        try:
+            try:
+                self.ib.connect(host=self.host, port=self.port, clientId=self.client_id)
+                self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port}")
+                self._createEvents()
+                return True
+            except Exception as e:
+                if 'getaddrinfo failed' in str(e):
+                    self.host = '127.0.0.1'
+                    self.ib.connect(host=self.host, port=self.port, clientId=self.client_id)
+                    self._createEvents()
+                    self.logger.info(f"Connected to IB Gateway at {self.host}:{self.port}")
+                    return True
+                raise
+        except Exception as e:
+            self.logger.error(f"Failed to connect to IB Gateway: {e}")
+            return False
+
+    def subscribe_account_updates(self):
+        """Subscribe to account updates"""
+        accounts = self.ib.managedAccounts()
+        if not accounts:
+            self.logger.error("No managed accounts available")
+            return False
+
+        self.account = accounts[0]
+        self.ib.reqAccountUpdates(True, self.account)
+        self.ib.reqPnL(self.account)
+        return True
+
+    def run(self):
+        """Main run loop with improved error handling."""
+        try:
+            load_dotenv()
+            logging.info("Starting Database fucker from db.py run...")
+            init_db()
+            if not self.connect():
+                return
+                
+            sleep(2)  # Allow connection to stabilize
+            
+            print(f"jengo db.py running ={self.connect()}")
+            
+            print(f"jengo db.py running _createEvents ={self._createEvents()}")
+            self._createEvents()
+            print(f"jengo db.py ran _createEvents ={self._createEvents()}")
+            
+            self.no_update_counter = 0
+            while True:
+                try:
+                    if self.ib.waitOnUpdate(timeout=1):
+                        self.no_update_counter = 0
+                    else:
+                        self.no_update_counter += 1
+                        if self.no_update_counter >= 60:
+                            logging.debug("No updates for 60 seconds")
+                            self.no_update_counter = 0
+                except Exception as e:
+                    logging.error(f"Error in main loop: {str(e)}")
+                    sleep(1)  # Prevent tight error loop
+                    
+        except KeyboardInterrupt:
+            logging.info("Shutting down by user request...")
+        except Exception as e:
+            logging.error(f"Critical error in run loop: {str(e)}")
+        finally:
+            self.ib.disconnect()
+
+if __name__ == '__main__':
+    client = IBClientDB()
+    client.run()

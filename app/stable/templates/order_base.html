@@ -8,7 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap5.css">
-    <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
@@ -399,6 +398,7 @@
 
     {% block scripts %}
     <script>
+      
         $(document).ready(function () {
             var dataTable = $('#data_order').DataTable({
                 scrollX: true,
@@ -517,8 +517,8 @@
             $('#data_order').on('click', '.close-position, .cancel-order', function () {
                 const ticker = $(this).data('ticker');
                 const isClosePosition = $(this).hasClass('close-position');
-                const ngrokUrl = $('#ngrokUrl').val() || 'https://tv.porenta.us//webhook_local';
-                const tokenKey = $('#tokenKey').val(); // Retrieve the token from the hidden input
+                const ngrokUrl = $('#ngrokUrl').val() || 'https://portfolio.porenta.us/proxy/webhook';
+                const tokenKey = "boof1234567890A";
                 const timestamp = Date.now();
 
                 const payload = {

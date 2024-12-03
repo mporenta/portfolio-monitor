@@ -40,7 +40,6 @@ RUN unzip ./IBCLinux-${IBC_VERSION}.zip -d /root/ibc
 RUN chmod -R u+x /root/ibc/*.sh 
 RUN chmod -R u+x /root/ibc/scripts/*.sh
 COPY ./config/ibc/config.ini.tmpl /root/ibc/config.ini.tmpl
-
 # Copy scripts
 COPY ./scripts /root/scripts
 
@@ -107,11 +106,11 @@ COPY ./tbot/tbot_run.sh /home/tbot/tbot_run.sh
 RUN chmod a+x /home/tbot/tbot_run.sh
 
 # TBOT: Set default git repository and allow user to override
-ARG TBOT_TRADINGBOAT_GIT_REPO=https://github.com/mporenta/tbot-tradingboat.git
-ARG TBOT_TRADINGBOAT_GIT_BRANCH=fastapi
+ARG TBOT_TRADINGBOAT_GIT_REPO=https://github.com/mporenta/tbot-tradingboat2.git
+ARG TBOT_TRADINGBOAT_GIT_BRANCH=main
 
-ARG TBOT_TVWB_GIT_REPO=https://github.com/mporenta/tradingview-webhooks-bot.git
-ARG TBOT_TVWB_GIT_BRANCH=fastapi
+ARG TBOT_TVWB_GIT_REPO=https://github.com/mporenta/tradingview-webhooks-bot2.git
+ARG TBOT_TVWB_GIT_BRANCH=envKey
 
 # Add GitHub to known hosts for SSH, copy SSH keys, and clone repository conditionally
 COPY ./tbot/* /home/tbot/.ssh/
@@ -145,6 +144,7 @@ RUN pip install -e .
 RUN chmod a+x /home/tbot/develop/github/tbot-tradingboat/tbottmux/*.sh
 RUN pip install fastapi uvicorn
 WORKDIR /home/tbot/develop/github/tbot-tradingboat
+#COPY ./tbot/tbot_decoder.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/tbot_decoder.py
 
 
 
@@ -152,15 +152,17 @@ WORKDIR /home/tbot/develop/github/tbot-tradingboat
 
 RUN git clone -b ${TBOT_TVWB_GIT_BRANCH} ${TBOT_TVWB_GIT_REPO} /home/tbot/develop/github/tradingview-webhooks-bot
 WORKDIR /home/tbot/develop/github/tradingview-webhooks-bot/src
-COPY ./event.py /home/tbot/develop/github/tradingview-webhooks-bot/src/components/events/base/event.py
+#COPY ./event.py /home/tbot/develop/github/tradingview-webhooks-bot/src/components/events/base/event.py
 
-COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
-COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
+#COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
+
 
 # Copy the local version of orders into the container
-#COPY ./order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/order_base.html
+COPY ./templates/order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/order_base.html
 #COPY ./order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/orders.html
 COPY ./flask/main.py /home/tbot/develop/github/tradingview-webhooks-bot/src/main.py
+#COPY ./flask/tbot.py /home/tbot/develop/github/tradingview-webhooks-bot/src/tbot.py
+
 #COPY ./tbot_dashboard.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/tbot_dashboard.html
 #COPY ./service_error.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/service_error.html
 COPY ./static/img/favicon.ico  /home/tbot/develop/github/tradingview-webhooks-bot/src/static/img/favicon.ico
@@ -178,8 +180,9 @@ COPY ./scripts/fork_ports_delayed.sh /root/scripts/fork_ports_delayed.sh
 COPY ./scripts/run_x11_vnc.sh /root/scripts/run_x11_vnc.sh
 RUN dos2unix /root/scripts/*.sh && chmod a+x /root/scripts/*.sh
 
-# Add cache buster to force rebuild when needed
-RUN echo "Cache busting step: ${CACHE_BUST}"
+# Add a cache-busting argument
+ARG CACHE_BUST=1
+RUN echo "Cache Bust: $CACHE_BUST"
 
 # Start run script
 RUN dos2unix /home/tbot/tbot_run.sh && chmod a+x /home/tbot/tbot_run.sh

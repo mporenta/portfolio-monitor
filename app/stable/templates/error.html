@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+{% extends "error_base.html" %}
+
+{% block content %}
+    <table id="data_error" class="table table-warning table-hover">
+        <thead>
+            <th>TBOT_TIME</th>
+            <th>REQID</th>
+            <th>ERRCODE</th>
+            <th>SYMBOL</th>
+            <th>ERRSTR</th>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+               <td>{{row["timestamp"]}}</td>
+               <td>{{row["reqid"]}}</td>
+               <td>{{row["errcode"]}}</td>
+               <td>{{row["symbol"]}}</td>
+               <td>{{row["errstr"]}}</td>
+            </tr>
+         {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

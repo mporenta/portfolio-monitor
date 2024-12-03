@@ -5,8 +5,11 @@ services:
     build:
       context: ./stable
       args:
-        TBOT_TRADINGBOAT_GIT_REPO: ${TBOT_TRADINGBOAT_GIT_REPO:-https://github.com/mporenta/tbot-tradingboat.git}
+        TBOT_TRADINGBOAT_GIT_REPO: ${TBOT_TRADINGBOAT_GIT_REPO:-https://github.com/mporenta/tbot-tradingboat2.git}
         TBOT_TRADINGBOAT_GIT_BRANCH: ${TBOT_TRADINGBOAT_GIT_BRANCH:-main}
+        TBOT_TVWB_GIT_REPO: ${TBOT_TVWB_GIT_REPO:-https://github.com/mporenta/tradingview-webhooks-bot2.git}
+        TBOT_TVWB_GIT_BRANCH: ${TBOT_TVWB_GIT_BRANCH:-main}
+  
     environment:
       TWS_USERID: ${TWS_USERID}
       TWS_PASSWORD: ${TWS_PASSWORD}
@@ -34,6 +37,7 @@ services:
       TBOT_TELEGRAM_CHAT_ID: ${TBOT_TELEGRAM_CHAT_ID:-}
       TBOT_NGROK: ${TBOT_NGROK:-}
       TBOT_PROFILER: ${TBOT_PROFILER:-False}
+    
     
     ports:
       - "127.0.0.1:4001:4001"
@@ -83,7 +87,10 @@ services:
       - tbot-network
     environment:
       PYTHONUNBUFFERED: 1
+      WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:--300.0}
+
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/pnl_data_jengo.db}
+      TVWB_UNIQUE_KEY: ${TVWB_UNIQUE_KEY:-}
     volumes:
       - ./data:/app/data
       - ./models:/app/models

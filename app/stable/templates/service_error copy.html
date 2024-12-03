@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Error</title>
+    <style>
+        .error-container {
+            text-align: center;
+            padding: 50px;
+            font-family: Arial, sans-serif;
+        }
+        .error-message {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+        .back-link {
+            margin-top: 20px;
+            display: inline-block;
+            color: #0056b3;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-message">
+            <h2>Service Error</h2>
+            <p>{{ error_message }}</p>
+        </div>
+        <a href="/" class="back-link">Return to Dashboard</a>
+    </div>
+</body>
+</html>

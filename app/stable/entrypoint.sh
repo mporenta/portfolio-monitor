@@ -1,10 +1,8 @@
-# entrypoint.sh
 #!/bin/bash
 
+# Start both Python scripts in background
+python ./pnl_monitor.py & 
+python ./db.py &
 
-# Wait for 60 seconds
-echo "pnl_monitor.py Waiting 60 seconds for IB-Gateway to initialize..."
-sleep 60
-
-# Execute the Python script
-exec python pnl_monitor.py
+# Wait for all background processes to complete
+wait

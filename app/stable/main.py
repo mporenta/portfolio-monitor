@@ -4,12 +4,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
+import httpx
+from datetime import datetime
 from typing import List, Dict, Optional, Union, Any
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 import pytz
 import time
-from datetime import datetime
 from dotenv import load_dotenv
 from ib_async import *
 import logging
@@ -19,6 +20,18 @@ import asyncio
 import os
 from models import Base, Positions, PnLData, Trades, Orders, PositionClose
 from fastapi.middleware.cors import CORSMiddleware
+import sys
+load_dotenv()
+unique_ts = str((time.time_ns() // 1000000) -  (4 * 60 * 60 * 1000))
+
+def get_timestamp(unique_ts: str) -> str:
+    """Get timestamp for database"""
+    dtime = datetime.fromtimestamp(int(unique_ts) / 1000.0)
+    dtime_str = dtime.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    return dtime_str
+
+
+timestamp = get_timestamp(unique_ts)
 
 ib = IB()
 portfolio_items = ib.portfolio()
@@ -147,7 +160,7 @@ app = FastAPI(
     title="PnL Monitor",
     lifespan=lifespan
 )
-
+load_dotenv()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -186,6 +199,7 @@ async def home(request: Request):
 
 @app.get("/api/positions")
 async def get_positions(db: Session = Depends(get_db)):
+   
     try:
         logger.info("API call to /api/positions")
         positions = db.query(Positions).all()
@@ -256,14 +270,9 @@ async def get_trades(db: Session = Depends(get_db)):
         logger.error(f"Error fetching trades: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch trades data")
 
-from fastapi import FastAPI, HTTPException
-from ib_async import IB, Contract, LimitOrder, MarketOrder
-from datetime import datetime
-import pytz
-import logging
 
-logger = logging.getLogger(__name__)
-ib = IB()
+
+
 
 @app.post("/close_positions", response_model=List[PositionResponse])
 async def place_order(positions_request: PositionsRequest):
@@ -363,21 +372,68 @@ async def place_order(positions_request: PositionsRequest):
 
 @app.post("/proxy/webhook")
 async def proxy_webhook(webhook_data: WebhookRequest):
+    
     try:
+        load_dotenv()
+        logger.info(f"load_dotenv{load_dotenv()}")
         logger.info("Received webhook request")
         logger.debug(f"Incoming webhook data: {webhook_data.dict()}")
         
-        webhook_url = "https://tv.porenta.us/webhook"
+        # Get PNL threshold from environment
+        pnl_threshold = float(os.getenv("WEBHOOK_PNL_THRESHOLD", "-300"))
+        logger.info(f"PNL threshold set to: {pnl_threshold}")
+        
+        # Fetch current positions and PNL data
+        try:
+            # Create async client for internal request
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "http://localhost:5001/api/orders-data",  # Internal call to our own endpoint
+                    timeout=10.0
+                )
+                response.raise_for_status()
+                positions_data = response.json()
+                
+                # Calculate total PNL for active positions
+                total_pnl = 0.0
+                for position in positions_data.get('data', []):
+                    # Only consider positions that are not zero
+                    if position.get('position', 0) != 0:
+                        realized_pnl = float(position.get('realizedpnl', 0))
+                        unrealized_pnl = float(position.get('unrealizedpnl', 0))
+                        total_pnl += realized_pnl + unrealized_pnl
+                
+                logger.info(f"Calculated total PNL: {total_pnl}")
+                
+                # Check if total PNL meets threshold
+                if total_pnl <= pnl_threshold:
+                    logger.warning(f"Total PNL ({total_pnl}) below threshold ({pnl_threshold}). Webhook blocked.")
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "status": "rejected",
+                            "message": f"Current PNL ({total_pnl}) is below threshold ({pnl_threshold})",
+                            "total_pnl": total_pnl,
+                            "threshold": pnl_threshold
+                        }
+                    )
+                
+                logger.info(f"PNL check passed. Proceeding with webhook forwarding.")
+                
+        except Exception as e:
+            logger.error(f"Error fetching or processing PNL data: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to verify PNL conditions")
+        
+        # If we get here, PNL check passed - proceed with webhook
+        webhook_url = "http://tbot-on-tradingboat:5000/webhook"
         logger.info(f"Forwarding to webhook URL: {webhook_url}")
         
         # Convert webhook data to dictionary and add the key
         webhook_dict = webhook_data.dict()
         webhook_dict["key"] = tbotKey
         logger.info(f"Added key to webhook data, ticker: {webhook_dict.get('ticker')}")
-        logger.debug(f"Modified webhook data: {webhook_dict}")
         
-        # Forward the request to the webhook with proper headers
-        logger.info("Sending POST request to webhook")
+        # Forward the request to the webhook
         response = requests.post(
             webhook_url,
             headers={'Content-Type': 'application/json'},
@@ -388,7 +444,7 @@ async def proxy_webhook(webhook_data: WebhookRequest):
         logger.debug(f"Webhook response content: {response.content}")
         
         # Return the forwarded response with CORS headers
-        cors_response = Response(
+        return Response(
             content=response.content,
             status_code=response.status_code,
             headers={
@@ -397,8 +453,6 @@ async def proxy_webhook(webhook_data: WebhookRequest):
                 "Access-Control-Allow-Headers": "Content-Type",
             },
         )
-        logger.info("Returning response to client")
-        return cors_response
         
     except requests.exceptions.RequestException as e:
         logger.error(f"Network error in proxy webhook: {str(e)}")
@@ -408,12 +462,7 @@ async def proxy_webhook(webhook_data: WebhookRequest):
         logger.exception("Full exception details:")
         raise HTTPException(status_code=500, detail=str(e))
 
-from fastapi import FastAPI, HTTPException
-from ib_async import IB
-import logging
 
-logger = logging.getLogger(__name__)
-ib = IB()
 
 async def ensure_ib_connection():
     """Ensure IB connection is active, reconnect if needed"""
@@ -575,6 +624,49 @@ async def get_ib_data():
                 "timestamp": datetime.now().isoformat()
             }
         )
+@app.get("/api/orders-data")
+async def proxy_orders_data():
+    try:
+        logger.info("Received request for orders data")
+        
+        # Generate timestamp using your method
+        
+        # Use the container name as hostname since they're on the same network
+        orders_url = f"http://tbot-on-tradingboat:5000/orders/data?_={unique_ts}"
+        logger.info(f"Forwarding request to internal endpoint: {orders_url}")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                orders_url,
+                timeout=10.0
+            )
+            
+            logger.info(f"Orders data response status code: {response.status_code}")
+            logger.debug(f"Orders data response content: {response.text}")
+            
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers={
+                    "Access-Control-Allow-Origin": "https://portfolio.porenta.us",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Content-Type": response.headers.get("Content-Type", "application/json")
+                }
+            )
+            
+    except httpx.TimeoutException:
+        logger.error("Timeout while fetching orders data")
+        raise HTTPException(status_code=504, detail="Request to orders service timed out")
+    except httpx.RequestError as e:
+        logger.error(f"Network error in orders proxy: {str(e)}")
+        raise HTTPException(status_code=503, detail="Error connecting to orders service")
+    except Exception as e:
+        logger.error(f"Unexpected error in orders proxy: {str(e)}")
+        logger.exception("Full exception details:")
+        raise HTTPException(status_code=500, detail=str(e))
+        
+
 def str2bool(value: str) -> bool:
     """Convert string to boolean, accepting various common string representations"""
     value = value.lower()
@@ -586,6 +678,7 @@ def str2bool(value: str) -> bool:
         raise ValueError(f'Invalid boolean value: {value}')
 
 if __name__ == "__main__":
+    load_dotenv()
     import uvicorn
     production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))
     if production:

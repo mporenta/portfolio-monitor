@@ -2,7 +2,7 @@
 import uuid
 import os
 
-LOG_LOCATION = 'log.log'
+LOG_LOCATION = 'components/logs/log.log'
 LOG_LIMIT = 100
 
 # ensure log file exists
