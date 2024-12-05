@@ -6,9 +6,9 @@ services:
       context: ./stable
       args:
         TBOT_TRADINGBOAT_GIT_REPO: ${TBOT_TRADINGBOAT_GIT_REPO:-https://github.com/mporenta/tbot-tradingboat2.git}
-        TBOT_TRADINGBOAT_GIT_BRANCH: ${TBOT_TRADINGBOAT_GIT_BRANCH:-main}
+        TBOT_TRADINGBOAT_GIT_BRANCH: ${TBOT_TRADINGBOAT_GIT_BRANCH:-rth}
         TBOT_TVWB_GIT_REPO: ${TBOT_TVWB_GIT_REPO:-https://github.com/mporenta/tradingview-webhooks-bot2.git}
-        TBOT_TVWB_GIT_BRANCH: ${TBOT_TVWB_GIT_BRANCH:-main}
+        TBOT_TVWB_GIT_BRANCH: ${TBOT_TVWB_GIT_BRANCH:-envKey}
   
     environment:
       TWS_USERID: ${TWS_USERID}
@@ -37,6 +37,10 @@ services:
       TBOT_TELEGRAM_CHAT_ID: ${TBOT_TELEGRAM_CHAT_ID:-}
       TBOT_NGROK: ${TBOT_NGROK:-}
       TBOT_PROFILER: ${TBOT_PROFILER:-False}
+      USER_EMAIL_GIT: ${USER_EMAIL_GIT}
+      USER_NAME_GIT: ${USER_NAME_GIT}
+
+
     
     
     ports:
@@ -79,8 +83,6 @@ services:
       dockerfile: Dockerfile.pnl_frontend
     depends_on:
       - ngrok-pnl
-      - ib-gateway
-      - pnl-monitor-backend
     ports:
       - 5001:5001
     networks:
@@ -102,7 +104,7 @@ services:
       dockerfile: Dockerfile.pnl_backend
     depends_on:
       - ngrok-pnl
-      - ib-gateway
+   
     ports:
       - 5002:5002
     networks:
@@ -134,6 +136,28 @@ services:
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTH}
       NGROK_REGION: us
+      
+  python-venv:
+    build:
+      context: ./stable
+      dockerfile: Dockerfile.python
+    image: python-venv:latest
+    container_name: python-venv
+    stdin_open: true  # Keep the container open for interactive use
+    tty: true         # Enable TTY for shell access
+    working_dir: /app/python
+    ports:
+      - 5005:5005
+    networks:
+      - tbot-network
+   
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    command: /bin/bash
+
+
+
 
 networks:
   tbot-network:

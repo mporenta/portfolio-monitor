@@ -107,10 +107,12 @@ RUN chmod a+x /home/tbot/tbot_run.sh
 
 # TBOT: Set default git repository and allow user to override
 ARG TBOT_TRADINGBOAT_GIT_REPO=https://github.com/mporenta/tbot-tradingboat2.git
-ARG TBOT_TRADINGBOAT_GIT_BRANCH=main
+ARG TBOT_TRADINGBOAT_GIT_BRANCH=rth
 
 ARG TBOT_TVWB_GIT_REPO=https://github.com/mporenta/tradingview-webhooks-bot2.git
 ARG TBOT_TVWB_GIT_BRANCH=envKey
+
+
 
 # Add GitHub to known hosts for SSH, copy SSH keys, and clone repository conditionally
 COPY ./tbot/* /home/tbot/.ssh/
@@ -124,8 +126,8 @@ RUN if echo "${TBOT_TRADINGBOAT_GIT_REPO}" | grep -q "git@"; then \
         /home/tbot/copy_ssh_key.sh && \
         chmod 600 /home/tbot/.ssh/id_rsa && \
         ssh-keyscan github.com > /home/tbot/.ssh/known_hosts && \
-        git config --global user.email "you@example.com" && \
-        git config --global user.name "Your Name" && \
+        git config --global user.email ${USER_EMAIL_GIT} && \
+        git config --global user.name ${USER_NAME_GIT} && \
         git config --global core.sshCommand "ssh -i /home/tbot/.ssh/id_rsa -o StrictHostKeyChecking=no"; \
     fi
 
@@ -144,8 +146,7 @@ RUN pip install -e .
 RUN chmod a+x /home/tbot/develop/github/tbot-tradingboat/tbottmux/*.sh
 RUN pip install fastapi uvicorn
 WORKDIR /home/tbot/develop/github/tbot-tradingboat
-#COPY ./tbot/tbot_decoder.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/tbot_decoder.py
-
+COPY ./tbot/tbot_order.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
 
 
 

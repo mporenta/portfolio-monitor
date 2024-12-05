@@ -398,7 +398,7 @@ async def proxy_webhook(webhook_data: WebhookRequest):
                 total_pnl = 0.0
                 for position in positions_data.get('data', []):
                     # Only consider positions that are not zero
-                    if position.get('position', 0) != 0:
+                    if position:
                         realized_pnl = float(position.get('realizedpnl', 0))
                         unrealized_pnl = float(position.get('unrealizedpnl', 0))
                         total_pnl += realized_pnl + unrealized_pnl
@@ -682,6 +682,6 @@ if __name__ == "__main__":
     import uvicorn
     production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))
     if production:
-        uvicorn.run("main:app", host="0.0.0.0", port=PORT)  # Changed from "main:app"
+        uvicorn.run("app:app", host="0.0.0.0", port=PORT)  # Changed from "main:app"
     else:
-        uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)  # Changed from "main:app"
+        uvicorn.run("app:app", host="0.0.0.0", port=PORT, reload=True)  # Changed from "main:app"

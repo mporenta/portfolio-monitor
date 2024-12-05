@@ -23,7 +23,7 @@ WORKDIR /app/portfolio-monitor
 # Copy Python files
 COPY ./requirements.txt /app/portfolio-monitor/requirements.txt
 COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
-COPY ./main.py /app/portfolio-monitor/src/main.py
+COPY ./app.py /app/portfolio-monitor/src/app.py
 COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
 COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
 COPY ./models.py /app/portfolio-monitor/src/models.py

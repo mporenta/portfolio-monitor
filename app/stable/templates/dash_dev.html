@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/jquery.dataTables.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.46/moment-timezone.min.js" integrity="sha512-Ne/lsUAQFATS+KrR4oPYWUtbM3C0I7eIORtGaC+xOdO/V1g3rfSzUwjsLd9/MkFw6iEqafr78LwrK75iZc3Emw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
+  <style>
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, .3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(17, 24, 39, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200">
+  <header class="bg-gray-800 text-gray-100 p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
+    <h1 class="text-2xl font-bold">Trading Dashboard</h1>
+    <div class="flex gap-4">
+      <div class="flex items-center">
+        <input type="checkbox" id="autoRefresh" class="mr-2" onchange="toggleAutoRefresh(this.checked)">
+        <label for="autoRefresh">Auto-refresh (30s)</label>
+      </div>
+      <button onclick="fetchData()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors flex items-center gap-2">
+        <span>Refresh Data</span>
+        <span id="refreshSpinner" class="spinner hidden"></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto mt-6">
+    <!-- Current P&L Section -->
+    <section class="p-4 bg-gray-800 rounded-lg shadow">
+      <h2 class="text-xl font-semibold mb-4">Current P&L</h2>
+      <div id="pnl-metrics" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-gray-700 p-4 rounded shadow animate-pulse">
+          <p class="text-gray-300">Loading...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Positions Section -->
+    <section class="p-4 bg-gray-800 rounded-lg shadow mt-6">
+      <h2 class="text-xl font-semibold mb-4">Active Positions</h2>
+      <table id="positions-table" class="w-full text-left"></table>
+    </section>
+
+    <!-- Recent Trades Section -->
+    <section class="p-4 bg-gray-800 rounded-lg shadow mt-6">
+      <h2 class="text-xl font-semibold mb-4">Recent Trades</h2>
+      <table id="trades-table" class="w-full text-left"></table>
+    </section>
+
+    <!-- Alerts Section -->
+    <section class="p-4 bg-gray-800 rounded-lg shadow mt-6">
+      <h2 class="text-xl font-semibold mb-4">Alerts</h2>
+      <table id="alerts-table" class="w-full text-left"></table>
+    </section>
+  </main>
+
+  <script>
+    const REFRESH_INTERVAL = 30000; // 30 seconds
+    let refreshInterval;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchData();
+    });
+
+    async function fetchData() {
+      const refreshButton = document.querySelector('button[onclick="fetchData()"]');
+      const spinner = document.getElementById('refreshSpinner');
+
+      try {
+        refreshButton.disabled = true;
+        spinner.classList.remove('hidden');
+
+        const [pnlData, positionsData, tradesData] = await Promise.all([
+          safeRequest("/api/current-pnl"),
+          safeRequest("/api/positions"),
+          safeRequest("/api/trades"),
+        ]);
+
+        updatePnLMetrics(pnlData.data);
+        updatePositions(positionsData.data);
+        updateTrades(tradesData.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        showError("Failed to refresh data. Please try again.");
+      } finally {
+        refreshButton.disabled = false;
+        spinner.classList.add('hidden');
+      }
+    }
+
+    function toggleAutoRefresh(enabled) {
+      if (enabled) {
+        refreshInterval = setInterval(fetchData, REFRESH_INTERVAL);
+      } else {
+        clearInterval(refreshInterval);
+      }
+    }
+
+    function toDenverTime(timestamp, format = "short") {
+      if (!timestamp) return "Invalid Timestamp";
+
+      try {
+        const denverTime = moment.tz(timestamp, "America/Denver");
+        return format === "short"
+          ? denverTime.format("hh:mm:ss A")
+          : denverTime.format("MM/DD/YYYY hh:mm:ss A");
+      } catch (error) {
+        console.error("Error formatting timestamp:", error);
+        return "Invalid Timestamp";
+      }
+    }
+
+    async function safeRequest(url, options = {}) {
+      try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+      } catch (error) {
+        console.error(`Error fetching ${url}:`, error);
+        throw error;
+      }
+    }
+
+    function updatePnLMetrics(data) {
+      const pnlMetrics = document.getElementById("pnl-metrics");
+      pnlMetrics.innerHTML = `
+        <div class="bg-gray-700 p-4 rounded shadow text-center">
+          <p class="text-gray-300">Unrealized P&L</p>
+          <p class="text-xl ${data.unrealized_pnl >= 0 ? "text-green-500" : "text-red-500"}">
+            ${data.unrealized_pnl.toFixed(2)}
+          </p>
+        </div>
+        <div class="bg-gray-700 p-4 rounded shadow text-center">
+          <p class="text-gray-300">Realized P&L</p>
+          <p class="text-xl ${data.realized_pnl >= 0 ? "text-green-500" : "text-red-500"}">
+            ${data.realized_pnl.toFixed(2)}
+          </p>
+        </div>`;
+    }
+
+    function updatePositions(data) {
+      $('#positions-table').DataTable({
+        data,
+        columns: [
+          { data: 'ticker', title: 'Symbol' },
+          { data: 'position', title: 'Position' },
+          { data: 'market_price', title: 'Market Price', render: data => data.toFixed(2) },
+          { data: 'unrealized_pnl', title: 'Unrealized P&L', render: data => data.toFixed(2) }
+        ],
+        destroy: true,
+      });
+    }
+
+    function updateTrades(data) {
+      $('#trades-table').DataTable({
+        data,
+        columns: [
+          { data: 'timestamp', title: 'Time', render: data => toDenverTime(data, "short") },
+          { data: 'symbol', title: 'Symbol' },
+          { data: 'action', title: 'Action' },
+          { data: 'quantity', title: 'Quantity' },
+          { data: 'fill_price', title: 'Fill Price', render: data => data.toFixed(2) }
+        ],
+        destroy: true,
+      });
+    }
+
+    function showError(message) {
+      const toast = document.createElement("div");
+      toast.className = "fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded shadow";
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,54 @@
+# Use the latest stable Python slim image
+FROM python:slim
+
+# Set environment variables to avoid Python buffering and ensure UTF-8 encoding
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+    
+# Create necessary directories
+RUN mkdir -p /app/logs && \
+    mkdir -p /app/data && \
+    mkdir -p /app/python
+
+# Set the working directory
+WORKDIR /app/python
+
+# Copy files
+COPY ./requirements.txt /app/python/requirements.txt
+COPY ./pnl_monitor.py /app/python/pnl_monitor.py
+COPY ./db.py /app/python/db.py
+COPY ./entrypoint.sh /app/python/entrypoint.sh
+COPY ./__init__.py /app/python/__init__.py
+COPY ./models.py /app/python/models.py
+COPY ./bkapp.py /app/python/bkapp.py
+# Copy static and template files
+COPY ./static/img/favicon.ico /app/python/static/img/favicon.ico
+COPY ./templates/tbot_dashboard.html /app/python/templates/tbot_dashboard.html
+COPY ./static/js/dashboard.js /app/python/static/js/dashboard.js
+COPY ./static/css/style.css /app/python/static/css/style.css
+
+
+
+
+
+# Create and set the working directory
+WORKDIR /app/python
+
+# Set up a virtual environment
+RUN python -m venv /venv
+# Install Python dependencies
+RUN pip install -r requirements.txt
+# Activate the virtual environment by default
+ENTRYPOINT ["/bin/bash", "-c", "source /venv/bin/activate && exec bash"]
+EXPOSE 5005
+# Allow you to shell in and manually run scripts
+CMD ["/bin/bash"]
