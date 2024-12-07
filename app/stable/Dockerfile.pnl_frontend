@@ -6,7 +6,9 @@ RUN apt-get update && apt-get upgrade -y
 # Install JDK and any needed utilities
 RUN apt-get install -y openjdk-17-jre-headless \
                        unzip curl procps vim net-tools \
-                       python3 python3-pip python3.11-venv
+                       python3 python3-pip python3.11-venv 
+                       
+                      
 
 # Create necessary directories
 RUN mkdir -p /app/logs && \
@@ -22,7 +24,6 @@ WORKDIR /app/portfolio-monitor
 
 # Copy Python files
 COPY ./requirements.txt /app/portfolio-monitor/src/requirements.txt
-COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
 COPY ./app.py /app/portfolio-monitor/src/app.py
 COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
 COPY ./__init__.py /app/portfolio-monitor/src/__init__.py

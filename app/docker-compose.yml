@@ -92,6 +92,7 @@ services:
       PYTHONUNBUFFERED: 1
       WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:--300.0}
       TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-}
+
   
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/pnl_data_jengo.db}
       TVWB_UNIQUE_KEY: ${TVWB_UNIQUE_KEY:-}
@@ -118,6 +119,7 @@ services:
       RISK_AMOUNT: ${RISK_AMOUNT:-}
       IB_GATEWAY_PORT: ${IB_GATEWAY_PORT:-4002}
       IB_GATEWAY_HOST: ${IB_GATEWAY_HOST:-ib-gateway}
+      IB_GATEWAY_CLIENT_ID: ${IB_GATEWAY_CLIENT_ID:-8}
       TVWB_UNIQUE_KEY: ${TVWB_UNIQUE_KEY:-}
       TOKEN_KEY: ${TOKEN_KEY:-}
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/pnl_data_jengo.db}
@@ -125,6 +127,7 @@ services:
       TBOT_IB_LOGLEVEL: ${TBOT_IB_LOGLEVEL:-}
       WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:--300.0}
       TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-}
+      IB_REALTIME_CLIENT_ID: ${IB_REALTIME_CLIENT_ID:-77}
 
     volumes:
       - ./data:/app/data
