@@ -9,6 +9,7 @@ from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountVal
 from typing import *
 from datetime import datetime, timedelta
 import pytz
+from real_time_bars import RealtimePriceService
 import os
 from dotenv import load_dotenv
 import time
@@ -42,6 +43,7 @@ class IBClient:
         self.positions: List = []
         self.portfolio_items = []
         self.pnl = PnL()
+        self.price_service = None
     
         self.risk_amount = 0.0
         self.closing_initiated = False
@@ -125,7 +127,11 @@ class IBClient:
            if self.logger:
                self.logger.error(f"Failed to connect to IB Gateway: {e}")
            return False
-    
+    async def init_price_service(self):
+        if self.price_service is None:
+            self.price_service = RealtimePriceService()
+            await self.price_service.start()
+
     def subscribe_events(self):
         """Subscribe to order and PnL events, and initialize account."""
         self.ib.pnlEvent += self.on_pnl_update
@@ -151,7 +157,7 @@ class IBClient:
         """Callback for new orders."""
         self.logger.info(f"New order placed: {trade}")
     
-    def on_pnl_update(self, pnl: PnL):
+    async def on_pnl_update(self, pnl: PnL):
         """Handle PnL updates and check conditions."""
         try:
             # Update PnL values
@@ -171,19 +177,17 @@ class IBClient:
             # Check positions and conditions
             for item in self.portfolio_items:
                 if item.position != 0:
-                    if self.check_pnl_conditions(pnl):
+                    if await self.check_pnl_conditions(pnl):
                         self.logger.info(f"PnL conditions met for {item.contract.symbol}")
                         
         except Exception as e:
             self.logger.error(f"Error in PnL update handler: {str(e)}")
         
-    def check_pnl_conditions(self, pnl: PnL) -> bool:
-        """Check if PnL conditions warrant closing positions."""
+    async def check_pnl_conditions(self, pnl: PnL) -> bool:
         try:
             load_dotenv()
-            self.risk_amount =  float(os.getenv('WEBHOOK_PNL_THRESHOLD', -300.0))  # Risk set WEBHOOK_PNL_THRESHOLD=-300.0 float(os.getenv('WEBHOOK_PNL_THRESHOLD', -300.0))
+            self.risk_amount = float(os.getenv('WEBHOOK_PNL_THRESHOLD', -300.0))
             self.logger.debug(f"dotenv - Risk amount set to: ${self.risk_amount:,.2f}")
-
 
             if self.closing_initiated:
                 return False
@@ -191,45 +195,69 @@ class IBClient:
             if self.net_liquidation <= 0:
                 self.logger.warning(f"Invalid net liquidation value: ${self.net_liquidation:,.2f}")
                 return False
-            
-            
-            is_threshold_exceeded = self.daily_pnl <= self.risk_amount #This is the real one
-            #is_threshold_exceeded = self.daily_pnl > self.risk_amount # This is a test when my pnl is positive and the market is closed
-            #print(f" jengo pnl is_threshold_exceeded, jk its a test {is_threshold_exceeded} = {self.daily_pnl} > {self.risk_amount}" )  #THE TEST ONE
 
-            print(f" jengo pnl is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl} <= {self.risk_amount}" )  #THE REAL ONE
+            is_threshold_exceeded = self.daily_pnl <= self.risk_amount
+            print(f"jengo pnl is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl} <= {self.risk_amount}")
+        
             if is_threshold_exceeded:
-                self.logger.debug(f"is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl:,.2f}, <= risk_amount ${self.risk_amount:,.2f}")
-
                 self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} <= ${self.risk_amount:,.2f}")
                 self.closing_initiated = True
-                
+            
                 positions_closed = False
                 for item in self.portfolio_items:
                     position_key = f"{item.contract.symbol}_{item.position}"
                     if item.position != 0 and position_key not in self.closed_positions:
                         self.logger.info(f"Initiating close for {item.contract.symbol} (Position: {item.position})")
-                        self.send_webhook_request(item)
+                        await self.send_webhook_request(item)  # Added await here
                         self.closed_positions.add(position_key)
                         positions_closed = True
-                
+            
                 return positions_closed
-            
+        
             return False
-            
+        
         except Exception as e:
             self.logger.error(f"Error in PnL conditions check: {str(e)}")
             return False
+        
 
-    def send_webhook_request(self, portfolio_items: PortfolioItem):
-        """Send webhook request to close position with different logic for market/after hours."""
-       
+    async def onBarUpdate(self, bars, hasNewBar):
+        print(bars[-1])
+
+    async def place_limit_order_with_latest_price(self, contract: Contract) -> Tuple[float, float]:
         try:
-            # Get current NY time
+            # Subscribe to realtime bars
+            bars = self.ib.reqRealTimeBars(contract, 5, 'TRADES', True)
+            bars.updateEvent += self.onBarUpdate
+            
+            # Wait for some data
+            await asyncio.sleep(5)
+            
+            if not bars or len(bars) == 0:
+                raise ValueError("No price data received")
+                
+            latest_price = bars[-1].close  # Get last reported price
+            
+            # Cancel the realtime subscription
+            self.ib.cancelRealTimeBars(bars)
+            
+            return latest_price
+            
+        except Exception as e:
+            self.logger.error(f"Error getting real-time price: {str(e)}")
+            return None
+
+    async def send_webhook_request(self, portfolio_items: PortfolioItem):
+        try:
             ny_tz = pytz.timezone('America/New_York')
             current_time = datetime.now(ny_tz)
+            is_weekend = current_time.weekday() >= 5
+        
             market_open = current_time.replace(hour=9, minute=30, second=0, microsecond=0)
             market_close = current_time.replace(hour=16, minute=0, second=0, microsecond=0)
+        
+            if is_weekend:
+                market_open = market_close
         
             timenow = int(current_time.timestamp() * 1000)
             position_size = abs(portfolio_items.position)
@@ -238,12 +266,11 @@ class IBClient:
             url = "https://tv.porenta.us/webhook"
         
             if market_open <= current_time <= market_close:
-                # During market hours - use close_all strategy
                 self.logger.info(f"Market hours close for {portfolio_items.contract.symbol}")
                 payload = {
                     "timestamp": timenow,
                     "ticker": portfolio_items.contract.symbol,
-                    "currency": "USD",
+                    "currency": "USD", 
                     "timeframe": "S",
                     "clientId": 1,
                     "key": self.token,
@@ -260,59 +287,65 @@ class IBClient:
                     ]
                 }
             else:
-                # After hours - get Tiingo price for entry.limit
-                self.logger.info(f"After hours close for {portfolio_items.contract.symbol} ({'LONG' if is_long_position else 'SHORT'} position)")
+                self.logger.info(f"After hours close for {portfolio_items.contract.symbol}")
                 
-                # Fetch current price from Tiingo
-                tiingo_token = self.tiingo_token
-                self.logger.info(f"Tiingo token: {tiingo_token}")
-                tiingo_url = f"https://api.tiingo.com/iex/?tickers={portfolio_items.contract.symbol}&token={tiingo_token}"
-                headers = {'Content-Type': 'application/json'}
-                market_price = portfolio_items.marketPrice  # default value
+                # Initialize market price as None
+                market_price = None
                 
-                try:
-                    tiingo_response = requests.get(tiingo_url, headers=headers)
-                    tiingo_data = tiingo_response.json()
-                    if tiingo_data and len(tiingo_data) > 0:
-                        market_price = tiingo_data[0]['tngoLast']
-                        self.logger.debug(f"Using Tiingo price for {portfolio_items.contract.symbol}: {market_price}")
-                except Exception as te:
-                    self.logger.error(f"Error fetching Tiingo data: {str(te)}, using portfolio market price")
+                # Try getting price from RealtimePriceService first
+                if not self.price_service:
+                    await self.init_price_service()
+                market_price = await self.price_service.get_price(portfolio_items.contract.symbol)
+                self.logger.info(f"Realtime price for {portfolio_items.contract.symbol}: {market_price}")
                 
-                payload = {
-                    "timestamp": timenow,
-                    "ticker": portfolio_items.contract.symbol,
-                    "currency": "USD",
-                    "timeframe": "S",
-                    "clientId": 1,
-                    "key": self.token,
-                    "contract": "stock",
-                    "orderRef": f"close-all-{portfolio_items.contract.symbol}-{timenow}",
-                    "direction": "strategy.entryshort" if is_long_position else "strategy.entrylong",
-                    "metrics": [
-                        {"name": "entry.limit", "value": market_price},
-                        {"name": "entry.stop", "value": 0},
-                        {"name": "exit.limit", "value": 0},
-                        {"name": "exit.stop", "value": 0},
-                        {"name": "qty", "value": position_size},
-                        {"name": "price", "value": portfolio_items.marketPrice}
-                    ]
-                }
+                # If market_price is None, try Tiingo API
+                if market_price is None:
+                    tiingo_token = self.tiingo_token
+                    tiingo_url = f"https://api.tiingo.com/iex/?tickers={portfolio_items.contract.symbol}&token={tiingo_token}"
+                    headers = {'Content-Type': 'application/json'}
+                    
+                    try:
+                        tiingo_response = requests.get(tiingo_url, headers=headers)
+                        tiingo_data = tiingo_response.json()
+                        if tiingo_data and len(tiingo_data) > 0:
+                            market_price = tiingo_data[0]['tngoLast']
+                            self.logger.debug(f"Using Tiingo price for {portfolio_items.contract.symbol}: {market_price}")
+                    except Exception as te:
+                        self.logger.error(f"Error fetching Tiingo data: {str(te)}")
+                
+                if market_price is not None:
+                    payload = {
+                        "timestamp": timenow,
+                        "ticker": portfolio_items.contract.symbol,
+                        "currency": "USD",
+                        "timeframe": "S",
+                        "clientId": 1,
+                        "key": self.token,
+                        "contract": "stock",
+                        "orderRef": f"close-all-{portfolio_items.contract.symbol}-{timenow}",
+                        "direction": "strategy.entryshort" if is_long_position else "strategy.entrylong",
+                        "metrics": [
+                            {"name": "entry.limit", "value": market_price},
+                            {"name": "entry.stop", "value": 0},
+                            {"name": "exit.limit", "value": 0},
+                            {"name": "exit.stop", "value": 0},
+                            {"name": "qty", "value": position_size},
+                            {"name": "price", "value": portfolio_items.marketPrice}
+                        ]
+                    }
 
-            headers = {'Content-Type': 'application/json'}
-            self.logger.debug(f"Sending webhook for {portfolio_items.contract.symbol} - Payload: {payload}")
-        
-            response = requests.post(url, headers=headers, data=json.dumps(payload))
-        
-            if response.status_code == 200:
-                self.logger.info(f"Successfully sent close request for {portfolio_items.contract.symbol}")
-                self.logger.debug(f"Webhook response: {response.text}")
-            else:
-                self.logger.error(f"Failed to send webhook for {portfolio_items.contract.symbol}. Status: {response.status_code}")
-            
+                    headers = {'Content-Type': 'application/json'}
+                    response = requests.post(url, headers=headers, data=json.dumps(payload))
+                    
+                    if response.status_code == 200:
+                        self.logger.info(f"Successfully sent close request for {portfolio_items.contract.symbol}")
+                    else:
+                        self.logger.error(f"Failed to send webhook. Status: {response.status_code}")
+                else:
+                    self.logger.error(f"Could not get price for {portfolio_items.contract.symbol} from any source")
+                    
         except Exception as e:
-            self.logger.error(f"Error sending webhook for {portfolio_items.contract.symbol}: {str(e)}")
-            
+            self.logger.error(f"Error sending webhook: {str(e)}")
   
     def close_all_positions(self):
         """Close all positions based on the data in the database."""
@@ -376,8 +409,6 @@ class IBClient:
             print(f" jengo run is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl} <= {self.risk_amount}" )
         
             self.subscribe_events()
-            print("jengo calling on_pnl_update initial run...")
-            self.on_pnl_update(self.pnl)  # Initial update
             print("jengo called on_pnl_update from run")
             
             no_update_counter = 0
