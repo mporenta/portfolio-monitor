@@ -1,5 +1,5 @@
 # initialize our Flask application
-from logging import getLogger, DEBUG
+from logging import getLogger, DEBUG, handlers
 
 import os
 import logging
@@ -15,19 +15,57 @@ from components.schemas.trading import Order, Position
 from utils.log import get_logger
 from utils.register import register_action, register_event, register_link
 from distutils.util import strtobool
-
-# register actions, events, links
 from settings import REGISTERED_ACTIONS, REGISTERED_EVENTS, REGISTERED_LINKS
 from waitress import serve
+
+# register actions, events, links
+
+
+loglevel_str = os.getenv('TBOT_LOGLEVEL', 'DEBUG').upper()  # Ensure it is uppercase
+logfile = os.getenv('FLASK_LOG_FILE', 'flask_log_jengo.txt')
+
+# Map log level string to actual logging level
+loglevel = getattr(logging, loglevel_str, logging.DEBUG)
+
+def setup_logger(name, logfile, level):
+    """Function to setup a custom logger"""
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # Create handlers
+    file_handler = handlers.RotatingFileHandler(
+        logfile, 
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5
+    )
+    console_handler = logging.StreamHandler()
+    
+    # Set the formatter for handlers
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Create logger
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+# Initialize logger
+logger = setup_logger(__name__, logfile, loglevel)
 
 registered_actions = [register_action(action) for action in REGISTERED_ACTIONS]
 registered_events = [register_event(event) for event in REGISTERED_EVENTS]
 registered_links = [register_link(link, em, am) for link in REGISTERED_LINKS]
 envKey = os.getenv('TVWB_UNIQUE_KEY',"")
+
 app = Flask(__name__)
 CORS(app)
-# configure logging
-logger = get_logger(__name__)
 
 app.add_url_rule("/", view_func=tbot.get_main)
 app.add_url_rule("/orders", view_func=tbot.get_orders)
@@ -47,7 +85,6 @@ schema_list = {"order": Order().as_json(), "position": Position().as_json()}
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
     if request.method == 'GET':
-
         # check if gui key file exists
         try:
             with open('.gui_key', 'r') as key_file:

@@ -597,6 +597,13 @@
   </section>
 
   <section class="max-w-6xl mx-auto mt-6 p-4 bg-gray-800 rounded-lg shadow">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-100">Current Portfolio</h2>
+    </div>
+    <table id="currentPortfolioTable" class="w-full"></table>
+  </section>
+
+  <section class="max-w-6xl mx-auto mt-6 p-4 bg-gray-800 rounded-lg shadow">
     <h2 class="text-xl font-semibold mb-4 text-gray-100">Today's Orders</h2>
     <table id="todayOrdersTable" class="w-full"></table>
   </section>
@@ -612,7 +619,7 @@
   </section>
 
   <script>
-    let activePositionsTable, todayOrdersTable, historicalOrdersTable, alertsTable;
+    let activePositionsTable, todayOrdersTable, historicalOrdersTable, alertsTable, currentPortfolioTable;
     let refreshInterval;
     const REFRESH_INTERVAL = 30000;
 
@@ -634,54 +641,144 @@
       };
 
       const commonOrderColumns = [
+
         {
-          data: 'timestamp', title: 'Tbot Time',
+          data: 'uniquekey',
+          title: 'TWS Time',
           render: data => moment.tz(data, 'America/Denver').format('YYYY-MM-DD HH:mm:ss')
         },
-        { data: 'uniquekey', title: 'Ord Time' },
-        { data: 'ticker', title: 'Ticker' },
-        { data: 'tv_price', title: 'Tv Close', render: data => (data || 0).toFixed(2) },
-        { data: 'action', title: 'Action' },
-        { data: 'ordertype', title: 'Type' },
-        { data: 'qty', title: 'Qty', render: data => (data || 0).toFixed(2) },
-        { data: 'lmtprice', title: 'Limit', render: data => (data || 0).toFixed(2) },
-        { data: 'auxprice', title: 'Stop', render: data => (data || 0).toFixed(2) },
-        { data: 'orderid', title: 'Orderid' },
-        { data: 'orderref', title: 'Orderref' },
-        { data: 'orderstatus', title: 'Status' },
-        { data: 'position', title: 'Pos', render: data => (data || 0).toFixed(2) },
-        { data: 'mrkvalue', title: 'Mrkval', render: data => (data || 0).toFixed(2) },
-        { data: 'avgfillprice', title: 'Avgf', render: data => (data || 0).toFixed(2) },
         {
-          data: 'unrealizedpnl', title: 'Unreal Pnl',
-          render: data => `<span class="${data >= 0 ? 'text-green-500' : 'text-red-500'}">${(data || 0).toFixed(2)}</span>`
+          data: 'ticker',
+          title: 'Ticker'
         },
         {
-          data: 'realizedpnl', title: 'Real Pnl',
-          render: data => `<span class="${data >= 0 ? 'text-green-500' : 'text-red-500'}">${(data || 0).toFixed(2)}</span>`
+          data: 'orderid',
+          title: 'Orderid'
+        },
+
+        {
+          data: 'orderref',
+          title: 'Orderref'
+        },
+        {
+          data: 'orderstatus',
+          title: 'Status'
+        },
+        {
+          data: 'timestamp',
+          title: 'Tbot Time',
+          render: data => moment.tz(data, 'America/Denver').format('YYYY-MM-DD HH:mm:ss')
+        },
+        {
+          data: 'action',
+          title: 'Action'
         }
+
+
       ];
 
       activePositionsTable = $('#activePositionsTable').DataTable({
         ...commonConfig,
         columns: [
-          ...commonOrderColumns,
           {
-            data: null,
-            title: 'Actions',
-            render: function (data) {
-              return `<button onclick="handleClosePosition('${data.ticker}', ${data.position}, ${data.tv_price})"
-                                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded text-white transition-colors">
-                                    Close
-                                </button>`;
-            }
+        data: null,
+        title: 'Actions',
+        render: function (data) {
+          return `<button onclick="handleClosePosition('${data.ticker}', ${data.position}, ${data.mrkvalue})"
+                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded text-white transition-colors">
+                Close
+                </button>`;
+        }
+          },
+          {
+        data: 'ticker',
+        title: 'Ticker'
+          },
+          {
+        data: 'position',
+        title: 'Pos',
+        render: data => (data || 0).toFixed(2)
+          },
+          {
+        data: 'mrkvalue',
+        title: 'Mrkval',
+        render: data => (data || 0).toFixed(2)
+          },
+          {
+        data: 'avgfillprice',
+        title: 'Avgf',
+        render: data => (data || 0).toFixed(2)
+          },
+          {
+        data: 'unrealizedpnl',
+        title: 'Unreal Pnl',
+        render: data => `<span class="${data >= 0 ? 'text-green-500' : 'text-red-500'}">${(data || 0).toFixed(2)}</span>`
+          },
+          {
+        data: 'realizedpnl',
+        title: 'Real Pnl',
+        render: data => `<span class="${data >= 0 ? 'text-green-500' : 'text-red-500'}">${(data || 0).toFixed(2)}</span>`
           }
         ]
       });
 
+      currentPortfolioTable = $('#currentPortfolioTable').DataTable({
+        ...commonConfig,
+        columns: [
+          ...commonOrderColumns,
+
+
+          { data: 'position', title: 'Pos', render: data => (data || 0).toFixed(2) },
+          { data: 'mrkvalue', title: 'Mrkval', render: data => (data || 0).toFixed(2) },
+          { data: 'avgfillprice', title: 'Avgf', render: data => (data || 0).toFixed(2) },
+          {
+            data: 'unrealizedpnl', title: 'Unreal Pnl',
+            render: data => `<span class="${data >= 0 ? 'text-green-500' : 'text-red-500'}">${(data || 0).toFixed(2)}</span>`
+          },
+          {
+            data: 'realizedpnl', title: 'Real Pnl',
+            render: data => `<span class="${data >= 0 ? 'text-green-500' : 'text-red-500'}">${(data || 0).toFixed(2)}</span>`
+          }
+        ]
+      });
       todayOrdersTable = $('#todayOrdersTable').DataTable({
         ...commonConfig,
-        columns: commonOrderColumns
+        columns: [
+          {
+            data: 'tv_price',
+            title: 'Tv Close',
+            render: data => (data || 0).toFixed(2)
+          },
+          ...commonOrderColumns,
+          {
+            data: 'ordertype',
+            title: 'Type'
+          },
+          {
+            data: 'lmtprice',
+            title: 'Limit',
+            render: data => (data || 0).toFixed(2)
+          },
+          {
+            data: 'auxprice',
+            title: 'Stop',
+            render: data => (data || 0).toFixed(2)
+          },
+          {
+            data: 'ordertype',
+            title: 'Type'
+          },
+          {
+            data: 'lmtprice',
+            title: 'Limit',
+            render: data => (data || 0).toFixed(2)
+          },
+          {
+            data: 'auxprice',
+            title: 'Stop',
+            render: data => (data || 0).toFixed(2)
+          }
+        ]
       });
 
       historicalOrdersTable = $('#historicalOrdersTable').DataTable({
@@ -712,16 +809,16 @@
     }
 
     async function fetchData() {
-    const refreshBtn = $('#refreshBtn');
-    const spinner = $('#refreshSpinner');
-    try {
+      const refreshBtn = $('#refreshBtn');
+      const spinner = $('#refreshSpinner');
+      try {
         refreshBtn.prop('disabled', true);
         spinner.removeClass('hidden');
 
         // Fetch data from APIs
         const [ordersDataResponse, alertsDataResponse] = await Promise.all([
-            fetch('/api/orders-data').then(r => r.json()),
-            fetch(`https://tv.porenta.us/alerts/data?_=${Date.now()}`).then(r => r.json())
+          fetch('/api/orders-data').then(r => r.json()),
+          fetch(`https://tv.porenta.us/alerts/data?_=${Date.now()}`).then(r => r.json())
         ]);
 
         console.log('Orders Data Response:', ordersDataResponse);
@@ -733,30 +830,32 @@
 
         // Ensure ordersData is an array
         if (!Array.isArray(ordersData)) {
-            console.error('ordersData is not an array:', ordersData);
-            throw new Error('ordersData is not an array');
+          console.error('ordersData is not an array:', ordersData);
+          throw new Error('ordersData is not an array');
         }
 
         const today = moment().startOf('day');
-        const activePositions = ordersData.filter(order => order.position !== 0);
+        const activePositions = ordersData.filter(order => order.position !== 0 && order.orderstatus === "Portfolio");
+        const currentPositions = ordersData.filter(order => order.position !== 0);
         const todayOrders = ordersData.filter(order =>
-            moment(order.timestamp).isSameOrAfter(today) && order.position === 0);
+          moment(order.timestamp).isSameOrAfter(today) && order.position === 0);
         const historicalOrders = ordersData.filter(order =>
-            moment(order.timestamp).isBefore(today) && order.position === 0);
+          moment(order.timestamp).isBefore(today) && order.position === 0);
 
         updatePnLMetrics(ordersData);
         activePositionsTable.clear().rows.add(activePositions).draw();
+        currentPortfolioTable.clear().rows.add(currentPositions).draw();
         todayOrdersTable.clear().rows.add(todayOrders).draw();
         historicalOrdersTable.clear().rows.add(historicalOrders).draw();
         alertsTable.clear().rows.add(alertsData).draw();
-    } catch (error) {
+      } catch (error) {
         console.error("Error fetching data:", error);
         showError("Failed to refresh data");
-    } finally {
+      } finally {
         refreshBtn.prop('disabled', false);
         spinner.addClass('hidden');
+      }
     }
-}
 
 
     async function handleClosePosition(symbol, position, price) {
@@ -768,29 +867,7 @@
         const qty = Math.abs(position);
 
         await Promise.all([
-          fetch("/proxy/webhook", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              timestamp: Date.now(),
-              ticker: symbol,
-              currency: "USD",
-              timeframe: "S",
-              clientId: 1,
-              key: "mrsprinkles",
-              contract: "stock",
-              orderRef: `close-${symbol}-${Date.now()}`,
-              direction: position > 0 ? "strategy.entryshort" : "strategy.entrylong",
-              metrics: [
-                { name: "entry.limit", value: price },
-                { name: "entry.stop", value: 0 },
-                { name: "exit.limit", value: 0 },
-                { name: "exit.stop", value: 0 },
-                { name: "qty", value: qty },
-                { name: "price", value: price }
-              ]
-            })
-          }),
+          
           fetch("/close_positions", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

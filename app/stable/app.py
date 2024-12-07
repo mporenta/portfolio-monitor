@@ -22,6 +22,7 @@ from models import Base, Positions, PnLData, Trades, Orders, PositionClose
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 load_dotenv()
+tiingo_token = os.getenv('TIINGO_API_TOKEN')
 unique_ts = str((time.time_ns() // 1000000) -  (4 * 60 * 60 * 1000))
 
 def get_timestamp(unique_ts: str) -> str:
@@ -317,16 +318,29 @@ async def place_order(positions_request: PositionsRequest):
                     )
                 else:
                     logger.info(f"Creating limit order for {position.symbol}")
-                    # Get current market price from IB
+                    # Fetch current price from Tiingo
+                    logger.info(f"Tiingo token: {tiingo_token}")
+                    tiingo_url = f"https://api.tiingo.com/iex/?tickers={position.symbol}&token={tiingo_token}"
+                    headers = {'Content-Type': 'application/json'}
+                    
+                
+                    try:
+                        tiingo_response = requests.get(tiingo_url, headers=headers)
+                        tiingo_data = tiingo_response.json()
+                        if tiingo_data and len(tiingo_data) > 0:
+                            limit_price = tiingo_data[0]['tngoLast']
+                            logger.info(f"Tiingo response: {tiingo_data} - Using Tiingo 'tngoLast' price for {position.symbol}: {limit_price}")
+                    except Exception as te:
+                        logger.error(f"Error fetching Tiingo data: {str(te)}")
                     
                      # Wait for price data
-                    limit_price = position.price
+                    
                     if not limit_price:
                         raise ValueError(f"Could not get market price for {position.symbol}")
                         
                     order = LimitOrder(
                         action=position.action,
-                        totalQuantity=-10000000000,
+                        totalQuantity=position.quantity,
                         lmtPrice=round(limit_price, 2),
                         tif='GTC',
                         outsideRth=True
@@ -372,59 +386,62 @@ async def place_order(positions_request: PositionsRequest):
 
 @app.post("/proxy/webhook")
 async def proxy_webhook(webhook_data: WebhookRequest):
-    
     try:
         load_dotenv()
         logger.info(f"load_dotenv{load_dotenv()}")
         logger.info("Received webhook request")
         logger.debug(f"Incoming webhook data: {webhook_data.dict()}")
         
-        # Get PNL threshold from environment
-        pnl_threshold = float(os.getenv("WEBHOOK_PNL_THRESHOLD", "-300"))
-        logger.info(f"PNL threshold set to: {pnl_threshold}")
-        
-        # Fetch current positions and PNL data
-        try:
-            # Create async client for internal request
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "http://localhost:5001/api/orders-data",  # Internal call to our own endpoint
-                    timeout=10.0
-                )
-                response.raise_for_status()
-                positions_data = response.json()
-                
-                # Calculate total PNL for active positions
-                total_pnl = 0.0
-                for position in positions_data.get('data', []):
-                    # Only consider positions that are not zero
-                    if position:
-                        realized_pnl = float(position.get('realizedpnl', 0))
-                        unrealized_pnl = float(position.get('unrealizedpnl', 0))
-                        total_pnl += realized_pnl + unrealized_pnl
-                
-                logger.info(f"Calculated total PNL: {total_pnl}")
-                
-                # Check if total PNL meets threshold
-                if total_pnl <= pnl_threshold:
-                    logger.warning(f"Total PNL ({total_pnl}) below threshold ({pnl_threshold}). Webhook blocked.")
-                    return JSONResponse(
-                        status_code=403,
-                        content={
-                            "status": "rejected",
-                            "message": f"Current PNL ({total_pnl}) is below threshold ({pnl_threshold})",
-                            "total_pnl": total_pnl,
-                            "threshold": pnl_threshold
-                        }
+        # Check if direction contains "close" or "cancel" - bypass PNL check if true
+        if "close" in webhook_data.direction.lower() or "cancel" in webhook_data.direction.lower():
+            logger.info(f"Direction '{webhook_data.direction}' contains close/cancel - bypassing PNL check")
+        else:
+            # Get PNL threshold from environment
+            pnl_threshold = float(os.getenv("WEBHOOK_PNL_THRESHOLD", "-300"))
+            logger.info(f"PNL threshold set to: {pnl_threshold}")
+            
+            # Fetch current positions and PNL data
+            try:
+                # Create async client for internal request
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        "http://localhost:5001/api/orders-data",  # Internal call to our own endpoint
+                        timeout=10.0
                     )
-                
-                logger.info(f"PNL check passed. Proceeding with webhook forwarding.")
-                
-        except Exception as e:
-            logger.error(f"Error fetching or processing PNL data: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to verify PNL conditions")
+                    response.raise_for_status()
+                    positions_data = response.json()
+                    
+                    # Calculate total PNL for active positions
+                    total_pnl = 0.0
+                    for position in positions_data.get('data', []):
+                        # Only consider positions that are not zero
+                        if position:
+                            realized_pnl = float(position.get('realizedpnl', 0))
+                            unrealized_pnl = float(position.get('unrealizedpnl', 0))
+                            total_pnl += realized_pnl + unrealized_pnl
+                    
+                    logger.info(f"Calculated total PNL: {total_pnl}")
+                    
+                    # Check if total PNL meets threshold
+                    if total_pnl <= pnl_threshold:
+                        logger.warning(f"Total PNL ({total_pnl}) below threshold ({pnl_threshold}). Webhook blocked.")
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "status": "rejected",
+                                "message": f"Current PNL ({total_pnl}) is below threshold ({pnl_threshold})",
+                                "total_pnl": total_pnl,
+                                "threshold": pnl_threshold
+                            }
+                        )
+                    
+                    logger.info(f"PNL check passed. Proceeding with webhook forwarding.")
+                    
+            except Exception as e:
+                logger.error(f"Error fetching or processing PNL data: {str(e)}")
+                raise HTTPException(status_code=500, detail="Failed to verify PNL conditions")
         
-        # If we get here, PNL check passed - proceed with webhook
+        # If we get here, either PNL check passed or direction was close/cancel
         webhook_url = "http://tbot-on-tradingboat:5000/webhook"
         logger.info(f"Forwarding to webhook URL: {webhook_url}")
         
@@ -461,7 +478,6 @@ async def proxy_webhook(webhook_data: WebhookRequest):
         logger.error(f"Unexpected error in proxy webhook: {str(e)}")
         logger.exception("Full exception details:")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 async def ensure_ib_connection():

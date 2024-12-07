@@ -1,13 +1,13 @@
-# Use Python 3.12 slim as base image
-FROM python:3.12-slim
+FROM debian:bookworm-slim
 
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y \
-    git \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-    
+# Update and upgrade packages
+RUN apt-get update && apt-get upgrade -y
+
+# Install JDK and any needed utilities
+RUN apt-get install -y openjdk-17-jre-headless \
+                       unzip curl procps vim net-tools \
+                       python3 python3-pip python3.11-venv
+
 # Create necessary directories
 RUN mkdir -p /app/logs && \
     mkdir -p /app/data && \
@@ -21,7 +21,7 @@ RUN mkdir -p /app/logs && \
 WORKDIR /app/portfolio-monitor
 
 # Copy Python files
-COPY ./requirements.txt /app/portfolio-monitor/requirements.txt
+COPY ./requirements.txt /app/portfolio-monitor/src/requirements.txt
 COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
 COPY ./app.py /app/portfolio-monitor/src/app.py
 COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
@@ -34,26 +34,22 @@ COPY ./templates/tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashb
 COPY ./static/js/dashboard.js /app/portfolio-monitor/static/js/dashboard.js
 COPY ./static/css/style.css /app/portfolio-monitor/static/css/style.css
 
-# Copy startup script to src directory for consistency with backend
+# Copy startup script
 COPY ./fast_api.sh /app/portfolio-monitor/src/fast_api.sh
 
-# Fix line endings and set permissions
-RUN sed -i 's/\r$//' /app/portfolio-monitor/src/fast_api.sh && \
-    chmod +x /app/portfolio-monitor/src/fast_api.sh
-
-# Install Python dependencies
-RUN pip install -r requirements.txt
+# Set up Python environment
+WORKDIR /app/portfolio-monitor/src
+RUN python3 -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    pip install -r requirements.txt
 
 # Set environment variables
+ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV REDIS_DECODE_RESPONSES=True
 ENV PYTHONPATH=/app/portfolio-monitor:/app/portfolio-monitor/src
 
-# Change to src directory where fast_api.sh is located
-WORKDIR /app/portfolio-monitor/src
-
-# Expose port for the application
 EXPOSE 5001
 
-# Use the startup script
-ENTRYPOINT ["./fast_api.sh"]
+# Use shell form to ensure virtual environment is activated
+CMD ["/opt/venv/bin/python3", "app.py"]

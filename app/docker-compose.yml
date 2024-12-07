@@ -39,6 +39,7 @@ services:
       TBOT_PROFILER: ${TBOT_PROFILER:-False}
       USER_EMAIL_GIT: ${USER_EMAIL_GIT}
       USER_NAME_GIT: ${USER_NAME_GIT}
+      FLASK_LOG_FILE: ${FLASK_LOG_FILE}
 
 
     
@@ -90,12 +91,14 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
       WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:--300.0}
-
+      TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-}
+  
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/pnl_data_jengo.db}
       TVWB_UNIQUE_KEY: ${TVWB_UNIQUE_KEY:-}
     volumes:
       - ./data:/app/data
       - ./models:/app/models
+    
 
   pnl-monitor-backend:
     container_name: pnl-monitor-backend
@@ -120,6 +123,9 @@ services:
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/pnl_data_jengo.db}
       TBOT_LOGLEVEL: ${TBOT_LOGLEVEL:-}
       TBOT_IB_LOGLEVEL: ${TBOT_IB_LOGLEVEL:-}
+      WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:--300.0}
+      TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-}
+
     volumes:
       - ./data:/app/data
       - ./models:/app/models
