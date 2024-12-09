@@ -24,9 +24,11 @@ WORKDIR /app/portfolio-monitor
 COPY ./requirements.txt /app/portfolio-monitor/src/requirements.txt
 COPY ./pnl_monitor.py /app/portfolio-monitor/src/pnl_monitor.py
 COPY ./app.py /app/portfolio-monitor/src/app.py
-COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
+#COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
 COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
 COPY ./models.py /app/portfolio-monitor/src/models.py
+COPY ./real_time_bars.py /app/portfolio-monitor/src/real_time_bars.py
+
 
 # Copy static and template files
 COPY ./static/img/favicon.ico /app/portfolio-monitor/static/img/favicon.ico

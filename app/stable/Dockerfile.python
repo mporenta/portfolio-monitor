@@ -35,6 +35,8 @@ COPY ./static/img/favicon.ico /app/python/static/img/favicon.ico
 COPY ./templates/tbot_dashboard.html /app/python/templates/tbot_dashboard.html
 COPY ./static/js/dashboard.js /app/python/static/js/dashboard.js
 COPY ./static/css/style.css /app/python/static/css/style.css
+COPY ./real_time_bars.py /app/portfolio-monitor/src/real_time_bars.py
+
 # Set environment variables
 # Set environment variables
 RUN python3.11 -m venv /opt/venv

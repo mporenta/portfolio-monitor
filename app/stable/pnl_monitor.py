@@ -159,6 +159,7 @@ class IBClient:
             self.total_unrealized_pnl = float(pnl.unrealizedPnL or 0.0)
             self.total_realized_pnl = float(pnl.realizedPnL or 0.0)
             
+            
             self.logger.debug(f"Daily PnL: ${self.daily_pnl:,.2f}, Net Liquidation: ${self.net_liquidation:,.2f}")
 
             # Update portfolio items
@@ -181,9 +182,11 @@ class IBClient:
         """Check if PnL conditions warrant closing positions."""
         try:
             load_dotenv()
-            self.risk_amount =  float(os.getenv('WEBHOOK_PNL_THRESHOLD', -300.0))  # Risk set WEBHOOK_PNL_THRESHOLD=-300.0 float(os.getenv('WEBHOOK_PNL_THRESHOLD', -300.0))
-            self.logger.debug(f"dotenv - Risk amount set to: ${self.risk_amount:,.2f}")
-
+            self.daily_pnl = float(pnl.dailyPnL or 0.0)
+            self.total_unrealized_pnl = float(pnl.unrealizedPnL or 0.0)
+            self.total_realized_pnl = float(pnl.realizedPnL or 0.0)
+            self.risk_amount = float(os.getenv('WEBHOOK_PNL_THRESHOLD', -300.0))  # Risk set WEBHOOK_PNL_THRESHOLD=-300.0
+            self.logger.info(f"dotenv - Risk amount set to: ${self.risk_amount:,.2f}")
 
             if self.closing_initiated:
                 return False
@@ -191,35 +194,38 @@ class IBClient:
             if self.net_liquidation <= 0:
                 self.logger.warning(f"Invalid net liquidation value: ${self.net_liquidation:,.2f}")
                 return False
-            
-            
-            is_threshold_exceeded = self.daily_pnl <= self.risk_amount #This is the real one
-            #is_threshold_exceeded = self.daily_pnl > self.risk_amount # This is a test when my pnl is positive and the market is closed
-            #print(f" jengo pnl is_threshold_exceeded, jk its a test {is_threshold_exceeded} = {self.daily_pnl} > {self.risk_amount}" )  #THE TEST ONE
 
-            print(f" jengo pnl is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl} <= {self.risk_amount}" )  #THE REAL ONE
+            # Updated threshold condition
+            combined_pnl = (self.total_unrealized_pnl / 2) + self.total_realized_pnl
+            is_threshold_exceeded = combined_pnl <= self.risk_amount or self.total_unrealized_pnl <= self.risk_amount
+
+            # Debug logging for PnL calculations
+            self.logger.info(f"Combined PnL: {combined_pnl:,.2f} = Unrealized PnL ({self.total_unrealized_pnl:,.2f}/2) + Realized PnL ({self.total_realized_pnl:,.2f})")
+            self.logger.info(f"Threshold exceeded: {is_threshold_exceeded} (Combined PnL <= Risk Amount ${self.risk_amount:,.2f})")
+
             if is_threshold_exceeded:
-                self.logger.debug(f"is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl:,.2f}, <= risk_amount ${self.risk_amount:,.2f}")
-
+                self.logger.info(f"is_threshold_exceeded {is_threshold_exceeded} = {self.daily_pnl:,.2f}, <= risk_amount ${self.risk_amount:,.2f}")
                 self.logger.info(f"Risk threshold reached: Daily PnL ${self.daily_pnl:,.2f} <= ${self.risk_amount:,.2f}")
                 self.closing_initiated = True
-                
+
                 positions_closed = False
                 for item in self.portfolio_items:
                     position_key = f"{item.contract.symbol}_{item.position}"
                     if item.position != 0 and position_key not in self.closed_positions:
                         self.logger.info(f"Initiating close for {item.contract.symbol} (Position: {item.position})")
-                        self.send_webhook_request(item)
+                        #self.send_webhook_request(item)
+                        self.place_order(item)
                         self.closed_positions.add(position_key)
                         positions_closed = True
-                
+
                 return positions_closed
-            
+
             return False
-            
+
         except Exception as e:
             self.logger.error(f"Error in PnL conditions check: {str(e)}")
             return False
+
 
     def send_webhook_request(self, portfolio_items: PortfolioItem):
         """Send webhook request to close position with different logic for market/after hours."""
@@ -275,7 +281,7 @@ class IBClient:
                     tiingo_data = tiingo_response.json()
                     if tiingo_data and len(tiingo_data) > 0:
                         market_price = tiingo_data[0]['tngoLast']
-                        self.logger.debug(f"Using Tiingo price for {portfolio_items.contract.symbol}: {market_price}")
+                        self.logger.info(f"Using Tiingo price for {portfolio_items.contract.symbol}: {market_price}")
                 except Exception as te:
                     self.logger.error(f"Error fetching Tiingo data: {str(te)}, using portfolio market price")
                 
@@ -300,13 +306,13 @@ class IBClient:
                 }
 
             headers = {'Content-Type': 'application/json'}
-            self.logger.debug(f"Sending webhook for {portfolio_items.contract.symbol} - Payload: {payload}")
+            self.logger.info(f"Sending webhook for {portfolio_items.contract.symbol} - Payload: {payload}")
         
             response = requests.post(url, headers=headers, data=json.dumps(payload))
         
             if response.status_code == 200:
                 self.logger.info(f"Successfully sent close request for {portfolio_items.contract.symbol}")
-                self.logger.debug(f"Webhook response: {response.text}")
+                self.logger.info(f"Webhook response: {response.text}")
             else:
                 self.logger.error(f"Failed to send webhook for {portfolio_items.contract.symbol}. Status: {response.status_code}")
             
@@ -314,52 +320,89 @@ class IBClient:
             self.logger.error(f"Error sending webhook for {portfolio_items.contract.symbol}: {str(e)}")
             
   
-    def close_all_positions(self):
-        """Close all positions based on the data in the database."""
-        
-        portfolio_items =  self.ib.portfolio(self.account)
-        for item in portfolio_items:
-            symbol = item.contract.symbol
-            pos = item.position
-            #self.logger.info("No positions to close.")
-            #return
+    def place_order(self, portfolio_item: PortfolioItem):
+        """
+        Place an order with Interactive Brokers based on the position request.
+        """
+        self.logger.info(f"Received position request: {portfolio_item}")
 
-        ny_tz = pytz.timezone('America/New_York')
-        ny_time = datetime.now(ny_tz)
-        is_after_hours = True  # or any logic to set trading hours based on `ny_time`
+        response_data = []
+        try:
+            load_dotenv()
 
-        for item in portfolio_items:
-            if item['position'] == 0:
-                continue
-           
-            
+            self.tiingo_token = os.getenv('TIINGO_API_TOKEN')   
+            ny_tz = pytz.timezone('America/New_York')
+            current_time = datetime.now(ny_tz)
+            market_open = current_time.replace(hour=9, minute=30, second=0, microsecond=0)
+            market_close = current_time.replace(hour=16, minute=0, second=0, microsecond=0)
+            is_market_hours = market_open <= current_time <= market_close
 
-            action = 'BUY' if item['position'] < 0 else 'SELL'
-            quantity = abs(item['position'])
+            is_long_position = portfolio_item.position > 0
+            symbol = portfolio_item.contract.symbol
+            pos = abs(portfolio_item.position)
 
-            # Example contract setup - modify as needed
-            contract = Contract(symbol=symbol, exchange='SMART', secType='STK', currency='USD')
-            
             try:
-                if pos != 0:
-                    self.logger.debug(f"Placing MarketOrder for {symbol}")
-                    order = MarketOrder(action=action, totalQuantity=quantity, tif='GTC')
-                    
-                else:
-                    limit_price = self.get_market_data(contract)  # Placeholder for a method to fetch market data
-                    order = LimitOrder(
-                        action=action, totalQuantity=quantity, lmtPrice=round(limit_price, 2), 
-                        tif='GTC', outsideRth=True
-                    )
-                    self.logger.debug(f"Placing LimitOrder for {symbol} at {limit_price}")
+                self.logger.info(f"Processing order for {symbol}")
 
-                # Place the order and update the order fill in the database
+                # Create contract
+                contract = Contract(
+                    symbol=symbol,
+                    exchange='SMART',
+                    secType='STK',
+                    currency='USD'
+                )
+
+                # Determine action based on position
+                action = 'SELL' if is_long_position else 'BUY'
+
+                # Create order based on market hours
+                if is_market_hours:
+                    self.logger.info(f"Creating market order for {symbol}")
+                    order = MarketOrder(
+                        action=action,
+                        totalQuantity=pos,
+                        tif='GTC'
+                    )
+                else:
+                    self.logger.info(f"Creating limit order for {symbol}")
+                    # Fetch current price from Tiingo
+                    self.logger.info(f"Tiingo token: {self.tiingo_token}")
+                    tiingo_url = f"https://api.tiingo.com/iex/?tickers={symbol}&token={self.tiingo_token}"
+                    headers = {'Content-Type': 'application/json'}
+
+                    try:
+                        tiingo_response = requests.get(tiingo_url, headers=headers)
+                        tiingo_data = tiingo_response.json()
+                        if tiingo_data and len(tiingo_data) > 0:
+                            limit_price = tiingo_data[0]['tngoLast']
+                            self.logger.info(f"Tiingo response: {tiingo_data} - Using Tiingo 'tngoLast' price for {symbol}: {limit_price}")
+                    except Exception as te:
+                        self.logger.error(f"Error fetching Tiingo data: {str(te)}")
+
+                    if not limit_price:
+                        raise ValueError(f"Could not get market price for {symbol}")
+
+                    order = LimitOrder(
+                        action=action,
+                        totalQuantity=pos,
+                        lmtPrice=round(limit_price, 2),
+                        tif='GTC',
+                        outsideRth=True
+                    )
+
+                # Place the order
                 trade = self.ib.placeOrder(contract, order)
-                #self.ib.sleep(30)
-                self.logger.info(f"Order placed and recorded for {symbol}")
+                self.logger.info(f"Order placed for {symbol}: {trade}")
 
             except Exception as e:
-                self.logger.error(f"Error creating order for {symbol}: {str(e)}")
+                self.logger.error(f"Error processing order for {symbol}: {str(e)}", exc_info=True)
+
+            self.logger.info("Order processed successfully")
+            return response_data
+
+        except Exception as e:
+            self.logger.error(f"Error processing position request: {str(e)}", exc_info=True)
+      
     
     async def run(self):
         """Async main run loop with improved error handling."""
@@ -378,7 +421,6 @@ class IBClient:
             self.subscribe_events()
             print("jengo calling on_pnl_update initial run...")
             self.on_pnl_update(self.pnl)  # Initial update
-            print("jengo called on_pnl_update from run")
             
             no_update_counter = 0
             while True:

@@ -25,7 +25,7 @@ WORKDIR /app/portfolio-monitor
 # Copy Python files
 COPY ./requirements.txt /app/portfolio-monitor/src/requirements.txt
 COPY ./app.py /app/portfolio-monitor/src/app.py
-COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
+#COPY ./closeall.py /app/portfolio-monitor/src/closeall.py
 COPY ./__init__.py /app/portfolio-monitor/src/__init__.py
 COPY ./models.py /app/portfolio-monitor/src/models.py
 
@@ -34,6 +34,7 @@ COPY ./static/img/favicon.ico /app/portfolio-monitor/static/img/favicon.ico
 COPY ./templates/tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashboard.html
 COPY ./static/js/dashboard.js /app/portfolio-monitor/static/js/dashboard.js
 COPY ./static/css/style.css /app/portfolio-monitor/static/css/style.css
+COPY ./real_time_bars.py /app/portfolio-monitor/src/real_time_bars.py
 
 # Copy startup script
 COPY ./fast_api.sh /app/portfolio-monitor/src/fast_api.sh
