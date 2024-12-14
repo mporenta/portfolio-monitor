@@ -19,3 +19,5 @@ aiofiles
 tailwindcss
 httpx
 discord_webhook
+apscheduler
+pandas

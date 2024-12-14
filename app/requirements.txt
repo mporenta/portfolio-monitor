@@ -16,3 +16,4 @@ pydantic
 jinja2 
 python-multipart
 aiofiles
+apscheduler

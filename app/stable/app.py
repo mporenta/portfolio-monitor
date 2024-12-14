@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
+from shorts import short_stock_manager
 import httpx
 from datetime import datetime
 from typing import List, Dict, Optional, Union, Any
@@ -42,7 +43,8 @@ PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 FASTAPI_IB_CLIENT_ID = int(os.getenv('FASTAPI_IB_CLIENT_ID', '1111'))
 IB_HOST = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  
 IB_PORT = int(os.getenv('TBOT_IBKR_PORT', '4002'))
-
+max_attempts=300
+initial_delay=1
 # Get the src directory path
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory (project root)
@@ -140,14 +142,79 @@ class WebhookRequest(BaseModel):
 async def lifespan(app: FastAPI):
     logger.info("Loading .env in lifespan...")
     load_dotenv()
-    # Startup
+    
+    async def try_connect():
+        try:
+            await ib.connectAsync(
+                host=IB_HOST,
+                port=IB_PORT,
+                clientId=FASTAPI_IB_CLIENT_ID,
+                timeout=20
+            )
+            ib.disconnectedEvent += on_disconnected
+            logger.info("Connected to IB Gateway and subscribed to disconnection event")
+            return True
+        except Exception as e:
+            if 'getaddrinfo failed' in str(e):
+                logger.warning(f"Connection failed with {IB_HOST}, trying localhost")
+                try:
+                    await ib.connectAsync(
+                        host='127.0.0.1',
+                        port=IB_PORT,
+                        clientId=FASTAPI_IB_CLIENT_ID,
+                        timeout=20
+                    )
+                    ib.disconnectedEvent += on_disconnected
+                    logger.info("Connected to IB Gateway and subscribed to disconnection event")
+
+                    return True
+                except Exception as inner_e:
+                    logger.error(f"Localhost connection failed: {inner_e}")
+            else:
+                logger.error(f"Connection error: {e}")
+            return False
+    async def on_disconnected():
+        """Handle disconnection"""
+  
+        logger.warning("Disconnected from IB Gateway")
+        if not ib.isConnected():
+
+            await connect_with_retry()   
+
+    async def connect_with_retry():
+        logger.info("Attempting to reconnect to IB Gateway...")
+        attempt = 0
+        while attempt < max_attempts:
+            if await try_connect():
+                logger.info("Successfully connected to IB Gateway")
+                return True
+                
+            attempt += 1
+            if attempt < max_attempts:
+                delay = initial_delay * (1 ** attempt)
+                logger.info(f"Retrying connection in {delay} seconds... "
+                           f"(Attempt {attempt + 1}/{max_attempts})")
+                await asyncio.sleep(delay)
+                
+        logger.error("Max reconnection attempts reached")
+        return False
+
     try:
         logger.info("Connecting to IB Gateway...")
-        await ib.connectAsync(IB_HOST, IB_PORT, FASTAPI_IB_CLIENT_ID)
-        logger.info("Connected to IB Gateway.")
+        if not await connect_with_retry():
+            raise RuntimeError("Failed to connect to IB Gateway after multiple attempts")
+            
+        # Initialize short stock data
+        logger.info("Initializing short stock data...")
+        await short_stock_manager.fetch_and_parse_short_availability()
+        short_stock_manager.start_scheduler()
+        logger.info("Short stock manager initialized and scheduler started.")
+        
     except Exception as e:
-        logger.error(f"Failed to connect to IB Gateway: {e}")
-        raise RuntimeError("IB Gateway connection failed.")
+        logger.error(f"Startup failed: {e}")
+        if ib.isConnected():
+            await ib.disconnect()
+        raise RuntimeError(f"Startup failed: {e}")
     
     yield
     
@@ -155,6 +222,10 @@ async def lifespan(app: FastAPI):
     if ib.isConnected():
         await ib.disconnect()
         logger.info("Disconnected from IB Gateway.")
+    
+    # Stop the short stock scheduler
+    short_stock_manager.stop_scheduler()
+    logger.info("Short stock scheduler stopped.")
 
 # Initialize FastAPI app with lifespan
 app = FastAPI(
@@ -186,6 +257,36 @@ async def preflight_handler(rest_of_path: str):
         },
         status_code=204,  # No content
     )
+
+@app.get("/short/{symbol}")
+async def get_short_availability(symbol: str):
+    shares = short_stock_manager.get_availability(symbol)
+    if shares is None:
+        raise HTTPException(status_code=404, detail="Symbol not found")
+    
+    return {
+        "symbol": symbol.upper(),
+        "available_shares": shares,
+        "last_updated": short_stock_manager.get_last_updated().isoformat()
+    }
+
+# Add bulk lookup endpoint if needed
+@app.post("/short/bulk")
+async def get_bulk_short_availability(symbols: List[str]):
+    results = {}
+    last_updated = short_stock_manager.get_last_updated()
+    
+    for symbol in symbols:
+        shares = short_stock_manager.get_availability(symbol.upper())
+        if shares is not None:
+            results[symbol.upper()] = shares
+    
+    return {
+        "data": results,
+        "last_updated": last_updated.isoformat() if last_updated else None,
+        "found": len(results),
+        "not_found": len(symbols) - len(results)
+    }
 
 # Routes
 @app.get("/", response_class=HTMLResponse)
@@ -313,7 +414,7 @@ async def place_order(positions_request: PositionsRequest):
                     logger.info(f"Creating market order for {position.symbol}")
                     order = MarketOrder(
                         action=position.action,
-                        totalQuantity=-10000000000,
+                        totalQuantity=position.quantity,
                         tif='GTC'
                     )
                 else:
@@ -390,7 +491,53 @@ async def proxy_webhook(webhook_data: WebhookRequest):
         load_dotenv()
         logger.info(f"load_dotenv{load_dotenv()}")
         logger.info("Received webhook request")
-        logger.debug(f"Incoming webhook data: {webhook_data.dict()}")
+        logger.debug(f"Incoming webhook data: {webhook_data.model_dump()}")
+         # Check if it's a short entry order
+        if "strategy.entryshort" in webhook_data.direction.lower():
+            # Check if all entry values are 0 for Market Order
+            entry_types = ["entry.limit", "entry.stop"]
+            for entry_type in entry_types:
+                value = next((metric.value for metric in webhook_data.metrics if metric.name == entry_type), None)
+                if value is None or value != 0:
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "status": "rejected",
+                            "message": f"Invalid {entry_type} value. Expected 0, got {value}"
+                        }
+                    )
+
+            # Get quantity from metrics
+            quantity = next((metric.value for metric in webhook_data.metrics if metric.name == "qty"), None)
+            if quantity is None:
+                raise HTTPException(status_code=400, detail="Quantity not found in metrics")
+            
+            # Check short availability
+            shares = short_stock_manager.get_availability(webhook_data.ticker)
+            if shares is None:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "status": "rejected",
+                        "message": f"No short availability data found for {webhook_data.ticker}"
+                    }
+                )
+            
+            required_shares = quantity * 5
+            if shares < required_shares:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "status": "rejected",
+                        "message": f"Insufficient shares available to short. Required: {required_shares}, Available: {shares}",
+                        "symbol": webhook_data.ticker,
+                        "available_shares": shares,
+                        "required_shares": required_shares
+                    }
+                )
+            logger.info(f"Short availability check passed for {webhook_data.ticker}. Required: {required_shares}, Available: {shares}")
+
+        # Rest of your existing webhook logic...
         
         # Check if direction contains "close" or "cancel" - bypass PNL check if true
         if "close" in webhook_data.direction.lower() or "cancel" in webhook_data.direction.lower():
@@ -446,7 +593,7 @@ async def proxy_webhook(webhook_data: WebhookRequest):
         logger.info(f"Forwarding to webhook URL: {webhook_url}")
         
         # Convert webhook data to dictionary and add the key
-        webhook_dict = webhook_data.dict()
+        webhook_dict = webhook_data.model_dump()
         webhook_dict["key"] = tbotKey
         logger.info(f"Added key to webhook data, ticker: {webhook_dict.get('ticker')}")
         
@@ -481,16 +628,30 @@ async def proxy_webhook(webhook_data: WebhookRequest):
 
 
 async def ensure_ib_connection():
-    """Ensure IB connection is active, reconnect if needed"""
     try:
         if not ib.isConnected():
             logger.info("IB not connected, attempting to reconnect...")
-            await ib.connectAsync(IB_HOST, IB_PORT, FASTAPI_IB_CLIENT_ID)
-            # Wait a brief moment for connection to stabilize
+            await ib.connectAsync(
+                host=IB_HOST,
+                port=IB_PORT,
+                clientId=FASTAPI_IB_CLIENT_ID,
+                timeout=20
+            )
             await asyncio.sleep(1)
             
             if not ib.isConnected():
-                raise ConnectionError("Failed to establish IB connection")
+                # Try localhost if main host fails
+                try:
+                    await ib.connectAsync(
+                        host='127.0.0.1',
+                        port=IB_PORT,
+                        clientId=FASTAPI_IB_CLIENT_ID,
+                        timeout=20
+                    )
+                    await asyncio.sleep(1)
+                except Exception:
+                    raise ConnectionError("Failed to establish IB connection")
+                    
             logger.info("Successfully reconnected to IB")
         return True
     except Exception as e:
@@ -519,7 +680,7 @@ async def get_ib_data():
         
         for attempt in range(max_retries):
             try:
-                async with asyncio.timeout(5):  # Reduced timeout
+                async with asyncio.timeout(2):  # Reduced timeout
                     if not ib.isConnected():
                         await ensure_ib_connection()
                     
@@ -538,7 +699,7 @@ async def get_ib_data():
                         }
                         for pos in positions
                     ]
-                    logger.debug(f"Successfully fetched {len(positions_data)} positions")
+                    logger.info(f"Successfully fetched {len(positions_data)} positions")
                     break  # Success, exit retry loop
                     
             except asyncio.TimeoutError:
@@ -555,35 +716,7 @@ async def get_ib_data():
                     continue
                 break
 
-        # Fetch PnL data with retry logic
-        for attempt in range(max_retries):
-            try:
-                async with asyncio.timeout(5):
-                    if not ib.isConnected():
-                        await ensure_ib_connection()
-                    
-                    accounts = ib.managedAccounts()
-                    if accounts:
-                        account = accounts[0]
-                        await ib.reqAccountUpdatesAsync(account)
-                        await asyncio.sleep(0.5)  # Allow time for data to arrive
-                        
-                        pnl = await ib.reqPnLAsync(account)
-                        if pnl:
-                            pnl_data = [{
-                                "account": account,
-                                "dailyPnL": getattr(pnl, 'dailyPnL', 0.0),
-                                "unrealizedPnL": getattr(pnl, 'unrealizedPnL', 0.0),
-                                "realizedPnL": getattr(pnl, 'realizedPnL', 0.0),
-                            }]
-                            logger.debug("Successfully fetched PnL data")
-                            break
-            except (asyncio.TimeoutError, Exception) as e:
-                logger.warning(f"PnL fetch attempt {attempt + 1} failed: {str(e)}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                    continue
-
+       
         # Fetch open orders with retry logic
         for attempt in range(max_retries):
             try:
@@ -619,11 +752,10 @@ async def get_ib_data():
 
         response = {
             "positions": positions_data,
-            "pnl": pnl_data,
             "trades": trades_data,
         }
         
-        logger.info("Successfully completed IB data fetch")
+        logger.info(f"Successfully completed IB data fetch of positions {positions_data} and trades {trades_data}")
         return JSONResponse(
             content=response,
             status_code=200

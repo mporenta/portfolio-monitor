@@ -90,7 +90,6 @@ services:
       - tbot-network
     environment:
       PYTHONUNBUFFERED: 1
-      WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:--300.0}
       TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-}
 
   
@@ -125,9 +124,9 @@ services:
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/pnl_data_jengo.db}
       TBOT_LOGLEVEL: ${TBOT_LOGLEVEL:-}
       TBOT_IB_LOGLEVEL: ${TBOT_IB_LOGLEVEL:-}
-      WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:--300.0}
       TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-}
       IB_REALTIME_CLIENT_ID: ${IB_REALTIME_CLIENT_ID:-77}
+      WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:-}
 
     volumes:
       - ./data:/app/data

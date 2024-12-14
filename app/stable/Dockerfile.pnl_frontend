@@ -35,6 +35,7 @@ COPY ./templates/tbot_dashboard.html /app/portfolio-monitor/templates/tbot_dashb
 COPY ./static/js/dashboard.js /app/portfolio-monitor/static/js/dashboard.js
 COPY ./static/css/style.css /app/portfolio-monitor/static/css/style.css
 COPY ./real_time_bars.py /app/portfolio-monitor/src/real_time_bars.py
+COPY ./shorts.py /app/portfolio-monitor/src/shorts.py
 
 # Copy startup script
 COPY ./fast_api.sh /app/portfolio-monitor/src/fast_api.sh
