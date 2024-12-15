@@ -290,16 +290,16 @@ class IBClient:
                 self.logger.info(f"After hours close for {portfolio_items.contract.symbol}")
                 
                 # Initialize market price as None
-                market_price = None
+                limit_price = None
                 
                 # Try getting price from RealtimePriceService first
                 if not self.price_service:
                     await self.init_price_service()
-                market_price = await self.price_service.get_price(portfolio_items.contract.symbol)
-                self.logger.info(f"Realtime price for {portfolio_items.contract.symbol}: {market_price}")
+                limit_price = await self.price_service.get_price(portfolio_items.contract.symbol)
+                self.logger.info(f"Realtime price for {portfolio_items.contract.symbol}: {limit_price}")
                 
-                # If market_price is None, try Tiingo API
-                if market_price is None:
+                # If limit_price is None, try Tiingo API
+                if limit_price is None:
                     tiingo_token = self.tiingo_token
                     tiingo_url = f"https://api.tiingo.com/iex/?tickers={portfolio_items.contract.symbol}&token={tiingo_token}"
                     headers = {'Content-Type': 'application/json'}
@@ -308,12 +308,12 @@ class IBClient:
                         tiingo_response = requests.get(tiingo_url, headers=headers)
                         tiingo_data = tiingo_response.json()
                         if tiingo_data and len(tiingo_data) > 0:
-                            market_price = tiingo_data[0]['tngoLast']
-                            self.logger.debug(f"Using Tiingo price for {portfolio_items.contract.symbol}: {market_price}")
+                            limit_price = tiingo_data[0]['tngoLast']
+                            self.logger.debug(f"Using Tiingo price for {portfolio_items.contract.symbol}: {limit_price}")
                     except Exception as te:
                         self.logger.error(f"Error fetching Tiingo data: {str(te)}")
                 
-                if market_price is not None:
+                if limit_price is not None:
                     payload = {
                         "timestamp": timenow,
                         "ticker": portfolio_items.contract.symbol,
@@ -325,7 +325,7 @@ class IBClient:
                         "orderRef": f"close-all-{portfolio_items.contract.symbol}-{timenow}",
                         "direction": "strategy.entryshort" if is_long_position else "strategy.entrylong",
                         "metrics": [
-                            {"name": "entry.limit", "value": market_price},
+                            {"name": "entry.limit", "value": limit_price},
                             {"name": "entry.stop", "value": 0},
                             {"name": "exit.limit", "value": 0},
                             {"name": "exit.stop", "value": 0},
