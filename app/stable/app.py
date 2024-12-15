@@ -46,7 +46,7 @@ tbotKey = os.getenv("TVWB_UNIQUE_KEY", "WebhookReceived:1234")
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 client_id = int(os.getenv('FASTAPI_IB_CLIENT_ID', '1111'))
 IB_HOST = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  
-IB_PORT = int(os.getenv('TBOT_IBKR_PORT', '4002'))
+ibPort = os.getenv('TBOT_IBKR_PORT')
 max_attempts=300
 initial_delay=1
 # Get the src directory path
@@ -150,7 +150,7 @@ async def lifespan(app: FastAPI):
         try:
             await ib.connectAsync(
                 host=IB_HOST,
-                port=IB_PORT,
+                port=ibPort,
                 clientId=client_id,
                 timeout=20
             )
@@ -164,7 +164,7 @@ async def lifespan(app: FastAPI):
                 try:
                     await ib.connectAsync(
                         host='127.0.0.1',
-                        port=IB_PORT,
+                        port=ibPort,
                         clientId=client_id,
                         timeout=20
                     )
@@ -650,7 +650,7 @@ async def ensure_ib_connection():
             logger.info("IB not connected, attempting to reconnect...")
             await ib.connectAsync(
                 host=IB_HOST,
-                port=IB_PORT,
+                port=ibPort,
                 clientId=client_id,
                 timeout=20
             )
@@ -661,7 +661,7 @@ async def ensure_ib_connection():
                 try:
                     await ib.connectAsync(
                         host='127.0.0.1',
-                        port=IB_PORT,
+                        port=ibPort,
                         clientId=client_id,
                         timeout=20
                     )

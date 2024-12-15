@@ -48,7 +48,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV REDIS_DECODE_RESPONSES=True
 ENV PYTHONPATH=/app/portfolio-monitor:/app/portfolio-monitor/src
-ENV TBOT_IBKR_PORT=${TBOT_IBKR_PORT:-}
 
 EXPOSE 5002
 

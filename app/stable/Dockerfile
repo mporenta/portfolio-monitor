@@ -176,7 +176,6 @@ WORKDIR /home/tbot/develop/github/tbot-tradingboat
 #COPY ./pnl_monitor.py /home/tbot/develop/github/tbot-tradingboat/pnl_monitor.py
 ENV TVWB_UNIQUE_KEY=${TVWB_UNIQUE_KEY:-}
 ENV WEBHOOK_PNL_THRESHOLD=-300.0
-ENV TBOT_IBKR_PORT=${TBOT_IBKR_PORT:-}
 
 
 COPY ./scripts/fork_ports_delayed.sh /root/scripts/fork_ports_delayed.sh

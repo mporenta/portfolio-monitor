@@ -42,7 +42,6 @@ COPY ./real_time_bars.py /app/portfolio-monitor/src/real_time_bars.py
 RUN python3.11 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN . /opt/venv/bin/activate
-ENV TBOT_IBKR_PORT=${TBOT_IBKR_PORT:-}
 
 
 
