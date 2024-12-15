@@ -5,6 +5,7 @@ import pandas as pd
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi.background import P
+import aiohttp
 import requests
 import json
 from ib_async import IB, MarketOrder, LimitOrder, PnL, PortfolioItem, AccountValue, Contract, Trade, util
@@ -14,7 +15,6 @@ import pytz
 import os
 from dotenv import load_dotenv
 import time
-from time import sleep
 import logging
 from typing import Optional, List
 load_dotenv()
@@ -31,12 +31,12 @@ logging.basicConfig(
     ]
 )
 
-logger = logging.getLogger(__name__)
 
 class PnLMonitor:
     def __init__(self):
         load_dotenv()
         self.ib = IB()
+        self.limit_price = None
         self.unrealized_pnl = 0.0
         self.daily_pnl = 0.0
         self.total_unrealized_pnl = 0.0
@@ -46,10 +46,11 @@ class PnLMonitor:
         self.total_realizedPnl = 0.0
         self.total_pnl = 0.0
         self.is_threshold_exceeded = False
+        self.price_service = None
 
         self.positions: List = []
         self.trade: List = []
-        self.portfolio_items = []
+        self.portfolio_item = []
         self.pnl = PnL()
         self.account = os.getenv('IB_PAPER_ACCOUNT', 'DU7397764')
         self.open_positions = {}  # Dictionary to store open positions index
@@ -101,7 +102,7 @@ class PnLMonitor:
 
            
             await self.monitor_pnl_and_close_positions()
-            self.logger.info(f"In try_connect: jengo subscribe_events Connection established with {self.host} for account: {self.account}")
+            self.logger.info(f"In try_connect: jengo subscribe_events Connection established with {self.host} and clientId: {self.client_id} for account: {self.account}")
             return True
         except Exception as e:
             if 'getaddrinfo failed' in str(e):
@@ -120,13 +121,54 @@ class PnLMonitor:
                     
 
                     await self.monitor_pnl_and_close_positions()
-                    self.logger.info(f"In try_connect: jengo subscribe_events Connection established with {self.host}")
+                    self.logger.info(f"In try_connect: jengo subscribe_events Connection established with {self.host} and clientId: {self.client_id} for account: {self.account}")
                     return True
                 except Exception as inner_e:
                     self.logger.error(f"Localhost connection failed: {inner_e}")
             else:
                 self.logger.error(f"Connection error: {e}")
             return False
+    async def init_price_service(self):
+        """Initialize and connect price service if not already initialized"""
+        self.logger = logging.getLogger(__name__)
+        try:
+            if self.price_service is None:
+                self.price_service = RealtimePriceService()
+                if not await self.price_service.start():
+                    raise ConnectionError("Failed to start price service")
+                self.logger.info("Price service initialized and connected")
+            elif not self.price_service.client.isConnected():
+                # Reconnect if connection was lost
+                if not await self.price_service.start():
+                    raise ConnectionError("Failed to reconnect price service")
+                self.logger.info("Price service reconnected")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error initializing price service: {str(e)}")
+            self.price_service = None
+            return False
+        
+    
+
+    async def _get_tiingo_price(self, symbol: str) -> Optional[float]:
+        """Fallback method to get price from Tiingo API"""
+        try:
+            tiingo_token = self.tiingo_token
+            tiingo_url = f"https://api.tiingo.com/iex/?tickers={symbol}&token={tiingo_token}"
+            headers = {'Content-Type': 'application/json'}
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(tiingo_url, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data and len(data) > 0:
+                            price = data[0]['tngoLast']
+                            self.logger.info(f"Got tngoLast price for {symbol} from Tiingo: {price}")
+                            return price
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting Tiingo price for {symbol}: {str(e)}")
+            return None
 
     async def on_pnl_event(self, pnl: PnL):
         pnl = self.ib.pnl(self.account)
@@ -138,7 +180,7 @@ class PnLMonitor:
         if pnl:
             
             self.total_pnl = self.total_realized_pnl + (self.total_unrealized_pnl) / 2
-            self.logger.info(f"total_pnl = self.total_realized_pnl {self.total_realized_pnl} + (self.total_unrealized_pnl) / 2: {self.total_unrealized_pnl}")
+            self.logger.info(f"{self.total_pnl} is the total_pnl = self.total_realized_pnl {self.total_realized_pnl} + (self.total_unrealized_pnl) / 2: {self.total_unrealized_pnl} all pnl object is {pnl}")
         else:
             self.logger.warning("PnL data is incomplete.")
             return
@@ -191,7 +233,7 @@ class PnLMonitor:
                 elif self.open_positions[symbol] != conId:
                     # Contract ID has changed, update index and place new order
                     self.open_positions[symbol] = conId
-                    self._place_closing_order(position)
+                    await self._place_closing_order(position)
                 
         # Clean up closed positions from the index
         self.open_positions = {symbol: conId for symbol, conId 
@@ -200,17 +242,19 @@ class PnLMonitor:
 
     
     async def monitor_pnl_and_close_positions(self):
-        
-        
-        self.ib.pnlEvent.clear()
-
-        self.ib.pnlEvent += self.on_pnl_event
-        self.ib.orderStatusEvent += self.order_status_event
-        self.ib.newOrderEvent += self.new_order_event
-
+        """Monitor PnL and handle position closures with price service ready"""
         try:
+            # Initialize price service first
+            if not await self.init_price_service():
+                self.logger.error("Failed to initialize price service, monitoring may have limited functionality")
+            
+            self.ib.pnlEvent.clear()
+            self.ib.pnlEvent += self.on_pnl_event
+            self.ib.orderStatusEvent += self.order_status_event
+            self.ib.newOrderEvent += self.new_order_event
+
             self.logger.info("Started monitoring PnL and positions.")
-              # Wait until the stop event is triggered
+            
         except Exception as e:
             self.logger.error(f"Error in PnL update handler: {str(e)}")
 
@@ -263,109 +307,80 @@ class PnLMonitor:
             
 
     async def _place_closing_order(self, portfolio_item: PortfolioItem):
-        """
-        Place an order with Interactive Brokers based on the position request.
-        """
-        
-        self.logger.info(f"_place_closing_order jengo Received position request: {portfolio_item}")
-
-        response_data = []
+        """Place an order with Interactive Brokers based on the position request."""
         try:
-            
-
-            self.tiingo_token = os.getenv('TIINGO_API_TOKEN')   
             ny_tz = pytz.timezone('America/New_York')
             current_time = datetime.now(ny_tz)
+            is_weekend = current_time.weekday() >= 5
             market_open = current_time.replace(hour=9, minute=30, second=0, microsecond=0)
             market_close = current_time.replace(hour=16, minute=0, second=0, microsecond=0)
-            is_market_hours = market_open <= current_time <= market_close
 
-            is_long_position = portfolio_item.position > 0
             symbol = portfolio_item.contract.symbol
             pos = abs(portfolio_item.position)
+            is_long_position = portfolio_item.position > 0
+            
+            contract = Contract(
+                symbol=symbol,
+                exchange='SMART',
+                secType='STK',
+                currency='USD'
+            )
 
-            try:
-                self.logger.info(f"Processing order for _place_closing_order jengo  {symbol}")
+            action = 'SELL' if is_long_position else 'BUY'
 
-                # Create contract
-                contract = Contract(
-                    symbol=symbol,
-                    exchange='SMART',
-                    secType='STK',
-                    currency='USD'
+            if market_open <= current_time <= market_close and not is_weekend:
+                # Use market order during regular trading hours
+                order = MarketOrder(
+                    action=action,
+                    totalQuantity=pos,
+                    tif='GTC'
+                )
+            else:
+                # Use limit order outside regular trading hours
+                price = await self.get_market_price(symbol)
+                if not price:
+                    raise ValueError(f"Could not get market price for {symbol}")
+                
+                order = LimitOrder(
+                    action=action,
+                    totalQuantity=pos,
+                    lmtPrice=round(price, 2),
+                    tif='GTC',
+                    transmit=True,
+                    outsideRth=True
                 )
 
-                # Determine action based on position
-                action = 'SELL' if is_long_position else 'BUY'
-
-                # Create order based on market hours
-                if is_market_hours:
-                    self.logger.debug(f"Creating market order for {symbol}")
-                    order = MarketOrder(
-                        action=action,
-                        totalQuantity=pos,
-                        tif='GTC'
-                    )
-                else:
-                    self.logger.debug(f"Creating limit order for _place_closing_order jengo {symbol}")
-                    # Fetch current price from Tiingo
-                    self.logger.debug(f"Tiingo token: {self.tiingo_token}")
-                    tiingo_url = f"https://api.tiingo.com/iex/?tickers={symbol}&token={self.tiingo_token}"
-                    headers = {'Content-Type': 'application/json'}
-
-                    try:
-                        tiingo_response = requests.get(tiingo_url, headers=headers)
-                        tiingo_data = tiingo_response.json()
-                        if tiingo_data and len(tiingo_data) > 0:
-                            limit_price = tiingo_data[0]['tngoLast']
-                            self.logger.debug(f"Tiingo response: {tiingo_data} - Using Tiingo 'tngoLast' price for {symbol}: {limit_price}")
-                    except Exception as te:
-                        self.logger.error(f"Error fetching Tiingo data: {str(te)}")
-
-                    if not limit_price:
-                        raise ValueError(f"Could not get market price for {symbol}")
-
-                    order = LimitOrder(
-                        action=action,
-                        totalQuantity=pos,
-                        lmtPrice=round(limit_price, 2),
-                        tif='GTC',
-                        outsideRth=False
-                    )
-
-                # Place the order
-                trade = self.ib.placeOrder(contract, order)
-                self.logger.debug(f"Order placed for {symbol}: {trade}")
-                await self.new_order_event(trade)
-                await self.order_status_event(trade)
-
-            except Exception as e:
-                self.logger.error(f"Error processing order for {symbol}: {str(e)}", exc_info=True)
-
-            self.logger.debug("Order processed successfully")
-            return response_data
+            trade = self.ib.placeOrder(contract, order)
+            self.logger.info(f"Order placed for {symbol}: {trade}")
+            await self.new_order_event(trade)
+            await self.order_status_event(trade)
+            return trade
 
         except Exception as e:
-            self.logger.error(f"Error processing position request: {str(e)}", exc_info=True)
+            self.logger.error(f"Error processing order for {symbol}: {str(e)}", exc_info=True)
+            return None
 
 
     async def run(self):
         """Main run loop with connection management and graceful shutdown."""
         try:
-            
+            print("Starting Price Service in run loop...")
+            await self.init_price_service()
             if not await self.connect_with_retry():
-                
                 self.logger.error("Initial connection failed")
                 return
 
             while True:
                 try:
                     await self.ensure_connected()
+                    
+                    # Ensure price service is connected
+                    
+                    if self.price_service and not self.price_service.client.isConnected():
+                        self.logger.debug("Running price service connection in run loop...")
+                        await self.init_price_service()
+                    
                     await asyncio.wait_for(self.ib.updateEvent, timeout=1)
-                    
-
-                    # Perform portfolio checks
-                    
 
                 except asyncio.TimeoutError:
                     continue
@@ -378,14 +393,19 @@ class PnLMonitor:
 
         except KeyboardInterrupt:
             self.logger.info("Keyboard interrupt detected, shutting down...")
-
         finally:
             await self.graceful_disconnect()
 
-
     async def graceful_disconnect(self):
-        """Gracefully disconnect from IB Gateway and unsubscribe from updates."""
+        """Gracefully disconnect all services."""
         try:
+            # Disconnect price service
+            if self.price_service:
+                if self.price_service.client.isConnected():
+                    self.price_service.client.disconnect()
+                self.price_service = None
+                self.logger.info("Price service disconnected")
+
             if self.ib.isConnected():
                 self.logger.info("Unsubscribing from events...")
                 self.ib.pnlEvent.clear()
@@ -405,7 +425,29 @@ class PnLMonitor:
                 self.logger.info("Disconnecting from IB Gateway...")
                 self.ib.disconnect()
         except Exception as e:
-            self.logger.error(f"Error during graceful disconnect: {e}")        
+            self.logger.error(f"Error during graceful disconnect: {e}") 
+
+    async def get_market_price(self, symbol: str) -> Optional[float]:
+        """Get market price using RealtimePriceService with fallback to Tiingo"""
+        try:
+            if not self.price_service or not self.price_service.client.isConnected():
+                await self.init_price_service()
+            
+            if not self.price_service:
+                self.logger.error("Price service unavailable")
+                return await self._get_tiingo_price(symbol)
+                
+            price = await self.price_service.get_price(symbol)
+            if price is not None:
+                self.logger.info(f"Got price for {symbol} from RealtimePriceService: {price}")
+                return price
+            
+            self.logger.warning(f"Could not get price from RealtimePriceService for {symbol}, falling back to Tiingo")
+            return await self._get_tiingo_price(symbol)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting market price for {symbol}: {str(e)}")
+            return await self._get_tiingo_price(symbol)
             
 if __name__ == '__main__':
     load_dotenv()

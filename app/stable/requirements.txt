@@ -21,3 +21,4 @@ httpx
 discord_webhook
 apscheduler
 pandas
+aiohttp

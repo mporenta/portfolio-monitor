@@ -41,7 +41,7 @@ COPY ./bkapp.py /app/portfolio-monitor/src/bkapp.py
 WORKDIR /app/portfolio-monitor/src
 RUN python3 -m venv /opt/venv && \
     . /opt/venv/bin/activate && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt 
 
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH"

@@ -846,38 +846,76 @@
         spinner.removeClass('hidden');
 
         // Fetch data from APIs
-        const [ordersDataResponse, alertsDataResponse] = await Promise.all([
+        const [ibDataResponse, alertsDataResponse] = await Promise.all([
           fetch('/api/ib-data').then(r => r.json()),
           fetch(`https://tv.porenta.us/alerts/data?_=${Date.now()}`).then(r => r.json())
         ]);
 
-        console.log('Orders Data Response:', ordersDataResponse);
+        console.log('IB Data Response:', ibDataResponse);
         console.log('Alerts Data Response:', alertsDataResponse);
 
-        // Extract the data arrays from the responses
-        const ordersData = ordersDataResponse.data || [];
-        const alertsData = alertsDataResponse.data || [];
+        // Transform positions data
+        const transformedPositions = ibDataResponse.positions.map(position => ({
+          ticker: position.contract,
+          position: position.position,
+          mrkvalue: position.marketValue || 0,
+          avgfillprice: position.avgCost,
+          unrealizedpnl: 0, // Will be calculated if market price is available
+          realizedpnl: 0,
+          orderid: 0,
+          orderref: `Ptf_${position.contract}`,
+          orderstatus: "Portfolio",
+          ordertype: "STK",
+          timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+          uniquekey: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+          action: position.position > 0 ? 'BUY' : 'SELL'
+        }));
 
-        // Ensure ordersData is an array
-        if (!Array.isArray(ordersData)) {
-          console.error('ordersData is not an array:', ordersData);
-          throw new Error('ordersData is not an array');
-        }
+        // Transform trades data
+        const transformedTrades = ibDataResponse.trades.map(trade => ({
+          ticker: trade.contract,
+          orderid: trade.tradeId,
+          orderref: '',
+          orderstatus: trade.status,
+          ordertype: trade.orderType,
+          timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+          uniquekey: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+          action: trade.action,
+          lmtprice: trade.limitPrice,
+          auxprice: 0,
+          position: trade.remaining,
+          qty: trade.quantity,
+          mrkvalue: (trade.avgFillPrice * trade.quantity) || 0,
+          avgfillprice: trade.avgFillPrice || 0,
+          unrealizedpnl: 0,
+          realizedpnl: 0
+        }));
 
         const today = moment().startOf('day');
-        const activePositions = ordersData.filter(order => order.position !== 0 && order.orderstatus === "Portfolio");
-        const currentPositions = ordersData.filter(order => order.position !== 0);
-        const todayOrders = ordersData.filter(order =>
-          moment(order.timestamp).isSameOrAfter(today) && order.position === 0);
-        const historicalOrders = ordersData.filter(order =>
-          moment(order.timestamp).isBefore(today) && order.position === 0);
 
-        updatePnLMetrics(ordersData);
+        // Filter positions for active positions table (non-zero positions)
+        const activePositions = transformedPositions.filter(pos => pos.position !== 0);
+
+        // Combine positions and trades for current portfolio
+        const currentPositions = [...transformedPositions, ...transformedTrades];
+
+        // Calculate totals
+        const totals = {
+          unrealized: activePositions.reduce((sum, pos) => sum + (pos.unrealizedpnl || 0), 0),
+          realized: activePositions.reduce((sum, pos) => sum + (pos.realizedpnl || 0), 0),
+          marketValue: activePositions.reduce((sum, pos) => sum + (pos.mrkvalue || 0), 0)
+        };
+
+        // Update tables and metrics
+        updatePnLMetrics(totals);
         activePositionsTable.clear().rows.add(activePositions).draw();
         currentPortfolioTable.clear().rows.add(currentPositions).draw();
-        todayOrdersTable.clear().rows.add(todayOrders).draw();
-        historicalOrdersTable.clear().rows.add(historicalOrders).draw();
-        alertsTable.clear().rows.add(alertsData).draw();
+
+        // Update alerts table if there's alerts data
+        if (alertsDataResponse.data) {
+          alertsTable.clear().rows.add(alertsDataResponse.data).draw();
+        }
+
       } catch (error) {
         console.error("Error fetching data:", error);
         showError("Failed to refresh data");
@@ -888,10 +926,7 @@
     }
 
     async function fetchData() {
-      const refreshBtn = $('#refreshBtn');
-      const spinner = $('#refreshSpinner');
       try {
-
         // Fetch data from APIs
         const [ordersDataResponse, alertsDataResponse] = await Promise.all([
           fetch('/api/orders-data').then(r => r.json()),
@@ -901,34 +936,51 @@
         console.log('Orders Data Response:', ordersDataResponse);
         console.log('Alerts Data Response:', alertsDataResponse);
 
-        // Extract the data arrays from the responses
         const ordersData = ordersDataResponse.data || [];
         const alertsData = alertsDataResponse.data || [];
 
-        // Ensure ordersData is an array
         if (!Array.isArray(ordersData)) {
           console.error('ordersData is not an array:', ordersData);
           throw new Error('ordersData is not an array');
         }
 
         const today = moment().startOf('day');
-        const activePositions = ordersData.filter(order => order.position !== 0 && order.orderstatus === "Portfolio");
-        const currentPositions = ordersData.filter(order => order.position !== 0);
-        const todayOrders = ordersData.filter(order =>
-          moment(order.timestamp).isSameOrAfter(today) && order.position === 0);
-        const historicalOrders = ordersData.filter(order =>
-          moment(order.timestamp).isBefore(today) && order.position === 0);
 
-        updatePnLMetrics(ordersData);
+        // Filter data for different tables
+        const activePositions = ordersData.filter(order =>
+          order.position !== 0 && order.orderstatus === "Portfolio"
+        );
+
+        const currentPositions = ordersData.filter(order =>
+          order.position !== 0
+        );
+
+        const todayOrders = ordersData.filter(order =>
+          moment(order.timestamp).isSameOrAfter(today) && order.position === 0
+        );
+
+        const historicalOrders = ordersData.filter(order =>
+          moment(order.timestamp).isBefore(today) && order.position === 0
+        );
+
+        // Calculate totals for PnL metrics
+        const totals = {
+          unrealized: activePositions.reduce((sum, pos) => sum + (pos.unrealizedpnl || 0), 0),
+          realized: activePositions.reduce((sum, pos) => sum + (pos.realizedpnl || 0), 0),
+          marketValue: activePositions.reduce((sum, pos) => sum + (pos.mrkvalue || 0), 0)
+        };
+
+        // Update all tables and metrics
+        updatePnLMetrics(totals);
         activePositionsTable.clear().rows.add(activePositions).draw();
         currentPortfolioTable.clear().rows.add(currentPositions).draw();
         todayOrdersTable.clear().rows.add(todayOrders).draw();
         historicalOrdersTable.clear().rows.add(historicalOrders).draw();
         alertsTable.clear().rows.add(alertsData).draw();
+
       } catch (error) {
         console.error("Error fetching data:", error);
         showError("Failed to refresh data");
-      } finally {
       }
     }
 
@@ -994,13 +1046,7 @@
       }
     }
 
-    function updatePnLMetrics(orders) {
-      const totals = orders.reduce((acc, order) => ({
-        unrealized: acc.unrealized + (order.unrealizedpnl || 0),
-        realized: acc.realized + (order.realizedpnl || 0),
-        marketValue: acc.marketValue + (order.mrkvalue || 0)
-      }), { unrealized: 0, realized: 0, marketValue: 0 });
-
+    function updatePnLMetrics(totals) {
       $('#unrealizedPnl')
         .text(totals.unrealized.toFixed(2))
         .removeClass('text-green-500 text-red-500')
@@ -1015,7 +1061,6 @@
         .text(totals.marketValue.toFixed(2))
         .addClass('text-blue-500');
     }
-
     function toggleAutoRefresh(enabled) {
       if (enabled) {
         if (refreshInterval) clearInterval(refreshInterval);

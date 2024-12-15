@@ -14,6 +14,7 @@ import pytz
 import time
 from dotenv import load_dotenv
 from ib_async import *
+from ib_async import PnL
 import logging
 import signal
 import requests
@@ -23,8 +24,11 @@ from models import Base, Positions, PnLData, Trades, Orders, PositionClose
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 load_dotenv()
+loadDotEnv = load_dotenv()
 tiingo_token = os.getenv('TIINGO_API_TOKEN')
 unique_ts = str((time.time_ns() // 1000000) -  (4 * 60 * 60 * 1000))
+account = os.getenv('IB_PAPER_ACCOUNT', 'DU7397764')
+
 
 def get_timestamp(unique_ts: str) -> str:
     """Get timestamp for database"""
@@ -38,9 +42,9 @@ timestamp = get_timestamp(unique_ts)
 ib = IB()
 portfolio_items = ib.portfolio()
 
-tbotKey = os.getenv("TVWB_UNIQUE_KEY", "WebhookReceived:ac1a2d")
+tbotKey = os.getenv("TVWB_UNIQUE_KEY", "WebhookReceived:1234")
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
-FASTAPI_IB_CLIENT_ID = int(os.getenv('FASTAPI_IB_CLIENT_ID', '1111'))
+client_id = int(os.getenv('FASTAPI_IB_CLIENT_ID', '1111'))
 IB_HOST = os.getenv('IB_GATEWAY_HOST', 'ib-gateway')  
 IB_PORT = int(os.getenv('TBOT_IBKR_PORT', '4002'))
 max_attempts=300
@@ -141,16 +145,16 @@ class WebhookRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Loading .env in lifespan...")
-    load_dotenv()
     
     async def try_connect():
         try:
             await ib.connectAsync(
                 host=IB_HOST,
                 port=IB_PORT,
-                clientId=FASTAPI_IB_CLIENT_ID,
+                clientId=client_id,
                 timeout=20
             )
+            ib.reqPnL(account)
             ib.disconnectedEvent += on_disconnected
             logger.info("Connected to IB Gateway and subscribed to disconnection event")
             return True
@@ -161,24 +165,23 @@ async def lifespan(app: FastAPI):
                     await ib.connectAsync(
                         host='127.0.0.1',
                         port=IB_PORT,
-                        clientId=FASTAPI_IB_CLIENT_ID,
+                        clientId=client_id,
                         timeout=20
                     )
+                    ib.reqPnL(account)
                     ib.disconnectedEvent += on_disconnected
                     logger.info("Connected to IB Gateway and subscribed to disconnection event")
-
                     return True
                 except Exception as inner_e:
                     logger.error(f"Localhost connection failed: {inner_e}")
             else:
                 logger.error(f"Connection error: {e}")
             return False
+
     async def on_disconnected():
         """Handle disconnection"""
-  
         logger.warning("Disconnected from IB Gateway")
         if not ib.isConnected():
-
             await connect_with_retry()   
 
     async def connect_with_retry():
@@ -212,27 +215,37 @@ async def lifespan(app: FastAPI):
         
     except Exception as e:
         logger.error(f"Startup failed: {e}")
-        if ib.isConnected():
-            await ib.disconnect()
+        if ib and ib.isConnected():
+            ib.disconnect()  # Remove await here
         raise RuntimeError(f"Startup failed: {e}")
     
-    yield
+    yield  # Application runs here
     
-    # Shutdown
-    if ib.isConnected():
-        await ib.disconnect()
-        logger.info("Disconnected from IB Gateway.")
-    
-    # Stop the short stock scheduler
-    short_stock_manager.stop_scheduler()
-    logger.info("Short stock scheduler stopped.")
+    # Cleanup
+    try:
+        logger.info("Starting shutdown process...")
+        
+        # Disconnect from IB if connected
+        if ib and ib.isConnected():
+            logger.info("Disconnecting from IB Gateway...")
+            ib.disconnect()  # Remove await here
+            logger.info("Disconnected from IB Gateway.")
+        
+        # Stop the short stock scheduler
+        logger.info("Stopping short stock scheduler...")
+        short_stock_manager.stop_scheduler()
+        logger.info("Short stock scheduler stopped.")
+        
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+        raise
 
 # Initialize FastAPI app with lifespan
 app = FastAPI(
     title="PnL Monitor",
     lifespan=lifespan
 )
-load_dotenv()
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -484,16 +497,34 @@ async def place_order(positions_request: PositionsRequest):
             status_code=500, 
             detail=f"Error processing positions request: {str(e)}"
         )
+async def on_pnl_event(pnl: PnL):
+    pnl = ib.pnl(account)
+    for item in pnl:
+        total_unrealized_pnl = float((item.unrealizedPnL /2) or 0.0)
+        total_realized_pnl = float(item.realizedPnL or 0.0)
+        logger.info(f"Received PnL update for unrealizedPnL: {total_unrealized_pnl} with the full item as {item}")
+    #if pnl and pnl.realizedPnL is not None and pnl.unrealizedPnL is not None:
+    if pnl:
 
+            
+        total_pnl = total_realized_pnl + (total_unrealized_pnl) / 2
+        logger.info(f"{total_pnl} is the total_pnl = total_realized_pnl {total_realized_pnl} + (total_unrealized_pnl) / 2: {total_unrealized_pnl} all pnl object is {pnl}")
+        return total_pnl
+    else:
+        logger.warning("PnL data is incomplete.")
+            
+
+            
 @app.post("/proxy/webhook")
 async def proxy_webhook(webhook_data: WebhookRequest):
+    pnl= PnL()
     try:
-        load_dotenv()
-        logger.info(f"load_dotenv{load_dotenv()}")
+        loadDotEnv
+        logger.info(f"loadDotEnv{loadDotEnv}")
         logger.info("Received webhook request")
         logger.debug(f"Incoming webhook data: {webhook_data.model_dump()}")
          # Check if it's a short entry order
-        if "strategy.entryshort" in webhook_data.direction.lower():
+        if "entryshort" in webhook_data.direction.lower():
             # Check if all entry values are 0 for Market Order
             entry_types = ["entry.limit", "entry.stop"]
             for entry_type in entry_types:
@@ -546,43 +577,29 @@ async def proxy_webhook(webhook_data: WebhookRequest):
             # Get PNL threshold from environment
             pnl_threshold = float(os.getenv("WEBHOOK_PNL_THRESHOLD", "-300"))
             logger.info(f"PNL threshold set to: {pnl_threshold}")
-            
+            total_pnl = None
             # Fetch current positions and PNL data
             try:
-                # Create async client for internal request
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(
-                        "http://localhost:5001/api/orders-data",  # Internal call to our own endpoint
-                        timeout=10.0
+
+                total_pnl = await on_pnl_event(pnl)
+           
+                
+                logger.info(f"Calculated total PNL: {total_pnl} and pnl_threshold is: {pnl_threshold}")
+                
+                # Check if total PNL meets threshold
+                if total_pnl <= pnl_threshold:
+                    logger.warning(f"Total PNL ({total_pnl}) below threshold ({pnl_threshold}). Webhook blocked.")
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "status": "rejected",
+                            "message": f"Current PNL ({total_pnl}) is below threshold ({pnl_threshold})",
+                            "total_pnl": total_pnl,
+                            "threshold": pnl_threshold
+                        }
                     )
-                    response.raise_for_status()
-                    positions_data = response.json()
-                    
-                    # Calculate total PNL for active positions
-                    total_pnl = 0.0
-                    for position in positions_data.get('data', []):
-                        # Only consider positions that are not zero
-                        if position:
-                            realized_pnl = float(position.get('realizedpnl', 0))
-                            unrealized_pnl = float(position.get('unrealizedpnl', 0))
-                            total_pnl += realized_pnl + unrealized_pnl
-                    
-                    logger.info(f"Calculated total PNL: {total_pnl}")
-                    
-                    # Check if total PNL meets threshold
-                    if total_pnl <= pnl_threshold:
-                        logger.warning(f"Total PNL ({total_pnl}) below threshold ({pnl_threshold}). Webhook blocked.")
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "status": "rejected",
-                                "message": f"Current PNL ({total_pnl}) is below threshold ({pnl_threshold})",
-                                "total_pnl": total_pnl,
-                                "threshold": pnl_threshold
-                            }
-                        )
-                    
-                    logger.info(f"PNL check passed. Proceeding with webhook forwarding.")
+                
+                logger.info(f"PNL check passed. Proceeding with webhook forwarding.")
                     
             except Exception as e:
                 logger.error(f"Error fetching or processing PNL data: {str(e)}")
@@ -634,7 +651,7 @@ async def ensure_ib_connection():
             await ib.connectAsync(
                 host=IB_HOST,
                 port=IB_PORT,
-                clientId=FASTAPI_IB_CLIENT_ID,
+                clientId=client_id,
                 timeout=20
             )
             await asyncio.sleep(1)
@@ -645,7 +662,7 @@ async def ensure_ib_connection():
                     await ib.connectAsync(
                         host='127.0.0.1',
                         port=IB_PORT,
-                        clientId=FASTAPI_IB_CLIENT_ID,
+                        clientId=client_id,
                         timeout=20
                     )
                     await asyncio.sleep(1)
@@ -724,7 +741,7 @@ async def get_ib_data():
                     if not ib.isConnected():
                         await ensure_ib_connection()
                     
-                    trades = await ib.reqAllOpenOrdersAsync()
+                    trades = ib.executions()
                     await asyncio.sleep(0.5)  # Allow time for data to arrive
                     
                     trades_data = [
@@ -826,7 +843,7 @@ def str2bool(value: str) -> bool:
         raise ValueError(f'Invalid boolean value: {value}')
 
 if __name__ == "__main__":
-    load_dotenv()
+    
     import uvicorn
     production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))
     if production:
