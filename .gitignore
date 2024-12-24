@@ -8,6 +8,7 @@ id_rsa*
 *.logs
 # vscode
 *.code-workspace
-
+**/.yml
+*.yml
 # Ignore db files
 *.db

@@ -15,7 +15,6 @@ import re
 from dataclasses import dataclass
 import sqlite3
 
-from ib_async import PortfolioItem
 from ib_insync import util, IB, OrderStatus
 from loguru import logger
 import numpy as np
@@ -37,9 +36,6 @@ from tbot_tradingboat.pg_decoder.ib_api.tbot_api import (
 )
 from tbot_tradingboat.utils.tbot_utils import strtobool
 
-from tbot_tradingboat.pg_decoder.ib_api.tbot_order_event import TbotOrderEvent
-#src/tbot_tradingboat/pg_decoder/ib_api/tbot_order_event.py
-#src/tbot_tradingboat/pg_decoder/tbot_decoder.py
 from .ib_api.tbot_order import TbotOrder
 from .tbot_observer import TbotObserver
 
@@ -61,7 +57,7 @@ class TBOTDecoder(TbotObserver):
         self.torder = TbotOrder(self.ibsyn, self.orderdb, self.errordb)
         self.loop = None
         self.profiler = strtobool(shared.profiler)
-        self.net_liquidation = 0.0
+        self.cash_type = shared.cash_type
 
     def open(self):
         try:
@@ -616,14 +612,7 @@ class TBOTDecoder(TbotObserver):
 
     def ib_check_balance(self, t_ord: OrderTV, price: float) -> bool:
         """Get the account summary"""
-        PortfolioItem
         account_summary = self.ibsyn.accountSummary()
-        for acctItem in account_summary:
-            if acctItem.tag == "NetLiquidation":
-                self.net_liquidation = float(acctItem.value)
-                logger.info(f"jengo NetLiquidation updated: ${self.net_liquidation:,.2f}")
-                print(f"jengo NetLiquidation updated: ${self.net_liquidation:,.2f}")
-        
         currency = t_ord.currency
         sec_type = (
             "STK"
@@ -640,7 +629,7 @@ class TBOTDecoder(TbotObserver):
                 (
                     item.value
                     for item in account_summary
-                    if item.tag == "AvailableFunds"
+                    if item.tag == self.cash_type
                 ),
                 None,
             )
@@ -648,14 +637,14 @@ class TBOTDecoder(TbotObserver):
             available_funds_str = sum(
                 item.value
                 for item in account_summary
-                if item.tag == "AvailableFunds" and item.currency == currency
+                if item.tag == self.cash_type and item.currency == currency
             )
         elif sec_type == "CRYPTO":
             available_funds_str = next(
                 (
                     item.value
                     for item in account_summary
-                    if item.tag == "AvailableFunds"
+                    if item.tag == self.cash_type
                 ),
                 None,
             )

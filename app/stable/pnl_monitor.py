@@ -52,7 +52,8 @@ class PnLMonitor:
         self.trade: List = []
         self.portfolio_item = []
         self.pnl = PnL()
-        self.account = os.getenv('IB_PAPER_ACCOUNT', 'DU7397764')
+        self.accounts = []
+        self.account = []
         self.open_positions = {}  # Dictionary to store open positions index
         self.current_positions = {}  # Dictionary to store current positions index
         
@@ -95,6 +96,9 @@ class PnLMonitor:
                 clientId=self.client_id,
                 timeout=20  # Increased timeout for stability
             )
+            self.accounts = self.ib.managedAccounts()
+
+            self.account = self.accounts[0] if self.accounts else None
 
             self.logger = logging.getLogger(__name__)
             self.ib.reqPnL(self.account)
@@ -114,6 +118,8 @@ class PnLMonitor:
                         clientId=self.client_id,
                         timeout=20
                     )
+                    self.accounts = self.ib.managedAccounts()
+                    self.account = self.accounts[0] if self.accounts else None
                     self.logger = logging.getLogger(__name__)
                     self.ib.reqPnL(self.account)
                     self.logger.info(f"Subscribing to PnL updates for account: {self.account}")
@@ -171,6 +177,10 @@ class PnLMonitor:
             return None
 
     async def on_pnl_event(self, pnl: PnL):
+        if not self.account:
+            self.accounts = self.ib.managedAccounts()
+
+        self.account = self.accounts[0] if self.accounts else None
         pnl = self.ib.pnl(self.account)
         for item in pnl:
             self.total_unrealized_pnl = float((item.unrealizedPnL /2) or 0.0)

@@ -27,7 +27,6 @@ load_dotenv()
 loadDotEnv = load_dotenv()
 tiingo_token = os.getenv('TIINGO_API_TOKEN')
 unique_ts = str((time.time_ns() // 1000000) -  (4 * 60 * 60 * 1000))
-account = os.getenv('IB_PAPER_ACCOUNT', 'DU7397764')
 
 
 def get_timestamp(unique_ts: str) -> str:
@@ -41,7 +40,6 @@ timestamp = get_timestamp(unique_ts)
 
 ib = IB()
 portfolio_items = ib.portfolio()
-
 tbotKey = os.getenv("TVWB_UNIQUE_KEY", "WebhookReceived:1234")
 PORT = int(os.getenv("PNL_HTTPS_PORT", "5001"))
 client_id = int(os.getenv('FASTAPI_IB_CLIENT_ID', '1111'))
@@ -154,6 +152,8 @@ async def lifespan(app: FastAPI):
                 clientId=client_id,
                 timeout=20
             )
+            accounts = ib.managedAccounts()
+            account = accounts[0] if accounts else None
             ib.reqPnL(account)
             ib.disconnectedEvent += on_disconnected
             logger.info("Connected to IB Gateway and subscribed to disconnection event")
@@ -168,6 +168,8 @@ async def lifespan(app: FastAPI):
                         clientId=client_id,
                         timeout=20
                     )
+                    accounts = ib.managedAccounts()
+                    account = accounts[0] if accounts else None
                     ib.reqPnL(account)
                     ib.disconnectedEvent += on_disconnected
                     logger.info("Connected to IB Gateway and subscribed to disconnection event")
@@ -498,6 +500,9 @@ async def place_order(positions_request: PositionsRequest):
             detail=f"Error processing positions request: {str(e)}"
         )
 async def on_pnl_event(pnl: PnL):
+    accounts = ib.managedAccounts()
+
+    account = accounts[0] if accounts else None
     pnl = ib.pnl(account)
     for item in pnl:
         total_unrealized_pnl = float((item.unrealizedPnL /2) or 0.0)

@@ -88,6 +88,7 @@ ENV IBC_PATH /root/ibc
 ENV IBC_INI /root/ibc/config.ini
 ENV TWOFA_TIMEOUT_ACTION exit
 
+
 RUN apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:deadsnakes/ppa
 
@@ -147,6 +148,9 @@ RUN chmod a+x /home/tbot/develop/github/tbot-tradingboat/tbottmux/*.sh
 RUN pip install fastapi uvicorn
 WORKDIR /home/tbot/develop/github/tbot-tradingboat
 COPY ./tbot/tbot_order.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
+COPY ./tbot/tbot_decoder.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_decoder.py
+
+COPY ./tbot/tbot_order_event.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order_event.py
 
 
 
@@ -156,7 +160,6 @@ WORKDIR /home/tbot/develop/github/tradingview-webhooks-bot/src
 #COPY ./event.py /home/tbot/develop/github/tradingview-webhooks-bot/src/components/events/base/event.py
 
 #COPY ./commons.py /home/tbot/develop/github/tradingview-webhooks-bot/src/commons.py
-
 
 # Copy the local version of orders into the container
 COPY ./templates/order_base.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/order_base.html
