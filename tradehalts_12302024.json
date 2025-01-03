@@ -1,0 +1,1266 @@
+4.79-USD-DU7397764-
+21:42:23:218 -> ---/6-2-FullExcessLiquidity-26736.69-USD-DU7397764-
+21:42:23:218 -> ----6-2-FullExcessLiquidity-C-0.00-USD-DU7397764-
+21:42:23:218 -> ---16-2-FullExcessLiquidity-S-26736.69-USD-DU7397764-
+21:42:23:218 -> ---,6-2-FullInitMarginReq-4420.90-USD-DU7397764-
+21:42:23:218 -> ---+6-2-FullInitMarginReq-C-0.00-USD-DU7397764-
+21:42:23:218 -> ---.6-2-FullInitMarginReq-S-4420.90-USD-DU7397764-
+21:42:23:218 -> ----6-2-FullMaintMarginReq-4019.00-USD-DU7397764-
+21:42:23:218 -> ---,6-2-FullMaintMarginReq-C-0.00-USD-DU7397764-
+21:42:23:218 -> ---/6-2-FullMaintMarginReq-S-4019.00-USD-DU7397764-
+21:42:23:218 -> ---"6-2-FundValue-0.00-BASE-DU7397764-
+21:42:23:218 -> ---!6-2-FundValue-0.00-USD-DU7397764-
+21:42:23:218 -> ---*6-2-FutureOptionValue-0.00-BASE-DU7397764-
+21:42:23:219 -> ---)6-2-FutureOptionValue-0.00-USD-DU7397764-
+21:42:23:219 -> ---#6-2-FuturesPNL-0.00-BASE-DU7397764-
+21:42:23:219 -> ---"6-2-FuturesPNL-0.00-USD-DU7397764-
+21:42:23:219 -> ---&6-2-FxCashBalance-0.00-BASE-DU7397764-
+21:42:23:219 -> ---%6-2-FxCashBalance-0.00-USD-DU7397764-
+21:42:23:219 -> ----6-2-GrossPositionValue-8038.00-USD-DU7397764-
+21:42:23:219 -> ---/6-2-GrossPositionValue-S-8038.00-USD-DU7397764-
+21:42:23:219 -> ---!6-2-Guarantee-0.00-USD-DU7397764-
+21:42:23:219 -> ---#6-2-Guarantee-C-0.00-USD-DU7397764-
+21:42:23:219 -> ---#6-2-Guarantee-S-0.00-USD-DU7397764-
+21:42:23:219 -> ---(6-2-IncentiveCoupons-0.00-USD-DU7397764-
+21:42:23:219 -> ---*6-2-IncentiveCoupons-C-0.00-USD-DU7397764-
+21:42:23:219 -> ---*6-2-IncentiveCoupons-S-0.00-USD-DU7397764-
+21:42:23:219 -> ---*6-2-IndianStockHaircut-0.00-USD-DU7397764-
+21:42:23:219 -> ---,6-2-IndianStockHaircut-C-0.00-USD-DU7397764-
+21:42:23:219 -> ---,6-2-IndianStockHaircut-S-0.00-USD-DU7397764-
+21:42:23:219 -> ---(6-2-InitMarginReq-4420.90-USD-DU7397764-
+21:42:23:220 -> ---'6-2-InitMarginReq-C-0.00-USD-DU7397764-
+21:42:23:221 -> ---*6-2-InitMarginReq-S-4420.90-USD-DU7397764-
+21:42:23:221 -> ---*6-2-IssuerOptionValue-0.00-BASE-DU7397764-
+21:42:23:221 -> ---)6-2-IssuerOptionValue-0.00-USD-DU7397764-
+21:42:23:221 -> ---6-2-Leverage-S-0.26--DU7397764-
+21:42:23:221 -> ---36-2-LookAheadAvailableFunds-26334.79-USD-DU7397764-
+21:42:23:221 -> ---16-2-LookAheadAvailableFunds-C-0.00-USD-DU7397764-
+21:42:23:221 -> ---56-2-LookAheadAvailableFunds-S-26334.79-USD-DU7397764-
+21:42:23:221 -> ---46-2-LookAheadExcessLiquidity-26736.69-USD-DU7397764-
+21:42:23:221 -> ---26-2-LookAheadExcessLiquidity-C-0.00-USD-DU7397764-
+21:42:23:221 -> ---66-2-LookAheadExcessLiquidity-S-26736.69-USD-DU7397764-
+21:42:23:221 -> ---16-2-LookAheadInitMarginReq-4420.90-USD-DU7397764-
+21:42:23:221 -> ---06-2-LookAheadInitMarginReq-C-0.00-USD-DU7397764-
+21:42:23:221 -> ---36-2-LookAheadInitMarginReq-S-4420.90-USD-DU7397764-
+21:42:23:221 -> ---26-2-LookAheadMaintMarginReq-4019.00-USD-DU7397764-
+21:42:23:221 -> ---16-2-LookAheadMaintMarginReq-C-0.00-USD-DU7397764-
+21:42:23:221 -> ---46-2-LookAheadMaintMarginReq-S-4019.00-USD-DU7397764-
+21:42:23:221 -> ---.6-2-LookAheadNextChange-1735828200--DU7397764-
+21:42:23:222 -> ---)6-2-MaintMarginReq-4019.00-USD-DU7397764-
+21:42:23:222 -> ---(6-2-MaintMarginReq-C-0.00-USD-DU7397764-
+21:42:23:222 -> ---+6-2-MaintMarginReq-S-4019.00-USD-DU7397764-
+21:42:23:222 -> ----6-2-MoneyMarketFundValue-0.00-BASE-DU7397764-
+21:42:23:222 -> ---,6-2-MoneyMarketFundValue-0.00-USD-DU7397764-
+21:42:23:222 -> ---(6-2-MutualFundValue-0.00-BASE-DU7397764-
+21:42:23:222 -> ---'6-2-MutualFundValue-0.00-USD-DU7397764-
+21:42:23:222 -> ---*6-2-NLVAndMarginInReview-false--DU7397764-
+21:42:23:222 -> ---$6-2-NetDividend-0.00-BASE-DU7397764-
+21:42:23:222 -> ---#6-2-NetDividend-0.00-USD-DU7397764-
+21:42:23:222 -> ---*6-2-NetLiquidation-30904.81-USD-DU7397764-
+21:42:23:222 -> ---(6-2-NetLiquidation-C-0.00-USD-DU7397764-
+21:42:23:222 -> ---,6-2-NetLiquidation-S-30904.81-USD-DU7397764-
+21:42:23:222 -> ---76-2-NetLiquidationByCurrency-30904.8099-BASE-DU7397764-
+21:42:23:222 -> ---66-2-NetLiquidationByCurrency-30904.8099-USD-DU7397764-
+21:42:23:222 -> ---16-2-NetLiquidationUncertainty-0.00-USD-DU7397764-
+21:42:23:222 -> ---*6-2-OptionMarketValue-0.00-BASE-DU7397764-
+21:42:23:222 -> ---)6-2-OptionMarketValue-0.00-USD-DU7397764-
+21:42:23:222 -> ---%6-2-PASharesValue-0.00-USD-DU7397764-
+21:42:23:222 -> ---'6-2-PASharesValue-C-0.00-USD-DU7397764-
+21:42:23:222 -> ---'6-2-PASharesValue-S-0.00-USD-DU7397764-
+21:42:23:222 -> ---06-2-PhysicalCertificateValue-0.00-USD-DU7397764-
+21:42:23:222 -> ---26-2-PhysicalCertificateValue-C-0.00-USD-DU7397764-
+21:42:23:223 -> ---26-2-PhysicalCertificateValue-S-0.00-USD-DU7397764-
+21:42:23:223 -> ---,6-2-PostExpirationExcess-0.00-USD-DU7397764-
+21:42:23:223 -> ---.6-2-PostExpirationExcess-C-0.00-USD-DU7397764-
+21:42:23:223 -> ---.6-2-PostExpirationExcess-S-0.00-USD-DU7397764-
+21:42:23:223 -> ---,6-2-PostExpirationMargin-0.00-USD-DU7397764-
+21:42:23:223 -> ---.6-2-PostExpirationMargin-C-0.00-USD-DU7397764-
+21:42:23:223 -> ---.6-2-PostExpirationMargin-S-0.00-USD-DU7397764-
+21:42:23:223 -> ---:6-2-PreviousDayEquityWithLoanValue-30757.09-USD-DU7397764-
+21:42:23:223 -> ---<6-2-PreviousDayEquityWithLoanValue-S-30757.09-USD-DU7397764-
+21:42:23:223 -> ---%6-2-RealCurrency-BASE-BASE-DU7397764-
+21:42:23:223 -> ---#6-2-RealCurrency-USD-USD-DU7397764-
+21:42:23:223 -> ---$6-2-RealizedPnL-0.00-BASE-DU7397764-
+21:42:23:223 -> ---#6-2-RealizedPnL-0.00-USD-DU7397764-
+21:42:23:223 -> ---&6-2-RegTEquity-30904.81-USD-DU7397764-
+21:42:23:223 -> ---(6-2-RegTEquity-S-30904.81-USD-DU7397764-
+21:42:23:223 -> ---%6-2-RegTMargin-4019.00-USD-DU7397764-
+21:42:23:223 -> ---'6-2-RegTMargin-S-4019.00-USD-DU7397764-
+21:42:23:223 -> --- 6-2-SMA-579168.87-USD-DU7397764-
+21:42:23:223 -> ---"6-2-SMA-S-579168.87-USD-DU7397764-
+21:42:23:224 -> ----6-2-SegmentTitle-C-US Commodities--DU7397764-
+21:42:23:224 -> ---,6-2-SegmentTitle-S-US Securities--DU7397764-
+21:42:23:224 -> ---,6-2-StockMarketValue-8038.00-BASE-DU7397764-
+21:42:23:224 -> ---+6-2-StockMarketValue-8038.00-USD-DU7397764-
+21:42:23:224 -> ---#6-2-TBillValue-0.00-BASE-DU7397764-
+21:42:23:224 -> ---"6-2-TBillValue-0.00-USD-DU7397764-
+21:42:23:224 -> ---#6-2-TBondValue-0.00-BASE-DU7397764-
+21:42:23:224 -> ---"6-2-TBondValue-0.00-USD-DU7397764-
+21:42:23:224 -> ----6-2-TotalCashBalance-22800.86-BASE-DU7397764-
+21:42:23:224 -> ---,6-2-TotalCashBalance-22800.86-USD-DU7397764-
+21:42:23:224 -> ---*6-2-TotalCashValue-22800.86-USD-DU7397764-
+21:42:23:224 -> ---(6-2-TotalCashValue-C-0.00-USD-DU7397764-
+21:42:23:224 -> ---,6-2-TotalCashValue-S-22800.86-USD-DU7397764-
+21:42:23:224 -> ---46-2-TotalDebitCardPendingCharges-0.00-USD-DU7397764-
+21:42:23:224 -> ---66-2-TotalDebitCardPendingCharges-C-0.00-USD-DU7397764-
+21:42:23:224 -> ---66-2-TotalDebitCardPendingCharges-S-0.00-USD-DU7397764-
+21:42:23:224 -> ---%6-2-TradingType-S-STKNOPT--DU7397764-
+21:42:23:224 -> ---)6-2-UnrealizedPnL--112.80-BASE-DU7397764-
+21:42:23:224 -> ---(6-2-UnrealizedPnL--112.80-USD-DU7397764-
+21:42:23:224 -> ---%6-2-WarrantValue-0.00-BASE-DU7397764-
+21:42:23:224 -> ---$6-2-WarrantValue-0.00-USD-DU7397764-
+21:42:23:224 -> ---$6-2-WhatIfPMEnabled-true--DU7397764-
+21:42:23:224 -> ---e7-8-76792991-TSLA-STK--0-0--NASDAQ-USD-TSLA-NMS-20-401.8999939-8038.0-407.54006--112.8-0.0-DU7397764-
+21:42:23:224 -> ---
+8-1-05:57-
+21:42:23:224 -> ---
+8-1-21:40-
+21:42:23:224 -> ---54-1-DU7397764-
+21:42:23:316 -> ---*73-1-64-DU7397764--AccountCode-DU7397764--
+21:42:23:316 -> ---&73-1-64-DU7397764--AccountReady-true--
+21:42:23:316 -> ---+73-1-64-DU7397764--AccountType-INDIVIDUAL--
+21:42:23:316 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+21:42:23:316 -> ---*73-1-64-DU7397764--AccruedCash-C-0.00-USD-
+21:42:23:316 -> ---+73-1-64-DU7397764--AccruedCash-S-65.95-USD-
+21:42:23:316 -> ---,73-1-64-DU7397764--AccruedDividend-0.00-USD-
+21:42:23:316 -> ---.73-1-64-DU7397764--AccruedDividend-C-0.00-USD-
+21:42:23:316 -> ---.73-1-64-DU7397764--AccruedDividend-S-0.00-USD-
+21:42:23:316 -> ---/73-1-64-DU7397764--AvailableFunds-26334.79-USD-
+21:42:23:316 -> ----73-1-64-DU7397764--AvailableFunds-C-0.00-USD-
+21:42:23:316 -> ---173-1-64-DU7397764--AvailableFunds-S-26334.79-USD-
+21:42:23:316 -> ---%73-1-64-DU7397764--Billable-0.00-USD-
+21:42:23:316 -> ---'73-1-64-DU7397764--Billable-C-0.00-USD-
+21:42:23:316 -> ---'73-1-64-DU7397764--Billable-S-0.00-USD-
+21:42:23:316 -> ----73-1-64-DU7397764--BuyingPower-105339.16-USD-
+21:42:23:316 -> ---#73-1-64-DU7397764--ColumnPrio-C-2--
+21:42:23:316 -> ---#73-1-64-DU7397764--ColumnPrio-S-1--
+21:42:23:317 -> ---$73-1-64-DU7397764--Cushion-0.86513--
+21:42:23:317 -> ---*73-1-64-DU7397764--DayTradesRemaining--1--
+21:42:23:317 -> ----73-1-64-DU7397764--DayTradesRemainingT+1--1--
+21:42:23:317 -> ----73-1-64-DU7397764--DayTradesRemainingT+2--1--
+21:42:23:317 -> ----73-1-64-DU7397764--DayTradesRemainingT+3--1--
+21:42:23:317 -> ----73-1-64-DU7397764--DayTradesRemainingT+4--1--
+21:42:23:317 -> ---N73-1-64-DU7397764--DayTradingStatus-S-20241231:20231123:true:30838.86::false--
+21:42:23:317 -> ---473-1-64-DU7397764--EquityWithLoanValue-30755.69-USD-
+21:42:23:317 -> ---273-1-64-DU7397764--EquityWithLoanValue-C-0.00-USD-
+21:42:23:317 -> ---673-1-64-DU7397764--EquityWithLoanValue-S-30755.69-USD-
+21:42:23:317 -> ---073-1-64-DU7397764--ExcessLiquidity-26736.69-USD-
+21:42:23:317 -> ---.73-1-64-DU7397764--ExcessLiquidity-C-0.00-USD-
+21:42:23:317 -> ---273-1-64-DU7397764--ExcessLiquidity-S-26736.69-USD-
+21:42:23:317 -> ---373-1-64-DU7397764--FullAvailableFunds-26334.79-USD-
+21:42:23:317 -> ---173-1-64-DU7397764--FullAvailableFunds-C-0.00-USD-
+21:42:23:317 -> ---573-1-64-DU7397764--FullAvailableFunds-S-26334.79-USD-
+21:42:23:317 -> ---473-1-64-DU7397764--FullExcessLiquidity-26736.69-USD-
+21:42:23:317 -> ---273-1-64-DU7397764--FullExcessLiquidity-C-0.00-USD-
+21:42:23:317 -> ---673-1-64-DU7397764--FullExcessLiquidity-S-26736.69-USD-
+21:42:23:317 -> ---173-1-64-DU7397764--FullInitMarginReq-4420.90-USD-
+21:42:23:317 -> ---073-1-64-DU7397764--FullInitMarginReq-C-0.00-USD-
+21:42:23:317 -> ---373-1-64-DU7397764--FullInitMarginReq-S-4420.90-USD-
+21:42:23:317 -> ---273-1-64-DU7397764--FullMaintMarginReq-4019.00-USD-
+21:42:23:317 -> ---173-1-64-DU7397764--FullMaintMarginReq-C-0.00-USD-
+21:42:23:317 -> ---473-1-64-DU7397764--FullMaintMarginReq-S-4019.00-USD-
+21:42:23:317 -> ---273-1-64-DU7397764--GrossPositionValue-8038.00-USD-
+21:42:23:317 -> ---473-1-64-DU7397764--GrossPositionValue-S-8038.00-USD-
+21:42:23:317 -> ---&73-1-64-DU7397764--Guarantee-0.00-USD-
+21:42:23:317 -> ---(73-1-64-DU7397764--Guarantee-C-0.00-USD-
+21:42:23:317 -> ---(73-1-64-DU7397764--Guarantee-S-0.00-USD-
+21:42:23:317 -> ----73-1-64-DU7397764--IncentiveCoupons-0.00-USD-
+21:42:23:317 -> ---/73-1-64-DU7397764--IncentiveCoupons-C-0.00-USD-
+21:42:23:317 -> ---/73-1-64-DU7397764--IncentiveCoupons-S-0.00-USD-
+21:42:23:317 -> ---/73-1-64-DU7397764--IndianStockHaircut-0.00-USD-
+21:42:23:317 -> ---173-1-64-DU7397764--IndianStockHaircut-C-0.00-USD-
+21:42:23:317 -> ---173-1-64-DU7397764--IndianStockHaircut-S-0.00-USD-
+21:42:23:317 -> ----73-1-64-DU7397764--InitMarginReq-4420.90-USD-
+21:42:23:317 -> ---,73-1-64-DU7397764--InitMarginReq-C-0.00-USD-
+21:42:23:317 -> ---/73-1-64-DU7397764--InitMarginReq-S-4420.90-USD-
+21:42:23:317 -> ---$73-1-64-DU7397764--Leverage-S-0.26--
+21:42:23:317 -> ---873-1-64-DU7397764--LookAheadAvailableFunds-26334.79-USD-
+21:42:23:317 -> ---673-1-64-DU7397764--LookAheadAvailableFunds-C-0.00-USD-
+21:42:23:317 -> ---:73-1-64-DU7397764--LookAheadAvailableFunds-S-26334.79-USD-
+21:42:23:318 -> ---973-1-64-DU7397764--LookAheadExcessLiquidity-26736.69-USD-
+21:42:23:318 -> ---773-1-64-DU7397764--LookAheadExcessLiquidity-C-0.00-USD-
+21:42:23:318 -> ---;73-1-64-DU7397764--LookAheadExcessLiquidity-S-26736.69-USD-
+21:42:23:318 -> ---673-1-64-DU7397764--LookAheadInitMarginReq-4420.90-USD-
+21:42:23:318 -> ---573-1-64-DU7397764--LookAheadInitMarginReq-C-0.00-USD-
+21:42:23:318 -> ---873-1-64-DU7397764--LookAheadInitMarginReq-S-4420.90-USD-
+21:42:23:318 -> ---773-1-64-DU7397764--LookAheadMaintMarginReq-4019.00-USD-
+21:42:23:318 -> ---673-1-64-DU7397764--LookAheadMaintMarginReq-C-0.00-USD-
+21:42:23:318 -> ---973-1-64-DU7397764--LookAheadMaintMarginReq-S-4019.00-USD-
+21:42:23:318 -> ---373-1-64-DU7397764--LookAheadNextChange-1735828200--
+21:42:23:318 -> ---.73-1-64-DU7397764--MaintMarginReq-4019.00-USD-
+21:42:23:318 -> ----73-1-64-DU7397764--MaintMarginReq-C-0.00-USD-
+21:42:23:318 -> ---073-1-64-DU7397764--MaintMarginReq-S-4019.00-USD-
+21:42:23:318 -> ---/73-1-64-DU7397764--NLVAndMarginInReview-false--
+21:42:23:318 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+21:42:23:318 -> ----73-1-64-DU7397764--NetLiquidation-C-0.00-USD-
+21:42:23:318 -> ---173-1-64-DU7397764--NetLiquidation-S-30904.81-USD-
+21:42:23:318 -> ---673-1-64-DU7397764--NetLiquidationUncertainty-0.00-USD-
+21:42:23:318 -> ---*73-1-64-DU7397764--PASharesValue-0.00-USD-
+21:42:23:318 -> ---,73-1-64-DU7397764--PASharesValue-C-0.00-USD-
+21:42:23:318 -> ---,73-1-64-DU7397764--PASharesValue-S-0.00-USD-
+21:42:23:318 -> ---573-1-64-DU7397764--PhysicalCertificateValue-0.00-USD-
+21:42:23:318 -> ---773-1-64-DU7397764--PhysicalCertificateValue-C-0.00-USD-
+21:42:23:318 -> ---773-1-64-DU7397764--PhysicalCertificateValue-S-0.00-USD-
+21:42:23:318 -> ---173-1-64-DU7397764--PostExpirationExcess-0.00-USD-
+21:42:23:318 -> ---373-1-64-DU7397764--PostExpirationExcess-C-0.00-USD-
+21:42:23:319 -> ---373-1-64-DU7397764--PostExpirationExcess-S-0.00-USD-
+21:42:23:319 -> ---173-1-64-DU7397764--PostExpirationMargin-0.00-USD-
+21:42:23:319 -> ---373-1-64-DU7397764--PostExpirationMargin-C-0.00-USD-
+21:42:23:319 -> ---373-1-64-DU7397764--PostExpirationMargin-S-0.00-USD-
+21:42:23:319 -> ---?73-1-64-DU7397764--PreviousDayEquityWithLoanValue-30757.09-USD-
+21:42:23:319 -> ---A73-1-64-DU7397764--PreviousDayEquityWithLoanValue-S-30757.09-USD-
+21:42:23:319 -> ---+73-1-64-DU7397764--RegTEquity-30904.81-USD-
+21:42:23:319 -> ----73-1-64-DU7397764--RegTEquity-S-30904.81-USD-
+21:42:23:319 -> ---*73-1-64-DU7397764--RegTMargin-4019.00-USD-
+21:42:23:319 -> ---,73-1-64-DU7397764--RegTMargin-S-4019.00-USD-
+21:42:23:319 -> ---%73-1-64-DU7397764--SMA-579168.87-USD-
+21:42:23:319 -> ---'73-1-64-DU7397764--SMA-S-579168.87-USD-
+21:42:23:319 -> ---273-1-64-DU7397764--SegmentTitle-C-US Commodities--
+21:42:23:319 -> ---173-1-64-DU7397764--SegmentTitle-S-US Securities--
+21:42:23:319 -> ---/73-1-64-DU7397764--TotalCashValue-22800.86-USD-
+21:42:23:319 -> ----73-1-64-DU7397764--TotalCashValue-C-0.00-USD-
+21:42:23:319 -> ---173-1-64-DU7397764--TotalCashValue-S-22800.86-USD-
+21:42:23:319 -> ---973-1-64-DU7397764--TotalDebitCardPendingCharges-0.00-USD-
+21:42:23:319 -> ---;73-1-64-DU7397764--TotalDebitCardPendingCharges-C-0.00-USD-
+21:42:23:319 -> ---;73-1-64-DU7397764--TotalDebitCardPendingCharges-S-0.00-USD-
+21:42:23:319 -> ---*73-1-64-DU7397764--TradingType-S-STKNOPT--
+21:42:23:319 -> ---)73-1-64-DU7397764--WhatIfPMEnabled-true--
+21:42:23:319 -> ---$73-1-64-DU7397764--Currency-USD-USD-
+21:42:23:319 -> ---,73-1-64-DU7397764--CashBalance-22800.86-USD-
+21:42:23:319 -> ---173-1-64-DU7397764--TotalCashBalance-22800.86-USD-
+21:42:23:319 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+21:42:23:319 -> ---073-1-64-DU7397764--StockMarketValue-8038.00-USD-
+21:42:23:319 -> ---.73-1-64-DU7397764--OptionMarketValue-0.00-USD-
+21:42:23:320 -> ---.73-1-64-DU7397764--FutureOptionValue-0.00-USD-
+21:42:23:320 -> ---'73-1-64-DU7397764--FuturesPNL-0.00-USD-
+21:42:23:320 -> ---;73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-USD-
+21:42:23:320 -> ----73-1-64-DU7397764--UnrealizedPnL--112.80-USD-
+21:42:23:320 -> ---(73-1-64-DU7397764--RealizedPnL-0.00-USD-
+21:42:23:320 -> ---)73-1-64-DU7397764--ExchangeRate-1.00-USD-
+21:42:23:320 -> ---&73-1-64-DU7397764--FundValue-0.00-USD-
+21:42:23:320 -> ---(73-1-64-DU7397764--NetDividend-0.00-USD-
+21:42:23:320 -> ---,73-1-64-DU7397764--MutualFundValue-0.00-USD-
+21:42:23:320 -> ---173-1-64-DU7397764--MoneyMarketFundValue-0.00-USD-
+21:42:23:320 -> ---/73-1-64-DU7397764--CorporateBondValue-0.00-USD-
+21:42:23:320 -> ---'73-1-64-DU7397764--TBondValue-0.00-USD-
+21:42:23:320 -> ---'73-1-64-DU7397764--TBillValue-0.00-USD-
+21:42:23:320 -> ---)73-1-64-DU7397764--WarrantValue-0.00-USD-
+21:42:23:320 -> ---*73-1-64-DU7397764--FxCashBalance-0.00-USD-
+21:42:23:320 -> ---073-1-64-DU7397764--AccountOrGroup-DU7397764-USD-
+21:42:23:320 -> ---(73-1-64-DU7397764--RealCurrency-USD-USD-
+21:42:23:320 -> ---.73-1-64-DU7397764--IssuerOptionValue-0.00-USD-
+21:42:23:320 -> ---'73-1-64-DU7397764--Cryptocurrency--USD-
+21:42:23:320 -> ---&73-1-64-DU7397764--Currency-BASE-BASE-
+21:42:23:320 -> ----73-1-64-DU7397764--CashBalance-22800.86-BASE-
+21:42:23:320 -> ---273-1-64-DU7397764--TotalCashBalance-22800.86-BASE-
+21:42:23:320 -> ---*73-1-64-DU7397764--AccruedCash-65.95-BASE-
+21:42:23:320 -> ---173-1-64-DU7397764--StockMarketValue-8038.00-BASE-
+21:42:23:321 -> ---/73-1-64-DU7397764--OptionMarketValue-0.00-BASE-
+21:42:23:321 -> ---/73-1-64-DU7397764--FutureOptionValue-0.00-BASE-
+21:42:23:321 -> ---(73-1-64-DU7397764--FuturesPNL-0.00-BASE-
+21:42:23:321 -> ---<73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-BASE-
+21:42:23:321 -> ---.73-1-64-DU7397764--UnrealizedPnL--112.80-BASE-
+21:42:23:321 -> ---)73-1-64-DU7397764--RealizedPnL-0.00-BASE-
+21:42:23:321 -> ---*73-1-64-DU7397764--ExchangeRate-1.00-BASE-
+21:42:23:321 -> ---'73-1-64-DU7397764--FundValue-0.00-BASE-
+21:42:23:321 -> ---)73-1-64-DU7397764--NetDividend-0.00-BASE-
+21:42:23:321 -> ----73-1-64-DU7397764--MutualFundValue-0.00-BASE-
+21:42:23:321 -> ---273-1-64-DU7397764--MoneyMarketFundValue-0.00-BASE-
+21:42:23:321 -> ---073-1-64-DU7397764--CorporateBondValue-0.00-BASE-
+21:42:23:321 -> ---(73-1-64-DU7397764--TBondValue-0.00-BASE-
+21:42:23:321 -> ---(73-1-64-DU7397764--TBillValue-0.00-BASE-
+21:42:23:321 -> ---*73-1-64-DU7397764--WarrantValue-0.00-BASE-
+21:42:23:321 -> ---+73-1-64-DU7397764--FxCashBalance-0.00-BASE-
+21:42:23:321 -> ---173-1-64-DU7397764--AccountOrGroup-DU7397764-BASE-
+21:42:23:321 -> ---)73-1-64-DU7397764--RealCurrency-USD-BASE-
+21:42:23:321 -> ---/73-1-64-DU7397764--IssuerOptionValue-0.00-BASE-
+21:42:23:321 -> ---(73-1-64-DU7397764--Cryptocurrency--BASE-
+21:42:23:321 -> ---74-1-64-
+21:42:23:325 <- 7-3-65-0-------
+21:42:23:333 -> ---55-1-65-
+21:42:23:334 <- 92-66-DU7397764--
+21:42:23:448 -> ---@94-66--5.442700000000002--112.40093144531238-1234.1018600999998-
+21:43:44:189 -> ---
+8-1-21:43-
+21:43:44:190 -> ---
+8-1-21:43-
+21:43:44:190 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+21:43:44:190 -> ---
+8-1-21:43-
+21:46:44:649 -> ---
+8-1-21:46-
+21:46:44:649 -> ---
+8-1-21:46-
+21:46:44:649 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+21:46:44:649 -> ---
+8-1-21:46-
+21:49:44:221 -> ---
+8-1-21:49-
+21:49:44:221 -> ---
+8-1-21:49-
+21:49:44:221 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+21:49:44:221 -> ---
+8-1-21:49-
+21:52:44:791 -> ---
+8-1-21:52-
+21:52:44:792 -> ---
+8-1-21:52-
+21:52:44:792 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+21:52:44:792 -> ---
+8-1-21:52-
+21:55:44:249 -> ---
+8-1-21:55-
+21:55:44:250 -> ---
+8-1-21:55-
+21:55:44:252 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+21:55:44:252 -> ---
+8-1-21:55-
+21:58:44:817 -> ---
+8-1-21:58-
+21:58:44:817 -> ---
+8-1-21:58-
+21:58:44:818 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+21:58:44:818 -> ---
+8-1-21:58-
+22:01:44:276 -> ---
+8-1-22:01-
+22:01:44:276 -> ---
+8-1-22:01-
+22:01:44:276 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:01:44:276 -> ---
+8-1-22:01-
+22:04:44:843 -> ---
+8-1-22:04-
+22:04:44:844 -> ---
+8-1-22:04-
+22:04:44:844 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:04:44:844 -> ---
+8-1-22:04-
+22:07:44:302 -> ---
+8-1-22:07-
+22:07:44:302 -> ---
+8-1-22:07-
+22:07:44:303 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:07:44:303 -> ---
+8-1-22:07-
+22:10:44:873 -> ---
+8-1-22:10-
+22:10:44:873 -> ---
+8-1-22:10-
+22:10:44:875 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:10:44:875 -> ---
+8-1-22:10-
+22:13:24:540 -> ---
+8-1-22:13-
+22:13:24:541 -> ---
+8-1-22:13-
+22:13:24:541 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:13:24:541 -> ---
+8-1-22:13-
+22:13:44:334 -> ---
+8-1-22:13-
+22:13:44:334 -> ---
+8-1-22:13-
+22:13:44:334 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:13:44:334 -> ---
+8-1-22:13-
+22:16:44:901 -> ---
+8-1-22:16-
+22:16:44:901 -> ---
+8-1-22:16-
+22:16:44:903 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:16:44:903 -> ---
+8-1-22:16-
+22:25:39:848 -> ---^4-2--1-2107-HMDS data farm connection is inactive but should be available upon demand.ushmds--
+22:25:39:848 -> ---94-2--1-2158-Sec-def data farm connection is OK:secdefil--
+22:25:39:889 <- 61-1-
+22:25:39:889 <- 5-1-
+22:25:39:894 -> ---C61-3-DU7397764-532497563-WULF-STK--0.0---NASDAQ-USD-WULF-SCM-0-0.0-
+22:25:39:894 -> ---B61-3-DU7397764-29308796-ACAD-STK--0.0---NASDAQ-USD-ACAD-NMS-0-0.0-
+22:25:39:894 -> --->61-3-DU7397764-38988979-EBR-STK--0.0---NYSE-USD-EBR-EBR-0-0.0-
+22:25:39:894 -> ---C61-3-DU7397764-547605251-RGTI-STK--0.0---NASDAQ-USD-RGTI-SCM-0-0.0-
+22:25:39:894 -> ---I61-3-DU7397764-76792991-TSLA-STK--0.0---NASDAQ-USD-TSLA-NMS-20-407.54006-
+22:25:39:894 -> ---861-3-DU7397764-44475946-M-STK--0.0---NYSE-USD-M-M-0-0.0-
+22:25:39:894 -> ---C61-3-DU7397764-504716446-LCID-STK--0.0---NASDAQ-USD-LCID-NMS-0-0.0-
+22:25:39:894 -> ---@61-3-DU7397764-272110-MSTR-STK--0.0---NASDAQ-USD-MSTR-NMS-0-0.0-
+22:25:39:895 -> ---861-3-DU7397764-87335484-C-STK--0.0---NYSE-USD-C-C-0-0.0-
+22:25:39:895 -> ---C61-3-DU7397764-107113386-META-STK--0.0---NASDAQ-USD-META-NMS-0-0.0-
+22:25:39:895 -> ---C61-3-DU7397764-444857009-PLTR-STK--0.0---NASDAQ-USD-PLTR-NMS-0-0.0-
+22:25:39:895 -> ---C61-3-DU7397764-558869874-SOUN-STK--0.0---NASDAQ-USD-SOUN-NMS-0-0.0-
+22:25:39:895 -> ---62-1-
+22:25:39:897 <- 99-0-
+22:25:39:897 <- 6-2-1-DU7397764-
+22:25:39:898 <- 76-1-64-DU7397764--0-
+22:25:39:993 -> ---53-1-
+22:25:40:092 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048926-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 14:30:41 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30740.96 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:25:40:092 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048927-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:12:19 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:25:40:098 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048925-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 14:30:41 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:25:40:100 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.91-0.0-GTC--DU7397764--0--1217048930-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.91-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:37:39 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.66 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:25:40:108 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.91-0.0-GTC--DU7397764--0--1217048931-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.91-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:39:51 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30741.16 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:25:40:110 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048928-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:17:26 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:25:40:118 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048929-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:32:56 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:25:40:122 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.91-0.0-GTC--DU7397764--0--1217048932-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.91-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:43:04 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.66 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:25:40:123 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.9-0.0-GTC--DU7397764--0--1217048933-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.9-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:44:37 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:25:40:123 -> ---102-
+22:25:40:193 -> ---%6-2-AccountCode-DU7397764--DU7397764-
+22:25:40:194 -> ---,6-2-AccountOrGroup-DU7397764-BASE-DU7397764-
+22:25:40:195 -> ---+6-2-AccountOrGroup-DU7397764-USD-DU7397764-
+22:25:40:195 -> ---!6-2-AccountReady-true--DU7397764-
+22:25:40:195 -> ---&6-2-AccountType-INDIVIDUAL--DU7397764-
+22:25:40:195 -> ---%6-2-AccruedCash-65.95-BASE-DU7397764-
+22:25:40:195 -> ---$6-2-AccruedCash-65.95-USD-DU7397764-
+22:25:40:195 -> ---%6-2-AccruedCash-C-0.00-USD-DU7397764-
+22:25:40:196 -> ---&6-2-AccruedCash-S-65.95-USD-DU7397764-
+22:25:40:196 -> ---'6-2-AccruedDividend-0.00-USD-DU7397764-
+22:25:40:197 -> ---)6-2-AccruedDividend-C-0.00-USD-DU7397764-
+22:25:40:197 -> ---)6-2-AccruedDividend-S-0.00-USD-DU7397764-
+22:25:40:197 -> ---*6-2-AvailableFunds-26334.79-USD-DU7397764-
+22:25:40:197 -> ---(6-2-AvailableFunds-C-0.00-USD-DU7397764-
+22:25:40:197 -> ---,6-2-AvailableFunds-S-26334.79-USD-DU7397764-
+22:25:40:197 -> --- 6-2-Billable-0.00-USD-DU7397764-
+22:25:40:197 -> ---"6-2-Billable-C-0.00-USD-DU7397764-
+22:25:40:197 -> ---"6-2-Billable-S-0.00-USD-DU7397764-
+22:25:40:197 -> ---(6-2-BuyingPower-105339.16-USD-DU7397764-
+22:25:40:197 -> ---(6-2-CashBalance-22800.86-BASE-DU7397764-
+22:25:40:197 -> ---'6-2-CashBalance-22800.86-USD-DU7397764-
+22:25:40:197 -> ---6-2-ColumnPrio-C-2--DU7397764-
+22:25:40:197 -> ---6-2-ColumnPrio-S-1--DU7397764-
+22:25:40:197 -> ---+6-2-CorporateBondValue-0.00-BASE-DU7397764-
+22:25:40:197 -> ---*6-2-CorporateBondValue-0.00-USD-DU7397764-
+22:25:40:197 -> ---!6-2-Currency-BASE-BASE-DU7397764-
+22:25:40:198 -> ---6-2-Currency-USD-USD-DU7397764-
+22:25:40:198 -> ---6-2-Cushion-0.86513--DU7397764-
+22:25:40:198 -> ---%6-2-DayTradesRemaining--1--DU7397764-
+22:25:40:199 -> ---(6-2-DayTradesRemainingT+1--1--DU7397764-
+22:25:40:199 -> ---(6-2-DayTradesRemainingT+2--1--DU7397764-
+22:25:40:199 -> ---(6-2-DayTradesRemainingT+3--1--DU7397764-
+22:25:40:199 -> ---(6-2-DayTradesRemainingT+4--1--DU7397764-
+22:25:40:199 -> ---I6-2-DayTradingStatus-S-20241231:20231123:true:30838.86::false--DU7397764-
+22:25:40:199 -> ---/6-2-EquityWithLoanValue-30755.69-USD-DU7397764-
+22:25:40:199 -> ----6-2-EquityWithLoanValue-C-0.00-USD-DU7397764-
+22:25:40:199 -> ---16-2-EquityWithLoanValue-S-30755.69-USD-DU7397764-
+22:25:40:199 -> ---+6-2-ExcessLiquidity-26736.69-USD-DU7397764-
+22:25:40:199 -> ---)6-2-ExcessLiquidity-C-0.00-USD-DU7397764-
+22:25:40:199 -> ----6-2-ExcessLiquidity-S-26736.69-USD-DU7397764-
+22:25:40:199 -> ---%6-2-ExchangeRate-1.00-BASE-DU7397764-
+22:25:40:199 -> ---$6-2-ExchangeRate-1.00-USD-DU7397764-
+22:25:40:199 -> ---.6-2-FullAvailableFunds-26334.79-USD-DU7397764-
+22:25:40:199 -> ---,6-2-FullAvailableFunds-C-0.00-USD-DU7397764-
+22:25:40:199 -> ---06-2-FullAvailableFunds-S-26334.79-USD-DU7397764-
+22:25:40:199 -> ---/6-2-FullExcessLiquidity-26736.69-USD-DU7397764-
+22:25:40:199 -> ----6-2-FullExcessLiquidity-C-0.00-USD-DU7397764-
+22:25:40:199 -> ---16-2-FullExcessLiquidity-S-26736.69-USD-DU7397764-
+22:25:40:199 -> ---,6-2-FullInitMarginReq-4420.90-USD-DU7397764-
+22:25:40:199 -> ---+6-2-FullInitMarginReq-C-0.00-USD-DU7397764-
+22:25:40:200 -> ---.6-2-FullInitMarginReq-S-4420.90-USD-DU7397764-
+22:25:40:200 -> ----6-2-FullMaintMarginReq-4019.00-USD-DU7397764-
+22:25:40:200 -> ---,6-2-FullMaintMarginReq-C-0.00-USD-DU7397764-
+22:25:40:200 -> ---/6-2-FullMaintMarginReq-S-4019.00-USD-DU7397764-
+22:25:40:200 -> ---"6-2-FundValue-0.00-BASE-DU7397764-
+22:25:40:200 -> ---!6-2-FundValue-0.00-USD-DU7397764-
+22:25:40:200 -> ---*6-2-FutureOptionValue-0.00-BASE-DU7397764-
+22:25:40:200 -> ---)6-2-FutureOptionValue-0.00-USD-DU7397764-
+22:25:40:200 -> ---#6-2-FuturesPNL-0.00-BASE-DU7397764-
+22:25:40:200 -> ---"6-2-FuturesPNL-0.00-USD-DU7397764-
+22:25:40:201 -> ---&6-2-FxCashBalance-0.00-BASE-DU7397764-
+22:25:40:201 -> ---%6-2-FxCashBalance-0.00-USD-DU7397764-
+22:25:40:201 -> ----6-2-GrossPositionValue-8038.00-USD-DU7397764-
+22:25:40:201 -> ---/6-2-GrossPositionValue-S-8038.00-USD-DU7397764-
+22:25:40:201 -> ---!6-2-Guarantee-0.00-USD-DU7397764-
+22:25:40:201 -> ---#6-2-Guarantee-C-0.00-USD-DU7397764-
+22:25:40:201 -> ---#6-2-Guarantee-S-0.00-USD-DU7397764-
+22:25:40:201 -> ---(6-2-IncentiveCoupons-0.00-USD-DU7397764-
+22:25:40:201 -> ---*6-2-IncentiveCoupons-C-0.00-USD-DU7397764-
+22:25:40:201 -> ---*6-2-IncentiveCoupons-S-0.00-USD-DU7397764-
+22:25:40:201 -> ---*6-2-IndianStockHaircut-0.00-USD-DU7397764-
+22:25:40:201 -> ---,6-2-IndianStockHaircut-C-0.00-USD-DU7397764-
+22:25:40:201 -> ---,6-2-IndianStockHaircut-S-0.00-USD-DU7397764-
+22:25:40:201 -> ---(6-2-InitMarginReq-4420.90-USD-DU7397764-
+22:25:40:201 -> ---'6-2-InitMarginReq-C-0.00-USD-DU7397764-
+22:25:40:201 -> ---*6-2-InitMarginReq-S-4420.90-USD-DU7397764-
+22:25:40:201 -> ---*6-2-IssuerOptionValue-0.00-BASE-DU7397764-
+22:25:40:201 -> ---)6-2-IssuerOptionValue-0.00-USD-DU7397764-
+22:25:40:207 -> ---6-2-Leverage-S-0.26--DU7397764-
+22:25:40:207 -> ---36-2-LookAheadAvailableFunds-26334.79-USD-DU7397764-
+22:25:40:208 -> ---16-2-LookAheadAvailableFunds-C-0.00-USD-DU7397764-
+22:25:40:208 -> ---56-2-LookAheadAvailableFunds-S-26334.79-USD-DU7397764-
+22:25:40:208 -> ---46-2-LookAheadExcessLiquidity-26736.69-USD-DU7397764-
+22:25:40:208 -> ---26-2-LookAheadExcessLiquidity-C-0.00-USD-DU7397764-
+22:25:40:208 -> ---66-2-LookAheadExcessLiquidity-S-26736.69-USD-DU7397764-
+22:25:40:208 -> ---16-2-LookAheadInitMarginReq-4420.90-USD-DU7397764-
+22:25:40:208 -> ---06-2-LookAheadInitMarginReq-C-0.00-USD-DU7397764-
+22:25:40:208 -> ---36-2-LookAheadInitMarginReq-S-4420.90-USD-DU7397764-
+22:25:40:208 -> ---26-2-LookAheadMaintMarginReq-4019.00-USD-DU7397764-
+22:25:40:208 -> ---16-2-LookAheadMaintMarginReq-C-0.00-USD-DU7397764-
+22:25:40:208 -> ---46-2-LookAheadMaintMarginReq-S-4019.00-USD-DU7397764-
+22:25:40:208 -> ---.6-2-LookAheadNextChange-1735828200--DU7397764-
+22:25:40:208 -> ---)6-2-MaintMarginReq-4019.00-USD-DU7397764-
+22:25:40:208 -> ---(6-2-MaintMarginReq-C-0.00-USD-DU7397764-
+22:25:40:208 -> ---+6-2-MaintMarginReq-S-4019.00-USD-DU7397764-
+22:25:40:208 -> ----6-2-MoneyMarketFundValue-0.00-BASE-DU7397764-
+22:25:40:208 -> ---,6-2-MoneyMarketFundValue-0.00-USD-DU7397764-
+22:25:40:208 -> ---(6-2-MutualFundValue-0.00-BASE-DU7397764-
+22:25:40:209 -> ---'6-2-MutualFundValue-0.00-USD-DU7397764-
+22:25:40:209 -> ---*6-2-NLVAndMarginInReview-false--DU7397764-
+22:25:40:209 -> ---$6-2-NetDividend-0.00-BASE-DU7397764-
+22:25:40:209 -> ---#6-2-NetDividend-0.00-USD-DU7397764-
+22:25:40:209 -> ---*6-2-NetLiquidation-30904.81-USD-DU7397764-
+22:25:40:209 -> ---(6-2-NetLiquidation-C-0.00-USD-DU7397764-
+22:25:40:209 -> ---,6-2-NetLiquidation-S-30904.81-USD-DU7397764-
+22:25:40:209 -> ---76-2-NetLiquidationByCurrency-30904.8099-BASE-DU7397764-
+22:25:40:209 -> ---66-2-NetLiquidationByCurrency-30904.8099-USD-DU7397764-
+22:25:40:209 -> ---16-2-NetLiquidationUncertainty-0.00-USD-DU7397764-
+22:25:40:209 -> ---*6-2-OptionMarketValue-0.00-BASE-DU7397764-
+22:25:40:209 -> ---)6-2-OptionMarketValue-0.00-USD-DU7397764-
+22:25:40:209 -> ---%6-2-PASharesValue-0.00-USD-DU7397764-
+22:25:40:209 -> ---'6-2-PASharesValue-C-0.00-USD-DU7397764-
+22:25:40:209 -> ---'6-2-PASharesValue-S-0.00-USD-DU7397764-
+22:25:40:209 -> ---06-2-PhysicalCertificateValue-0.00-USD-DU7397764-
+22:25:40:209 -> ---26-2-PhysicalCertificateValue-C-0.00-USD-DU7397764-
+22:25:40:209 -> ---26-2-PhysicalCertificateValue-S-0.00-USD-DU7397764-
+22:25:40:209 -> ---,6-2-PostExpirationExcess-0.00-USD-DU7397764-
+22:25:40:209 -> ---.6-2-PostExpirationExcess-C-0.00-USD-DU7397764-
+22:25:40:209 -> ---.6-2-PostExpirationExcess-S-0.00-USD-DU7397764-
+22:25:40:209 -> ---,6-2-PostExpirationMargin-0.00-USD-DU7397764-
+22:25:40:209 -> ---.6-2-PostExpirationMargin-C-0.00-USD-DU7397764-
+22:25:40:209 -> ---.6-2-PostExpirationMargin-S-0.00-USD-DU7397764-
+22:25:40:210 -> ---:6-2-PreviousDayEquityWithLoanValue-30757.09-USD-DU7397764-
+22:25:40:211 -> ---<6-2-PreviousDayEquityWithLoanValue-S-30757.09-USD-DU7397764-
+22:25:40:211 -> ---%6-2-RealCurrency-BASE-BASE-DU7397764-
+22:25:40:211 -> ---#6-2-RealCurrency-USD-USD-DU7397764-
+22:25:40:211 -> ---$6-2-RealizedPnL-0.00-BASE-DU7397764-
+22:25:40:211 -> ---#6-2-RealizedPnL-0.00-USD-DU7397764-
+22:25:40:211 -> ---&6-2-RegTEquity-30904.81-USD-DU7397764-
+22:25:40:211 -> ---(6-2-RegTEquity-S-30904.81-USD-DU7397764-
+22:25:40:211 -> ---%6-2-RegTMargin-4019.00-USD-DU7397764-
+22:25:40:211 -> ---'6-2-RegTMargin-S-4019.00-USD-DU7397764-
+22:25:40:211 -> --- 6-2-SMA-579168.87-USD-DU7397764-
+22:25:40:211 -> ---"6-2-SMA-S-579168.87-USD-DU7397764-
+22:25:40:211 -> ----6-2-SegmentTitle-C-US Commodities--DU7397764-
+22:25:40:212 -> ---,6-2-SegmentTitle-S-US Securities--DU7397764-
+22:25:40:220 -> ---,6-2-StockMarketValue-8038.00-BASE-DU7397764-
+22:25:40:221 -> ---+6-2-StockMarketValue-8038.00-USD-DU7397764-
+22:25:40:221 -> ---#6-2-TBillValue-0.00-BASE-DU7397764-
+22:25:40:222 -> ---"6-2-TBillValue-0.00-USD-DU7397764-
+22:25:40:223 -> ---#6-2-TBondValue-0.00-BASE-DU7397764-
+22:25:40:223 -> ---"6-2-TBondValue-0.00-USD-DU7397764-
+22:25:40:224 -> ----6-2-TotalCashBalance-22800.86-BASE-DU7397764-
+22:25:40:224 -> ---,6-2-TotalCashBalance-22800.86-USD-DU7397764-
+22:25:40:224 -> ---*6-2-TotalCashValue-22800.86-USD-DU7397764-
+22:25:40:224 -> ---(6-2-TotalCashValue-C-0.00-USD-DU7397764-
+22:25:40:224 -> ---,6-2-TotalCashValue-S-22800.86-USD-DU7397764-
+22:25:40:224 -> ---46-2-TotalDebitCardPendingCharges-0.00-USD-DU7397764-
+22:25:40:224 -> ---66-2-TotalDebitCardPendingCharges-C-0.00-USD-DU7397764-
+22:25:40:224 -> ---66-2-TotalDebitCardPendingCharges-S-0.00-USD-DU7397764-
+22:25:40:224 -> ---%6-2-TradingType-S-STKNOPT--DU7397764-
+22:25:40:224 -> ---)6-2-UnrealizedPnL--112.80-BASE-DU7397764-
+22:25:40:224 -> ---(6-2-UnrealizedPnL--112.80-USD-DU7397764-
+22:25:40:224 -> ---%6-2-WarrantValue-0.00-BASE-DU7397764-
+22:25:40:224 -> ---$6-2-WarrantValue-0.00-USD-DU7397764-
+22:25:40:224 -> ---$6-2-WhatIfPMEnabled-true--DU7397764-
+22:25:40:224 -> ---e7-8-76792991-TSLA-STK--0-0--NASDAQ-USD-TSLA-NMS-20-401.8999939-8038.0-407.54006--112.8-0.0-DU7397764-
+22:25:40:224 -> ---
+8-1-05:57-
+22:25:40:224 -> ---
+8-1-22:22-
+22:25:40:225 -> ---54-1-DU7397764-
+22:25:40:290 -> ---*73-1-64-DU7397764--AccountCode-DU7397764--
+22:25:40:292 -> ---&73-1-64-DU7397764--AccountReady-true--
+22:25:40:292 -> ---+73-1-64-DU7397764--AccountType-INDIVIDUAL--
+22:25:40:292 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+22:25:40:292 -> ---*73-1-64-DU7397764--AccruedCash-C-0.00-USD-
+22:25:40:292 -> ---+73-1-64-DU7397764--AccruedCash-S-65.95-USD-
+22:25:40:292 -> ---,73-1-64-DU7397764--AccruedDividend-0.00-USD-
+22:25:40:293 -> ---.73-1-64-DU7397764--AccruedDividend-C-0.00-USD-
+22:25:40:293 -> ---.73-1-64-DU7397764--AccruedDividend-S-0.00-USD-
+22:25:40:293 -> ---/73-1-64-DU7397764--AvailableFunds-26334.79-USD-
+22:25:40:293 -> ----73-1-64-DU7397764--AvailableFunds-C-0.00-USD-
+22:25:40:293 -> ---173-1-64-DU7397764--AvailableFunds-S-26334.79-USD-
+22:25:40:293 -> ---%73-1-64-DU7397764--Billable-0.00-USD-
+22:25:40:293 -> ---'73-1-64-DU7397764--Billable-C-0.00-USD-
+22:25:40:293 -> ---'73-1-64-DU7397764--Billable-S-0.00-USD-
+22:25:40:293 -> ----73-1-64-DU7397764--BuyingPower-105339.16-USD-
+22:25:40:293 -> ---#73-1-64-DU7397764--ColumnPrio-C-2--
+22:25:40:293 -> ---#73-1-64-DU7397764--ColumnPrio-S-1--
+22:25:40:293 -> ---$73-1-64-DU7397764--Cushion-0.86513--
+22:25:40:293 -> ---*73-1-64-DU7397764--DayTradesRemaining--1--
+22:25:40:293 -> ----73-1-64-DU7397764--DayTradesRemainingT+1--1--
+22:25:40:293 -> ----73-1-64-DU7397764--DayTradesRemainingT+2--1--
+22:25:40:293 -> ----73-1-64-DU7397764--DayTradesRemainingT+3--1--
+22:25:40:293 -> ----73-1-64-DU7397764--DayTradesRemainingT+4--1--
+22:25:40:293 -> ---N73-1-64-DU7397764--DayTradingStatus-S-20241231:20231123:true:30838.86::false--
+22:25:40:293 -> ---473-1-64-DU7397764--EquityWithLoanValue-30755.69-USD-
+22:25:40:294 -> ---273-1-64-DU7397764--EquityWithLoanValue-C-0.00-USD-
+22:25:40:294 -> ---673-1-64-DU7397764--EquityWithLoanValue-S-30755.69-USD-
+22:25:40:294 -> ---073-1-64-DU7397764--ExcessLiquidity-26736.69-USD-
+22:25:40:294 -> ---.73-1-64-DU7397764--ExcessLiquidity-C-0.00-USD-
+22:25:40:294 -> ---273-1-64-DU7397764--ExcessLiquidity-S-26736.69-USD-
+22:25:40:294 -> ---373-1-64-DU7397764--FullAvailableFunds-26334.79-USD-
+22:25:40:294 -> ---173-1-64-DU7397764--FullAvailableFunds-C-0.00-USD-
+22:25:40:294 -> ---573-1-64-DU7397764--FullAvailableFunds-S-26334.79-USD-
+22:25:40:295 -> ---473-1-64-DU7397764--FullExcessLiquidity-26736.69-USD-
+22:25:40:295 -> ---273-1-64-DU7397764--FullExcessLiquidity-C-0.00-USD-
+22:25:40:295 -> ---673-1-64-DU7397764--FullExcessLiquidity-S-26736.69-USD-
+22:25:40:296 -> ---173-1-64-DU7397764--FullInitMarginReq-4420.90-USD-
+22:25:40:296 -> ---073-1-64-DU7397764--FullInitMarginReq-C-0.00-USD-
+22:25:40:296 -> ---373-1-64-DU7397764--FullInitMarginReq-S-4420.90-USD-
+22:25:40:297 -> ---273-1-64-DU7397764--FullMaintMarginReq-4019.00-USD-
+22:25:40:297 -> ---173-1-64-DU7397764--FullMaintMarginReq-C-0.00-USD-
+22:25:40:297 -> ---473-1-64-DU7397764--FullMaintMarginReq-S-4019.00-USD-
+22:25:40:298 -> ---273-1-64-DU7397764--GrossPositionValue-8038.00-USD-
+22:25:40:298 -> ---473-1-64-DU7397764--GrossPositionValue-S-8038.00-USD-
+22:25:40:298 -> ---&73-1-64-DU7397764--Guarantee-0.00-USD-
+22:25:40:299 -> ---(73-1-64-DU7397764--Guarantee-C-0.00-USD-
+22:25:40:299 -> ---(73-1-64-DU7397764--Guarantee-S-0.00-USD-
+22:25:40:300 -> ----73-1-64-DU7397764--IncentiveCoupons-0.00-USD-
+22:25:40:300 -> ---/73-1-64-DU7397764--IncentiveCoupons-C-0.00-USD-
+22:25:40:300 -> ---/73-1-64-DU7397764--IncentiveCoupons-S-0.00-USD-
+22:25:40:300 -> ---/73-1-64-DU7397764--IndianStockHaircut-0.00-USD-
+22:25:40:301 -> ---173-1-64-DU7397764--IndianStockHaircut-C-0.00-USD-
+22:25:40:301 -> ---173-1-64-DU7397764--IndianStockHaircut-S-0.00-USD-
+22:25:40:301 -> ----73-1-64-DU7397764--InitMarginReq-4420.90-USD-
+22:25:40:302 -> ---,73-1-64-DU7397764--InitMarginReq-C-0.00-USD-
+22:25:40:302 -> ---/73-1-64-DU7397764--InitMarginReq-S-4420.90-USD-
+22:25:40:303 -> ---$73-1-64-DU7397764--Leverage-S-0.26--
+22:25:40:304 -> ---873-1-64-DU7397764--LookAheadAvailableFunds-26334.79-USD-
+22:25:40:304 -> ---673-1-64-DU7397764--LookAheadAvailableFunds-C-0.00-USD-
+22:25:40:305 -> ---:73-1-64-DU7397764--LookAheadAvailableFunds-S-26334.79-USD-
+22:25:40:305 -> ---973-1-64-DU7397764--LookAheadExcessLiquidity-26736.69-USD-
+22:25:40:305 -> ---773-1-64-DU7397764--LookAheadExcessLiquidity-C-0.00-USD-
+22:25:40:305 -> ---;73-1-64-DU7397764--LookAheadExcessLiquidity-S-26736.69-USD-
+22:25:40:306 -> ---673-1-64-DU7397764--LookAheadInitMarginReq-4420.90-USD-
+22:25:40:306 -> ---573-1-64-DU7397764--LookAheadInitMarginReq-C-0.00-USD-
+22:25:40:306 -> ---873-1-64-DU7397764--LookAheadInitMarginReq-S-4420.90-USD-
+22:25:40:306 -> ---773-1-64-DU7397764--LookAheadMaintMarginReq-4019.00-USD-
+22:25:40:306 -> ---673-1-64-DU7397764--LookAheadMaintMarginReq-C-0.00-USD-
+22:25:40:307 -> ---973-1-64-DU7397764--LookAheadMaintMarginReq-S-4019.00-USD-
+22:25:40:307 -> ---373-1-64-DU7397764--LookAheadNextChange-1735828200--
+22:25:40:307 -> ---.73-1-64-DU7397764--MaintMarginReq-4019.00-USD-
+22:25:40:307 -> ----73-1-64-DU7397764--MaintMarginReq-C-0.00-USD-
+22:25:40:308 -> ---073-1-64-DU7397764--MaintMarginReq-S-4019.00-USD-
+22:25:40:308 -> ---/73-1-64-DU7397764--NLVAndMarginInReview-false--
+22:25:40:308 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:25:40:308 -> ----73-1-64-DU7397764--NetLiquidation-C-0.00-USD-
+22:25:40:309 -> ---173-1-64-DU7397764--NetLiquidation-S-30904.81-USD-
+22:25:40:309 -> ---673-1-64-DU7397764--NetLiquidationUncertainty-0.00-USD-
+22:25:40:309 -> ---*73-1-64-DU7397764--PASharesValue-0.00-USD-
+22:25:40:310 -> ---,73-1-64-DU7397764--PASharesValue-C-0.00-USD-
+22:25:40:310 -> ---,73-1-64-DU7397764--PASharesValue-S-0.00-USD-
+22:25:40:310 -> ---573-1-64-DU7397764--PhysicalCertificateValue-0.00-USD-
+22:25:40:310 -> ---773-1-64-DU7397764--PhysicalCertificateValue-C-0.00-USD-
+22:25:40:310 -> ---773-1-64-DU7397764--PhysicalCertificateValue-S-0.00-USD-
+22:25:40:311 -> ---173-1-64-DU7397764--PostExpirationExcess-0.00-USD-
+22:25:40:311 -> ---373-1-64-DU7397764--PostExpirationExcess-C-0.00-USD-
+22:25:40:311 -> ---373-1-64-DU7397764--PostExpirationExcess-S-0.00-USD-
+22:25:40:311 -> ---173-1-64-DU7397764--PostExpirationMargin-0.00-USD-
+22:25:40:312 -> ---373-1-64-DU7397764--PostExpirationMargin-C-0.00-USD-
+22:25:40:312 -> ---373-1-64-DU7397764--PostExpirationMargin-S-0.00-USD-
+22:25:40:312 -> ---?73-1-64-DU7397764--PreviousDayEquityWithLoanValue-30757.09-USD-
+22:25:40:313 -> ---A73-1-64-DU7397764--PreviousDayEquityWithLoanValue-S-30757.09-USD-
+22:25:40:313 -> ---+73-1-64-DU7397764--RegTEquity-30904.81-USD-
+22:25:40:313 -> ----73-1-64-DU7397764--RegTEquity-S-30904.81-USD-
+22:25:40:313 -> ---*73-1-64-DU7397764--RegTMargin-4019.00-USD-
+22:25:40:314 -> ---,73-1-64-DU7397764--RegTMargin-S-4019.00-USD-
+22:25:40:314 -> ---%73-1-64-DU7397764--SMA-579168.87-USD-
+22:25:40:314 -> ---'73-1-64-DU7397764--SMA-S-579168.87-USD-
+22:25:40:315 -> ---273-1-64-DU7397764--SegmentTitle-C-US Commodities--
+22:25:40:315 -> ---173-1-64-DU7397764--SegmentTitle-S-US Securities--
+22:25:40:315 -> ---/73-1-64-DU7397764--TotalCashValue-22800.86-USD-
+22:25:40:315 -> ----73-1-64-DU7397764--TotalCashValue-C-0.00-USD-
+22:25:40:316 -> ---173-1-64-DU7397764--TotalCashValue-S-22800.86-USD-
+22:25:40:316 -> ---973-1-64-DU7397764--TotalDebitCardPendingCharges-0.00-USD-
+22:25:40:316 -> ---;73-1-64-DU7397764--TotalDebitCardPendingCharges-C-0.00-USD-
+22:25:40:316 -> ---;73-1-64-DU7397764--TotalDebitCardPendingCharges-S-0.00-USD-
+22:25:40:317 -> ---*73-1-64-DU7397764--TradingType-S-STKNOPT--
+22:25:40:317 -> ---)73-1-64-DU7397764--WhatIfPMEnabled-true--
+22:25:40:317 -> ---$73-1-64-DU7397764--Currency-USD-USD-
+22:25:40:318 -> ---,73-1-64-DU7397764--CashBalance-22800.86-USD-
+22:25:40:318 -> ---173-1-64-DU7397764--TotalCashBalance-22800.86-USD-
+22:25:40:318 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+22:25:40:318 -> ---073-1-64-DU7397764--StockMarketValue-8038.00-USD-
+22:25:40:318 -> ---.73-1-64-DU7397764--OptionMarketValue-0.00-USD-
+22:25:40:319 -> ---.73-1-64-DU7397764--FutureOptionValue-0.00-USD-
+22:25:40:319 -> ---'73-1-64-DU7397764--FuturesPNL-0.00-USD-
+22:25:40:319 -> ---;73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-USD-
+22:25:40:319 -> ----73-1-64-DU7397764--UnrealizedPnL--112.80-USD-
+22:25:40:320 -> ---(73-1-64-DU7397764--RealizedPnL-0.00-USD-
+22:25:40:320 -> ---)73-1-64-DU7397764--ExchangeRate-1.00-USD-
+22:25:40:321 -> ---&73-1-64-DU7397764--FundValue-0.00-USD-
+22:25:40:321 -> ---(73-1-64-DU7397764--NetDividend-0.00-USD-
+22:25:40:321 -> ---,73-1-64-DU7397764--MutualFundValue-0.00-USD-
+22:25:40:321 -> ---173-1-64-DU7397764--MoneyMarketFundValue-0.00-USD-
+22:25:40:322 -> ---/73-1-64-DU7397764--CorporateBondValue-0.00-USD-
+22:25:40:322 -> ---'73-1-64-DU7397764--TBondValue-0.00-USD-
+22:25:40:322 -> ---'73-1-64-DU7397764--TBillValue-0.00-USD-
+22:25:40:322 -> ---)73-1-64-DU7397764--WarrantValue-0.00-USD-
+22:25:40:322 -> ---*73-1-64-DU7397764--FxCashBalance-0.00-USD-
+22:25:40:323 -> ---073-1-64-DU7397764--AccountOrGroup-DU7397764-USD-
+22:25:40:323 -> ---(73-1-64-DU7397764--RealCurrency-USD-USD-
+22:25:40:323 -> ---.73-1-64-DU7397764--IssuerOptionValue-0.00-USD-
+22:25:40:323 -> ---'73-1-64-DU7397764--Cryptocurrency--USD-
+22:25:40:327 -> ---&73-1-64-DU7397764--Currency-BASE-BASE-
+22:25:40:327 -> ----73-1-64-DU7397764--CashBalance-22800.86-BASE-
+22:25:40:327 -> ---273-1-64-DU7397764--TotalCashBalance-22800.86-BASE-
+22:25:40:327 -> ---*73-1-64-DU7397764--AccruedCash-65.95-BASE-
+22:25:40:328 -> ---173-1-64-DU7397764--StockMarketValue-8038.00-BASE-
+22:25:40:328 -> ---/73-1-64-DU7397764--OptionMarketValue-0.00-BASE-
+22:25:40:328 -> ---/73-1-64-DU7397764--FutureOptionValue-0.00-BASE-
+22:25:40:328 -> ---(73-1-64-DU7397764--FuturesPNL-0.00-BASE-
+22:25:40:329 -> ---<73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-BASE-
+22:25:40:329 -> ---.73-1-64-DU7397764--UnrealizedPnL--112.80-BASE-
+22:25:40:329 -> ---)73-1-64-DU7397764--RealizedPnL-0.00-BASE-
+22:25:40:329 -> ---*73-1-64-DU7397764--ExchangeRate-1.00-BASE-
+22:25:40:330 -> ---'73-1-64-DU7397764--FundValue-0.00-BASE-
+22:25:40:330 -> ---)73-1-64-DU7397764--NetDividend-0.00-BASE-
+22:25:40:330 -> ----73-1-64-DU7397764--MutualFundValue-0.00-BASE-
+22:25:40:330 -> ---273-1-64-DU7397764--MoneyMarketFundValue-0.00-BASE-
+22:25:40:331 -> ---073-1-64-DU7397764--CorporateBondValue-0.00-BASE-
+22:25:40:331 -> ---(73-1-64-DU7397764--TBondValue-0.00-BASE-
+22:25:40:338 -> ---(73-1-64-DU7397764--TBillValue-0.00-BASE-
+22:25:40:338 -> ---*73-1-64-DU7397764--WarrantValue-0.00-BASE-
+22:25:40:338 -> ---+73-1-64-DU7397764--FxCashBalance-0.00-BASE-
+22:25:40:338 -> ---173-1-64-DU7397764--AccountOrGroup-DU7397764-BASE-
+22:25:40:338 -> ---)73-1-64-DU7397764--RealCurrency-USD-BASE-
+22:25:40:338 -> ---/73-1-64-DU7397764--IssuerOptionValue-0.00-BASE-
+22:25:40:338 -> ---(73-1-64-DU7397764--Cryptocurrency--BASE-
+22:25:40:338 -> ---74-1-64-
+22:25:40:344 <- 7-3-65-0-------
+22:25:40:353 -> ---55-1-65-
+22:25:40:353 <- 92-66-DU7397764--
+22:25:40:553 -> ---@94-66--5.442700000000002--112.40093144531238-1234.1018600999998-
+22:25:44:724 -> ---
+8-1-22:25-
+22:25:44:725 -> ---
+8-1-22:25-
+22:25:44:725 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:25:44:725 -> ---
+8-1-22:25-
+22:26:17:619 -> ---
+8-1-21:00-
+22:26:17:619 -> ---
+8-1-21:00-
+22:26:17:624 -> ---+73-1-64-DU7397764--AccountType-INDIVIDUAL--
+22:26:17:625 -> ---$73-1-64-DU7397764--Cushion-0.86513--
+22:26:17:625 -> ---*73-1-64-DU7397764--DayTradesRemaining--1--
+22:26:17:625 -> ----73-1-64-DU7397764--DayTradesRemainingT+1--1--
+22:26:17:625 -> ----73-1-64-DU7397764--DayTradesRemainingT+2--1--
+22:26:17:626 -> ----73-1-64-DU7397764--DayTradesRemainingT+3--1--
+22:26:17:626 -> ----73-1-64-DU7397764--DayTradesRemainingT+4--1--
+22:26:17:626 -> ---373-1-64-DU7397764--LookAheadNextChange-1735828200--
+22:26:17:626 -> ---
+8-1-21:00-
+22:26:17:639 -> ---
+8-1-05:57-
+22:26:17:641 -> ---
+8-1-05:57-
+22:26:17:648 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+22:26:17:648 -> ---/73-1-64-DU7397764--AvailableFunds-26334.79-USD-
+22:26:17:648 -> ----73-1-64-DU7397764--BuyingPower-105339.16-USD-
+22:26:17:648 -> ---473-1-64-DU7397764--EquityWithLoanValue-30755.69-USD-
+22:26:17:649 -> ---073-1-64-DU7397764--ExcessLiquidity-26736.69-USD-
+22:26:17:649 -> ---373-1-64-DU7397764--FullAvailableFunds-26334.79-USD-
+22:26:17:649 -> ---473-1-64-DU7397764--FullExcessLiquidity-26736.69-USD-
+22:26:17:649 -> ---173-1-64-DU7397764--FullInitMarginReq-4420.90-USD-
+22:26:17:649 -> ---273-1-64-DU7397764--FullMaintMarginReq-4019.00-USD-
+22:26:17:649 -> ---273-1-64-DU7397764--GrossPositionValue-8038.00-USD-
+22:26:17:650 -> ----73-1-64-DU7397764--InitMarginReq-4420.90-USD-
+22:26:17:650 -> ---873-1-64-DU7397764--LookAheadAvailableFunds-26334.79-USD-
+22:26:17:650 -> ---973-1-64-DU7397764--LookAheadExcessLiquidity-26736.69-USD-
+22:26:17:650 -> ---673-1-64-DU7397764--LookAheadInitMarginReq-4420.90-USD-
+22:26:17:650 -> ---773-1-64-DU7397764--LookAheadMaintMarginReq-4019.00-USD-
+22:26:17:651 -> ---.73-1-64-DU7397764--MaintMarginReq-4019.00-USD-
+22:26:17:651 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:26:17:651 -> ---%73-1-64-DU7397764--SMA-579168.87-USD-
+22:26:17:651 -> ---/73-1-64-DU7397764--TotalCashValue-22800.86-USD-
+22:26:17:651 -> ---
+8-1-05:57-
+22:26:17:675 -> ---
+8-1-05:56-
+22:26:17:678 -> ---
+8-1-05:56-
+22:26:17:679 -> ---173-1-64-DU7397764--AccountOrGroup-DU7397764-BASE-
+22:26:17:679 -> ---073-1-64-DU7397764--AccountOrGroup-DU7397764-USD-
+22:26:17:679 -> ---*73-1-64-DU7397764--AccruedCash-65.95-BASE-
+22:26:17:679 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+22:26:17:680 -> ----73-1-64-DU7397764--CashBalance-22800.86-BASE-
+22:26:17:680 -> ---,73-1-64-DU7397764--CashBalance-22800.86-USD-
+22:26:17:680 -> ---073-1-64-DU7397764--CorporateBondValue-0.00-BASE-
+22:26:17:680 -> ---/73-1-64-DU7397764--CorporateBondValue-0.00-USD-
+22:26:17:680 -> ---(73-1-64-DU7397764--Cryptocurrency--BASE-
+22:26:17:680 -> ---'73-1-64-DU7397764--Cryptocurrency--USD-
+22:26:17:681 -> ---&73-1-64-DU7397764--Currency-BASE-BASE-
+22:26:17:681 -> ---$73-1-64-DU7397764--Currency-USD-USD-
+22:26:17:681 -> ---*73-1-64-DU7397764--ExchangeRate-1.00-BASE-
+22:26:17:681 -> ---)73-1-64-DU7397764--ExchangeRate-1.00-USD-
+22:26:17:681 -> ---'73-1-64-DU7397764--FundValue-0.00-BASE-
+22:26:17:681 -> ---&73-1-64-DU7397764--FundValue-0.00-USD-
+22:26:17:682 -> ---/73-1-64-DU7397764--FutureOptionValue-0.00-BASE-
+22:26:17:682 -> ---.73-1-64-DU7397764--FutureOptionValue-0.00-USD-
+22:26:17:682 -> ---(73-1-64-DU7397764--FuturesPNL-0.00-BASE-
+22:26:17:682 -> ---'73-1-64-DU7397764--FuturesPNL-0.00-USD-
+22:26:17:682 -> ---+73-1-64-DU7397764--FxCashBalance-0.00-BASE-
+22:26:17:683 -> ---*73-1-64-DU7397764--FxCashBalance-0.00-USD-
+22:26:17:683 -> ---/73-1-64-DU7397764--IssuerOptionValue-0.00-BASE-
+22:26:17:683 -> ---.73-1-64-DU7397764--IssuerOptionValue-0.00-USD-
+22:26:17:683 -> ---273-1-64-DU7397764--MoneyMarketFundValue-0.00-BASE-
+22:26:17:683 -> ---173-1-64-DU7397764--MoneyMarketFundValue-0.00-USD-
+22:26:17:683 -> ----73-1-64-DU7397764--MutualFundValue-0.00-BASE-
+22:26:17:684 -> ---,73-1-64-DU7397764--MutualFundValue-0.00-USD-
+22:26:17:684 -> ---)73-1-64-DU7397764--NetDividend-0.00-BASE-
+22:26:17:684 -> ---(73-1-64-DU7397764--NetDividend-0.00-USD-
+22:26:17:684 -> ---<73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-BASE-
+22:26:17:684 -> ---;73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-USD-
+22:26:17:685 -> ---/73-1-64-DU7397764--OptionMarketValue-0.00-BASE-
+22:26:17:685 -> ---.73-1-64-DU7397764--OptionMarketValue-0.00-USD-
+22:26:17:685 -> ---*73-1-64-DU7397764--RealCurrency-BASE-BASE-
+22:26:17:685 -> ---(73-1-64-DU7397764--RealCurrency-USD-USD-
+22:26:17:685 -> ---)73-1-64-DU7397764--RealizedPnL-0.00-BASE-
+22:26:17:685 -> ---(73-1-64-DU7397764--RealizedPnL-0.00-USD-
+22:26:17:686 -> ---173-1-64-DU7397764--StockMarketValue-8038.00-BASE-
+22:26:17:686 -> ---073-1-64-DU7397764--StockMarketValue-8038.00-USD-
+22:26:17:686 -> ---(73-1-64-DU7397764--TBillValue-0.00-BASE-
+22:26:17:686 -> ---'73-1-64-DU7397764--TBillValue-0.00-USD-
+22:26:17:686 -> ---(73-1-64-DU7397764--TBondValue-0.00-BASE-
+22:26:17:687 -> ---'73-1-64-DU7397764--TBondValue-0.00-USD-
+22:26:17:687 -> ---273-1-64-DU7397764--TotalCashBalance-22800.86-BASE-
+22:26:17:687 -> ---173-1-64-DU7397764--TotalCashBalance-22800.86-USD-
+22:26:17:687 -> ---.73-1-64-DU7397764--UnrealizedPnL--112.80-BASE-
+22:26:17:687 -> ----73-1-64-DU7397764--UnrealizedPnL--112.80-USD-
+22:26:17:687 -> ---*73-1-64-DU7397764--WarrantValue-0.00-BASE-
+22:26:17:688 -> ---)73-1-64-DU7397764--WarrantValue-0.00-USD-
+22:26:17:750 -> ---74-1-64-
+22:26:17:754 -> ---54-1-DU7397764-
+22:28:44:908 -> ---
+8-1-22:28-
+22:28:44:908 -> ---
+8-1-22:28-
+22:28:44:908 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:28:44:908 -> ---
+8-1-22:28-
+22:28:44:911 -> ---
+8-1-22:28-
+22:28:44:911 -> ---
+8-1-22:28-
+22:28:44:911 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:28:44:911 -> ---
+8-1-22:28-
+22:31:44:481 -> ---
+8-1-22:31-
+22:31:44:482 -> ---
+8-1-22:31-
+22:31:44:482 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:31:44:482 -> ---
+8-1-22:31-
+22:31:44:482 -> ---
+8-1-22:31-
+22:31:44:483 -> ---
+8-1-22:31-
+22:31:44:485 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:31:44:485 -> ---
+8-1-22:31-
+22:34:44:386 -> ---
+8-1-22:34-
+22:34:44:386 -> ---
+8-1-22:34-
+22:34:44:386 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:34:44:386 -> ---
+8-1-22:34-
+22:34:44:388 -> ---
+8-1-22:34-
+22:34:44:388 -> ---
+8-1-22:34-
+22:34:44:388 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:34:44:388 -> ---
+8-1-22:34-
+22:35:42:849 -> ---15-1-DU7397764-
+22:35:42:855 -> ---9-1-64-
+22:35:42:855 -> ---64-2--1-2104-Market data farm connection is OK:usfarm--
+22:35:42:855 -> ---^4-2--1-2107-HMDS data farm connection is inactive but should be available upon demand.ushmds--
+22:35:42:856 -> ---94-2--1-2158-Sec-def data farm connection is OK:secdefil--
+22:35:42:894 <- 61-1-
+22:35:42:896 -> ---C61-3-DU7397764-532497563-WULF-STK--0.0---NASDAQ-USD-WULF-SCM-0-0.0-
+22:35:42:896 <- 5-1-
+22:35:42:896 <- 99-0-
+22:35:42:897 <- 6-2-1-DU7397764-
+22:35:42:897 <- 76-1-64-DU7397764--0-
+22:35:42:897 -> ---B61-3-DU7397764-29308796-ACAD-STK--0.0---NASDAQ-USD-ACAD-NMS-0-0.0-
+22:35:42:898 -> --->61-3-DU7397764-38988979-EBR-STK--0.0---NYSE-USD-EBR-EBR-0-0.0-
+22:35:42:898 -> ---C61-3-DU7397764-547605251-RGTI-STK--0.0---NASDAQ-USD-RGTI-SCM-0-0.0-
+22:35:42:898 -> ---I61-3-DU7397764-76792991-TSLA-STK--0.0---NASDAQ-USD-TSLA-NMS-20-407.54006-
+22:35:42:898 -> ---861-3-DU7397764-44475946-M-STK--0.0---NYSE-USD-M-M-0-0.0-
+22:35:42:898 -> ---C61-3-DU7397764-504716446-LCID-STK--0.0---NASDAQ-USD-LCID-NMS-0-0.0-
+22:35:42:898 -> ---@61-3-DU7397764-272110-MSTR-STK--0.0---NASDAQ-USD-MSTR-NMS-0-0.0-
+22:35:42:898 -> ---861-3-DU7397764-87335484-C-STK--0.0---NYSE-USD-C-C-0-0.0-
+22:35:42:898 -> ---C61-3-DU7397764-107113386-META-STK--0.0---NASDAQ-USD-META-NMS-0-0.0-
+22:35:42:898 -> ---C61-3-DU7397764-444857009-PLTR-STK--0.0---NASDAQ-USD-PLTR-NMS-0-0.0-
+22:35:42:898 -> ---C61-3-DU7397764-558869874-SOUN-STK--0.0---NASDAQ-USD-SOUN-NMS-0-0.0-
+22:35:42:898 -> ---62-1-
+22:35:42:997 -> ---53-1-
+22:35:43:095 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048926-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 14:30:41 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30740.96 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:35:43:097 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048927-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:12:19 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:35:43:097 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048925-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 14:30:41 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:35:43:098 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.91-0.0-GTC--DU7397764--0--1217048930-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.91-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:37:39 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.66 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:35:43:098 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.91-0.0-GTC--DU7397764--0--1217048931-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.91-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:39:51 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30741.16 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:35:43:099 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048928-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:17:26 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:35:43:099 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-MKT-417.41-0.0-GTC--DU7397764-O-0--1217048929-0-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-418.41-1.7976931348623157E308-0-1-0--0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:32:56 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].--100-0.02---
+22:35:43:102 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.91-0.0-GTC--DU7397764--0--1217048932-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.91-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:43:04 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.66 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:35:43:102 -> --?101-76792991-TSLA-STK--0-?--SMART-USD-TSLA-NMS-SELL-20-LMT-401.9-0.0-GTC--DU7397764--0--1217048933-1-0-0----------0---1------2147483647-0-0--3-0--0-None--0-0-0--0-0----0-0-0-2147483647-2147483647----IB-0-0--0-Cancelled-0-0-0-402.9-1.7976931348623157E308-0-1-0-20250701 05:00:00 GMT-0-2147483647-0-Not an insider or substantial shareholder-0-0-9223372036854775807-20250101 15:44:37 US/Eastern-Rejected by System:
+We are unable to accept your order. Your Available Funds are in sufficient to cover the change in the <br>account's margin requirements if this order executes. In order to obtain the desired position your Equity with<br> Loan Value [30754.46 USD] must exceed the new total Initial Margin of  [31830.48 USD].------
+22:35:43:103 -> ---102-
+22:35:43:195 -> ---%6-2-AccountCode-DU7397764--DU7397764-
+22:35:43:195 -> ---,6-2-AccountOrGroup-DU7397764-BASE-DU7397764-
+22:35:43:196 -> ---+6-2-AccountOrGroup-DU7397764-USD-DU7397764-
+22:35:43:196 -> ---!6-2-AccountReady-true--DU7397764-
+22:35:43:196 -> ---&6-2-AccountType-INDIVIDUAL--DU7397764-
+22:35:43:197 -> ---%6-2-AccruedCash-65.95-BASE-DU7397764-
+22:35:43:197 -> ---$6-2-AccruedCash-65.95-USD-DU7397764-
+22:35:43:197 -> ---%6-2-AccruedCash-C-0.00-USD-DU7397764-
+22:35:43:198 -> ---&6-2-AccruedCash-S-65.95-USD-DU7397764-
+22:35:43:199 -> ---'6-2-AccruedDividend-0.00-USD-DU7397764-
+22:35:43:199 -> ---)6-2-AccruedDividend-C-0.00-USD-DU7397764-
+22:35:43:199 -> ---)6-2-AccruedDividend-S-0.00-USD-DU7397764-
+22:35:43:199 -> ---*6-2-AvailableFunds-26334.79-USD-DU7397764-
+22:35:43:199 -> ---(6-2-AvailableFunds-C-0.00-USD-DU7397764-
+22:35:43:200 -> ---,6-2-AvailableFunds-S-26334.79-USD-DU7397764-
+22:35:43:200 -> --- 6-2-Billable-0.00-USD-DU7397764-
+22:35:43:200 -> ---"6-2-Billable-C-0.00-USD-DU7397764-
+22:35:43:201 -> ---"6-2-Billable-S-0.00-USD-DU7397764-
+22:35:43:201 -> ---(6-2-BuyingPower-105339.16-USD-DU7397764-
+22:35:43:201 -> ---(6-2-CashBalance-22800.86-BASE-DU7397764-
+22:35:43:201 -> ---'6-2-CashBalance-22800.86-USD-DU7397764-
+22:35:43:201 -> ---6-2-ColumnPrio-C-2--DU7397764-
+22:35:43:201 -> ---6-2-ColumnPrio-S-1--DU7397764-
+22:35:43:201 -> ---+6-2-CorporateBondValue-0.00-BASE-DU7397764-
+22:35:43:201 -> ---*6-2-CorporateBondValue-0.00-USD-DU7397764-
+22:35:43:201 -> ---!6-2-Currency-BASE-BASE-DU7397764-
+22:35:43:201 -> ---6-2-Currency-USD-USD-DU7397764-
+22:35:43:202 -> ---6-2-Cushion-0.86513--DU7397764-
+22:35:43:202 -> ---%6-2-DayTradesRemaining--1--DU7397764-
+22:35:43:202 -> ---(6-2-DayTradesRemainingT+1--1--DU7397764-
+22:35:43:202 -> ---(6-2-DayTradesRemainingT+2--1--DU7397764-
+22:35:43:202 -> ---(6-2-DayTradesRemainingT+3--1--DU7397764-
+22:35:43:202 -> ---(6-2-DayTradesRemainingT+4--1--DU7397764-
+22:35:43:202 -> ---I6-2-DayTradingStatus-S-20241231:20231123:true:30838.86::false--DU7397764-
+22:35:43:202 -> ---/6-2-EquityWithLoanValue-30755.69-USD-DU7397764-
+22:35:43:202 -> ----6-2-EquityWithLoanValue-C-0.00-USD-DU7397764-
+22:35:43:202 -> ---16-2-EquityWithLoanValue-S-30755.69-USD-DU7397764-
+22:35:43:202 -> ---+6-2-ExcessLiquidity-26736.69-USD-DU7397764-
+22:35:43:203 -> ---)6-2-ExcessLiquidity-C-0.00-USD-DU7397764-
+22:35:43:203 -> ----6-2-ExcessLiquidity-S-26736.69-USD-DU7397764-
+22:35:43:203 -> ---%6-2-ExchangeRate-1.00-BASE-DU7397764-
+22:35:43:203 -> ---$6-2-ExchangeRate-1.00-USD-DU7397764-
+22:35:43:203 -> ---.6-2-FullAvailableFunds-26334.79-USD-DU7397764-
+22:35:43:203 -> ---,6-2-FullAvailableFunds-C-0.00-USD-DU7397764-
+22:35:43:203 -> ---06-2-FullAvailableFunds-S-26334.79-USD-DU7397764-
+22:35:43:203 -> ---/6-2-FullExcessLiquidity-26736.69-USD-DU7397764-
+22:35:43:203 -> ----6-2-FullExcessLiquidity-C-0.00-USD-DU7397764-
+22:35:43:203 -> ---16-2-FullExcessLiquidity-S-26736.69-USD-DU7397764-
+22:35:43:204 -> ---,6-2-FullInitMarginReq-4420.90-USD-DU7397764-
+22:35:43:204 -> ---+6-2-FullInitMarginReq-C-0.00-USD-DU7397764-
+22:35:43:204 -> ---.6-2-FullInitMarginReq-S-4420.90-USD-DU7397764-
+22:35:43:204 -> ----6-2-FullMaintMarginReq-4019.00-USD-DU7397764-
+22:35:43:204 -> ---,6-2-FullMaintMarginReq-C-0.00-USD-DU7397764-
+22:35:43:204 -> ---/6-2-FullMaintMarginReq-S-4019.00-USD-DU7397764-
+22:35:43:204 -> ---"6-2-FundValue-0.00-BASE-DU7397764-
+22:35:43:204 -> ---!6-2-FundValue-0.00-USD-DU7397764-
+22:35:43:204 -> ---*6-2-FutureOptionValue-0.00-BASE-DU7397764-
+22:35:43:204 -> ---)6-2-FutureOptionValue-0.00-USD-DU7397764-
+22:35:43:205 -> ---#6-2-FuturesPNL-0.00-BASE-DU7397764-
+22:35:43:205 -> ---"6-2-FuturesPNL-0.00-USD-DU7397764-
+22:35:43:205 -> ---&6-2-FxCashBalance-0.00-BASE-DU7397764-
+22:35:43:205 -> ---%6-2-FxCashBalance-0.00-USD-DU7397764-
+22:35:43:205 -> ----6-2-GrossPositionValue-8038.00-USD-DU7397764-
+22:35:43:205 -> ---/6-2-GrossPositionValue-S-8038.00-USD-DU7397764-
+22:35:43:205 -> ---!6-2-Guarantee-0.00-USD-DU7397764-
+22:35:43:205 -> ---#6-2-Guarantee-C-0.00-USD-DU7397764-
+22:35:43:205 -> ---#6-2-Guarantee-S-0.00-USD-DU7397764-
+22:35:43:205 -> ---(6-2-IncentiveCoupons-0.00-USD-DU7397764-
+22:35:43:205 -> ---*6-2-IncentiveCoupons-C-0.00-USD-DU7397764-
+22:35:43:206 -> ---*6-2-IncentiveCoupons-S-0.00-USD-DU7397764-
+22:35:43:206 -> ---*6-2-IndianStockHaircut-0.00-USD-DU7397764-
+22:35:43:206 -> ---,6-2-IndianStockHaircut-C-0.00-USD-DU7397764-
+22:35:43:206 -> ---,6-2-IndianStockHaircut-S-0.00-USD-DU7397764-
+22:35:43:206 -> ---(6-2-InitMarginReq-4420.90-USD-DU7397764-
+22:35:43:206 -> ---'6-2-InitMarginReq-C-0.00-USD-DU7397764-
+22:35:43:206 -> ---*6-2-InitMarginReq-S-4420.90-USD-DU7397764-
+22:35:43:206 -> ---*6-2-IssuerOptionValue-0.00-BASE-DU7397764-
+22:35:43:206 -> ---)6-2-IssuerOptionValue-0.00-USD-DU7397764-
+22:35:43:206 -> ---6-2-Leverage-S-0.26--DU7397764-
+22:35:43:207 -> ---36-2-LookAheadAvailableFunds-26334.79-USD-DU7397764-
+22:35:43:207 -> ---16-2-LookAheadAvailableFunds-C-0.00-USD-DU7397764-
+22:35:43:207 -> ---56-2-LookAheadAvailableFunds-S-26334.79-USD-DU7397764-
+22:35:43:207 -> ---46-2-LookAheadExcessLiquidity-26736.69-USD-DU7397764-
+22:35:43:207 -> ---26-2-LookAheadExcessLiquidity-C-0.00-USD-DU7397764-
+22:35:43:207 -> ---66-2-LookAheadExcessLiquidity-S-26736.69-USD-DU7397764-
+22:35:43:207 -> ---16-2-LookAheadInitMarginReq-4420.90-USD-DU7397764-
+22:35:43:208 -> ---06-2-LookAheadInitMarginReq-C-0.00-USD-DU7397764-
+22:35:43:208 -> ---36-2-LookAheadInitMarginReq-S-4420.90-USD-DU7397764-
+22:35:43:208 -> ---26-2-LookAheadMaintMarginReq-4019.00-USD-DU7397764-
+22:35:43:208 -> ---16-2-LookAheadMaintMarginReq-C-0.00-USD-DU7397764-
+22:35:43:208 -> ---46-2-LookAheadMaintMarginReq-S-4019.00-USD-DU7397764-
+22:35:43:208 -> ---.6-2-LookAheadNextChange-1735828200--DU7397764-
+22:35:43:208 -> ---)6-2-MaintMarginReq-4019.00-USD-DU7397764-
+22:35:43:208 -> ---(6-2-MaintMarginReq-C-0.00-USD-DU7397764-
+22:35:43:208 -> ---+6-2-MaintMarginReq-S-4019.00-USD-DU7397764-
+22:35:43:209 -> ----6-2-MoneyMarketFundValue-0.00-BASE-DU7397764-
+22:35:43:209 -> ---,6-2-MoneyMarketFundValue-0.00-USD-DU7397764-
+22:35:43:209 -> ---(6-2-MutualFundValue-0.00-BASE-DU7397764-
+22:35:43:209 -> ---'6-2-MutualFundValue-0.00-USD-DU7397764-
+22:35:43:209 -> ---*6-2-NLVAndMarginInReview-false--DU7397764-
+22:35:43:209 -> ---$6-2-NetDividend-0.00-BASE-DU7397764-
+22:35:43:210 -> ---#6-2-NetDividend-0.00-USD-DU7397764-
+22:35:43:210 -> ---*6-2-NetLiquidation-30904.81-USD-DU7397764-
+22:35:43:210 -> ---(6-2-NetLiquidation-C-0.00-USD-DU7397764-
+22:35:43:210 -> ---,6-2-NetLiquidation-S-30904.81-USD-DU7397764-
+22:35:43:210 -> ---76-2-NetLiquidationByCurrency-30904.8099-BASE-DU7397764-
+22:35:43:210 -> ---66-2-NetLiquidationByCurrency-30904.8099-USD-DU7397764-
+22:35:43:210 -> ---16-2-NetLiquidationUncertainty-0.00-USD-DU7397764-
+22:35:43:210 -> ---*6-2-OptionMarketValue-0.00-BASE-DU7397764-
+22:35:43:210 -> ---)6-2-OptionMarketValue-0.00-USD-DU7397764-
+22:35:43:210 -> ---%6-2-PASharesValue-0.00-USD-DU7397764-
+22:35:43:211 -> ---'6-2-PASharesValue-C-0.00-USD-DU7397764-
+22:35:43:211 -> ---'6-2-PASharesValue-S-0.00-USD-DU7397764-
+22:35:43:211 -> ---06-2-PhysicalCertificateValue-0.00-USD-DU7397764-
+22:35:43:211 -> ---26-2-PhysicalCertificateValue-C-0.00-USD-DU7397764-
+22:35:43:211 -> ---26-2-PhysicalCertificateValue-S-0.00-USD-DU7397764-
+22:35:43:211 -> ---,6-2-PostExpirationExcess-0.00-USD-DU7397764-
+22:35:43:211 -> ---.6-2-PostExpirationExcess-C-0.00-USD-DU7397764-
+22:35:43:211 -> ---.6-2-PostExpirationExcess-S-0.00-USD-DU7397764-
+22:35:43:211 -> ---,6-2-PostExpirationMargin-0.00-USD-DU7397764-
+22:35:43:211 -> ---.6-2-PostExpirationMargin-C-0.00-USD-DU7397764-
+22:35:43:211 -> ---.6-2-PostExpirationMargin-S-0.00-USD-DU7397764-
+22:35:43:212 -> ---:6-2-PreviousDayEquityWithLoanValue-30757.09-USD-DU7397764-
+22:35:43:212 -> ---<6-2-PreviousDayEquityWithLoanValue-S-30757.09-USD-DU7397764-
+22:35:43:212 -> ---%6-2-RealCurrency-BASE-BASE-DU7397764-
+22:35:43:212 -> ---#6-2-RealCurrency-USD-USD-DU7397764-
+22:35:43:212 -> ---$6-2-RealizedPnL-0.00-BASE-DU7397764-
+22:35:43:212 -> ---#6-2-RealizedPnL-0.00-USD-DU7397764-
+22:35:43:212 -> ---&6-2-RegTEquity-30904.81-USD-DU7397764-
+22:35:43:212 -> ---(6-2-RegTEquity-S-30904.81-USD-DU7397764-
+22:35:43:212 -> ---%6-2-RegTMargin-4019.00-USD-DU7397764-
+22:35:43:212 -> ---'6-2-RegTMargin-S-4019.00-USD-DU7397764-
+22:35:43:213 -> --- 6-2-SMA-579168.87-USD-DU7397764-
+22:35:43:213 -> ---"6-2-SMA-S-579168.87-USD-DU7397764-
+22:35:43:213 -> ----6-2-SegmentTitle-C-US Commodities--DU7397764-
+22:35:43:213 -> ---,6-2-SegmentTitle-S-US Securities--DU7397764-
+22:35:43:213 -> ---,6-2-StockMarketValue-8038.00-BASE-DU7397764-
+22:35:43:213 -> ---+6-2-StockMarketValue-8038.00-USD-DU7397764-
+22:35:43:213 -> ---#6-2-TBillValue-0.00-BASE-DU7397764-
+22:35:43:213 -> ---"6-2-TBillValue-0.00-USD-DU7397764-
+22:35:43:214 -> ---#6-2-TBondValue-0.00-BASE-DU7397764-
+22:35:43:214 -> ---"6-2-TBondValue-0.00-USD-DU7397764-
+22:35:43:214 -> ----6-2-TotalCashBalance-22800.86-BASE-DU7397764-
+22:35:43:214 -> ---,6-2-TotalCashBalance-22800.86-USD-DU7397764-
+22:35:43:214 -> ---*6-2-TotalCashValue-22800.86-USD-DU7397764-
+22:35:43:214 -> ---(6-2-TotalCashValue-C-0.00-USD-DU7397764-
+22:35:43:214 -> ---,6-2-TotalCashValue-S-22800.86-USD-DU7397764-
+22:35:43:215 -> ---46-2-TotalDebitCardPendingCharges-0.00-USD-DU7397764-
+22:35:43:215 -> ---66-2-TotalDebitCardPendingCharges-C-0.00-USD-DU7397764-
+22:35:43:215 -> ---66-2-TotalDebitCardPendingCharges-S-0.00-USD-DU7397764-
+22:35:43:215 -> ---%6-2-TradingType-S-STKNOPT--DU7397764-
+22:35:43:215 -> ---)6-2-UnrealizedPnL--112.80-BASE-DU7397764-
+22:35:43:215 -> ---(6-2-UnrealizedPnL--112.80-USD-DU7397764-
+22:35:43:216 -> ---%6-2-WarrantValue-0.00-BASE-DU7397764-
+22:35:43:216 -> ---$6-2-WarrantValue-0.00-USD-DU7397764-
+22:35:43:216 -> ---$6-2-WhatIfPMEnabled-true--DU7397764-
+22:35:43:216 -> ---e7-8-76792991-TSLA-STK--0-0--NASDAQ-USD-TSLA-NMS-20-401.8999939-8038.0-407.54006--112.8-0.0-DU7397764-
+22:35:43:216 -> ---
+8-1-05:57-
+22:35:43:217 -> ---
+8-1-22:34-
+22:35:43:217 -> ---54-1-DU7397764-
+22:35:43:294 -> ---*73-1-64-DU7397764--AccountCode-DU7397764--
+22:35:43:296 -> ---&73-1-64-DU7397764--AccountReady-true--
+22:35:43:296 -> ---+73-1-64-DU7397764--AccountType-INDIVIDUAL--
+22:35:43:296 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+22:35:43:296 -> ---*73-1-64-DU7397764--AccruedCash-C-0.00-USD-
+22:35:43:296 -> ---+73-1-64-DU7397764--AccruedCash-S-65.95-USD-
+22:35:43:296 -> ---,73-1-64-DU7397764--AccruedDividend-0.00-USD-
+22:35:43:296 -> ---.73-1-64-DU7397764--AccruedDividend-C-0.00-USD-
+22:35:43:296 -> ---.73-1-64-DU7397764--AccruedDividend-S-0.00-USD-
+22:35:43:296 -> ---/73-1-64-DU7397764--AvailableFunds-26334.79-USD-
+22:35:43:296 -> ----73-1-64-DU7397764--AvailableFunds-C-0.00-USD-
+22:35:43:296 -> ---173-1-64-DU7397764--AvailableFunds-S-26334.79-USD-
+22:35:43:296 -> ---%73-1-64-DU7397764--Billable-0.00-USD-
+22:35:43:297 -> ---'73-1-64-DU7397764--Billable-C-0.00-USD-
+22:35:43:297 -> ---'73-1-64-DU7397764--Billable-S-0.00-USD-
+22:35:43:297 -> ----73-1-64-DU7397764--BuyingPower-105339.16-USD-
+22:35:43:297 -> ---#73-1-64-DU7397764--ColumnPrio-C-2--
+22:35:43:297 -> ---#73-1-64-DU7397764--ColumnPrio-S-1--
+22:35:43:297 -> ---$73-1-64-DU7397764--Cushion-0.86513--
+22:35:43:297 -> ---*73-1-64-DU7397764--DayTradesRemaining--1--
+22:35:43:297 -> ----73-1-64-DU7397764--DayTradesRemainingT+1--1--
+22:35:43:297 -> ----73-1-64-DU7397764--DayTradesRemainingT+2--1--
+22:35:43:297 -> ----73-1-64-DU7397764--DayTradesRemainingT+3--1--
+22:35:43:297 -> ----73-1-64-DU7397764--DayTradesRemainingT+4--1--
+22:35:43:297 -> ---N73-1-64-DU7397764--DayTradingStatus-S-20241231:20231123:true:30838.86::false--
+22:35:43:297 -> ---473-1-64-DU7397764--EquityWithLoanValue-30755.69-USD-
+22:35:43:297 -> ---273-1-64-DU7397764--EquityWithLoanValue-C-0.00-USD-
+22:35:43:298 -> ---673-1-64-DU7397764--EquityWithLoanValue-S-30755.69-USD-
+22:35:43:298 -> ---073-1-64-DU7397764--ExcessLiquidity-26736.69-USD-
+22:35:43:298 -> ---.73-1-64-DU7397764--ExcessLiquidity-C-0.00-USD-
+22:35:43:298 -> ---273-1-64-DU7397764--ExcessLiquidity-S-26736.69-USD-
+22:35:43:298 -> ---373-1-64-DU7397764--FullAvailableFunds-26334.79-USD-
+22:35:43:298 -> ---173-1-64-DU7397764--FullAvailableFunds-C-0.00-USD-
+22:35:43:298 -> ---573-1-64-DU7397764--FullAvailableFunds-S-26334.79-USD-
+22:35:43:298 -> ---473-1-64-DU7397764--FullExcessLiquidity-26736.69-USD-
+22:35:43:298 -> ---273-1-64-DU7397764--FullExcessLiquidity-C-0.00-USD-
+22:35:43:298 -> ---673-1-64-DU7397764--FullExcessLiquidity-S-26736.69-USD-
+22:35:43:298 -> ---173-1-64-DU7397764--FullInitMarginReq-4420.90-USD-
+22:35:43:384 -> ---073-1-64-DU7397764--FullInitMarginReq-C-0.00-USD-
+22:35:43:384 -> ---373-1-64-DU7397764--FullInitMarginReq-S-4420.90-USD-
+22:35:43:384 -> ---273-1-64-DU7397764--FullMaintMarginReq-4019.00-USD-
+22:35:43:384 -> ---173-1-64-DU7397764--FullMaintMarginReq-C-0.00-USD-
+22:35:43:384 -> ---473-1-64-DU7397764--FullMaintMarginReq-S-4019.00-USD-
+22:35:43:384 -> ---273-1-64-DU7397764--GrossPositionValue-8038.00-USD-
+22:35:43:384 -> ---473-1-64-DU7397764--GrossPositionValue-S-8038.00-USD-
+22:35:43:384 -> ---&73-1-64-DU7397764--Guarantee-0.00-USD-
+22:35:43:384 -> ---(73-1-64-DU7397764--Guarantee-C-0.00-USD-
+22:35:43:384 -> ---(73-1-64-DU7397764--Guarantee-S-0.00-USD-
+22:35:43:384 -> ----73-1-64-DU7397764--IncentiveCoupons-0.00-USD-
+22:35:43:384 -> ---/73-1-64-DU7397764--IncentiveCoupons-C-0.00-USD-
+22:35:43:384 -> ---/73-1-64-DU7397764--IncentiveCoupons-S-0.00-USD-
+22:35:43:384 -> ---/73-1-64-DU7397764--IndianStockHaircut-0.00-USD-
+22:35:43:384 -> ---173-1-64-DU7397764--IndianStockHaircut-C-0.00-USD-
+22:35:43:384 -> ---173-1-64-DU7397764--IndianStockHaircut-S-0.00-USD-
+22:35:43:384 -> ----73-1-64-DU7397764--InitMarginReq-4420.90-USD-
+22:35:43:384 -> ---,73-1-64-DU7397764--InitMarginReq-C-0.00-USD-
+22:35:43:384 -> ---/73-1-64-DU7397764--InitMarginReq-S-4420.90-USD-
+22:35:43:384 -> ---$73-1-64-DU7397764--Leverage-S-0.26--
+22:35:43:384 -> ---873-1-64-DU7397764--LookAheadAvailableFunds-26334.79-USD-
+22:35:43:384 -> ---673-1-64-DU7397764--LookAheadAvailableFunds-C-0.00-USD-
+22:35:43:384 -> ---:73-1-64-DU7397764--LookAheadAvailableFunds-S-26334.79-USD-
+22:35:43:384 -> ---973-1-64-DU7397764--LookAheadExcessLiquidity-26736.69-USD-
+22:35:43:384 -> ---773-1-64-DU7397764--LookAheadExcessLiquidity-C-0.00-USD-
+22:35:43:384 -> ---;73-1-64-DU7397764--LookAheadExcessLiquidity-S-26736.69-USD-
+22:35:43:384 -> ---673-1-64-DU7397764--LookAheadInitMarginReq-4420.90-USD-
+22:35:43:384 -> ---573-1-64-DU7397764--LookAheadInitMarginReq-C-0.00-USD-
+22:35:43:384 -> ---873-1-64-DU7397764--LookAheadInitMarginReq-S-4420.90-USD-
+22:35:43:384 -> ---773-1-64-DU7397764--LookAheadMaintMarginReq-4019.00-USD-
+22:35:43:384 -> ---673-1-64-DU7397764--LookAheadMaintMarginReq-C-0.00-USD-
+22:35:43:384 -> ---973-1-64-DU7397764--LookAheadMaintMarginReq-S-4019.00-USD-
+22:35:43:384 -> ---373-1-64-DU7397764--LookAheadNextChange-1735828200--
+22:35:43:384 -> ---.73-1-64-DU7397764--MaintMarginReq-4019.00-USD-
+22:35:43:384 -> ----73-1-64-DU7397764--MaintMarginReq-C-0.00-USD-
+22:35:43:384 -> ---073-1-64-DU7397764--MaintMarginReq-S-4019.00-USD-
+22:35:43:384 -> ---/73-1-64-DU7397764--NLVAndMarginInReview-false--
+22:35:43:384 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:35:43:384 -> ----73-1-64-DU7397764--NetLiquidation-C-0.00-USD-
+22:35:43:387 -> ---173-1-64-DU7397764--NetLiquidation-S-30904.81-USD-
+22:35:43:387 -> ---673-1-64-DU7397764--NetLiquidationUncertainty-0.00-USD-
+22:35:43:387 -> ---*73-1-64-DU7397764--PASharesValue-0.00-USD-
+22:35:43:387 -> ---,73-1-64-DU7397764--PASharesValue-C-0.00-USD-
+22:35:43:387 -> ---,73-1-64-DU7397764--PASharesValue-S-0.00-USD-
+22:35:43:387 -> ---573-1-64-DU7397764--PhysicalCertificateValue-0.00-USD-
+22:35:43:387 -> ---773-1-64-DU7397764--PhysicalCertificateValue-C-0.00-USD-
+22:35:43:387 -> ---773-1-64-DU7397764--PhysicalCertificateValue-S-0.00-USD-
+22:35:43:387 -> ---173-1-64-DU7397764--PostExpirationExcess-0.00-USD-
+22:35:43:387 -> ---373-1-64-DU7397764--PostExpirationExcess-C-0.00-USD-
+22:35:43:387 -> ---373-1-64-DU7397764--PostExpirationExcess-S-0.00-USD-
+22:35:43:387 -> ---173-1-64-DU7397764--PostExpirationMargin-0.00-USD-
+22:35:43:387 -> ---373-1-64-DU7397764--PostExpirationMargin-C-0.00-USD-
+22:35:43:388 -> ---373-1-64-DU7397764--PostExpirationMargin-S-0.00-USD-
+22:35:43:388 -> ---?73-1-64-DU7397764--PreviousDayEquityWithLoanValue-30757.09-USD-
+22:35:43:388 -> ---A73-1-64-DU7397764--PreviousDayEquityWithLoanValue-S-30757.09-USD-
+22:35:43:388 -> ---+73-1-64-DU7397764--RegTEquity-30904.81-USD-
+22:35:43:388 -> ----73-1-64-DU7397764--RegTEquity-S-30904.81-USD-
+22:35:43:388 -> ---*73-1-64-DU7397764--RegTMargin-4019.00-USD-
+22:35:43:388 -> ---,73-1-64-DU7397764--RegTMargin-S-4019.00-USD-
+22:35:43:388 -> ---%73-1-64-DU7397764--SMA-579168.87-USD-
+22:35:43:388 -> ---'73-1-64-DU7397764--SMA-S-579168.87-USD-
+22:35:43:388 -> ---273-1-64-DU7397764--SegmentTitle-C-US Commodities--
+22:35:43:388 -> ---173-1-64-DU7397764--SegmentTitle-S-US Securities--
+22:35:43:388 -> ---/73-1-64-DU7397764--TotalCashValue-22800.86-USD-
+22:35:43:388 -> ----73-1-64-DU7397764--TotalCashValue-C-0.00-USD-
+22:35:43:388 -> ---173-1-64-DU7397764--TotalCashValue-S-22800.86-USD-
+22:35:43:388 -> ---973-1-64-DU7397764--TotalDebitCardPendingCharges-0.00-USD-
+22:35:43:388 -> ---;73-1-64-DU7397764--TotalDebitCardPendingCharges-C-0.00-USD-
+22:35:43:394 -> ---;73-1-64-DU7397764--TotalDebitCardPendingCharges-S-0.00-USD-
+22:35:43:397 -> ---*73-1-64-DU7397764--TradingType-S-STKNOPT--
+22:35:43:397 -> ---)73-1-64-DU7397764--WhatIfPMEnabled-true--
+22:35:43:397 -> ---$73-1-64-DU7397764--Currency-USD-USD-
+22:35:43:397 -> ---,73-1-64-DU7397764--CashBalance-22800.86-USD-
+22:35:43:398 -> ---173-1-64-DU7397764--TotalCashBalance-22800.86-USD-
+22:35:43:398 -> ---)73-1-64-DU7397764--AccruedCash-65.95-USD-
+22:35:43:398 -> ---073-1-64-DU7397764--StockMarketValue-8038.00-USD-
+22:35:43:398 -> ---.73-1-64-DU7397764--OptionMarketValue-0.00-USD-
+22:35:43:398 -> ---.73-1-64-DU7397764--FutureOptionValue-0.00-USD-
+22:35:43:398 -> ---'73-1-64-DU7397764--FuturesPNL-0.00-USD-
+22:35:43:398 -> ---;73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-USD-
+22:35:43:398 -> ----73-1-64-DU7397764--UnrealizedPnL--112.80-USD-
+22:35:43:398 -> ---(73-1-64-DU7397764--RealizedPnL-0.00-USD-
+22:35:43:398 -> ---)73-1-64-DU7397764--ExchangeRate-1.00-USD-
+22:35:43:398 -> ---&73-1-64-DU7397764--FundValue-0.00-USD-
+22:35:43:398 -> ---(73-1-64-DU7397764--NetDividend-0.00-USD-
+22:35:43:398 -> ---,73-1-64-DU7397764--MutualFundValue-0.00-USD-
+22:35:43:398 -> ---173-1-64-DU7397764--MoneyMarketFundValue-0.00-USD-
+22:35:43:398 -> ---/73-1-64-DU7397764--CorporateBondValue-0.00-USD-
+22:35:43:398 -> ---'73-1-64-DU7397764--TBondValue-0.00-USD-
+22:35:43:398 -> ---'73-1-64-DU7397764--TBillValue-0.00-USD-
+22:35:43:399 -> ---)73-1-64-DU7397764--WarrantValue-0.00-USD-
+22:35:43:399 -> ---*73-1-64-DU7397764--FxCashBalance-0.00-USD-
+22:35:43:399 -> ---073-1-64-DU7397764--AccountOrGroup-DU7397764-USD-
+22:35:43:399 -> ---(73-1-64-DU7397764--RealCurrency-USD-USD-
+22:35:43:399 -> ---.73-1-64-DU7397764--IssuerOptionValue-0.00-USD-
+22:35:43:399 -> ---'73-1-64-DU7397764--Cryptocurrency--USD-
+22:35:43:401 -> ---&73-1-64-DU7397764--Currency-BASE-BASE-
+22:35:43:401 -> ----73-1-64-DU7397764--CashBalance-22800.86-BASE-
+22:35:43:401 -> ---273-1-64-DU7397764--TotalCashBalance-22800.86-BASE-
+22:35:43:401 -> ---*73-1-64-DU7397764--AccruedCash-65.95-BASE-
+22:35:43:401 -> ---173-1-64-DU7397764--StockMarketValue-8038.00-BASE-
+22:35:43:401 -> ---/73-1-64-DU7397764--OptionMarketValue-0.00-BASE-
+22:35:43:401 -> ---/73-1-64-DU7397764--FutureOptionValue-0.00-BASE-
+22:35:43:401 -> ---(73-1-64-DU7397764--FuturesPNL-0.00-BASE-
+22:35:43:401 -> ---<73-1-64-DU7397764--NetLiquidationByCurrency-30904.8099-BASE-
+22:35:43:401 -> ---.73-1-64-DU7397764--UnrealizedPnL--112.80-BASE-
+22:35:43:401 -> ---)73-1-64-DU7397764--RealizedPnL-0.00-BASE-
+22:35:43:401 -> ---*73-1-64-DU7397764--ExchangeRate-1.00-BASE-
+22:35:43:401 -> ---'73-1-64-DU7397764--FundValue-0.00-BASE-
+22:35:43:401 -> ---)73-1-64-DU7397764--NetDividend-0.00-BASE-
+22:35:43:401 -> ----73-1-64-DU7397764--MutualFundValue-0.00-BASE-
+22:35:43:401 -> ---273-1-64-DU7397764--MoneyMarketFundValue-0.00-BASE-
+22:35:43:401 -> ---073-1-64-DU7397764--CorporateBondValue-0.00-BASE-
+22:35:43:401 -> ---(73-1-64-DU7397764--TBondValue-0.00-BASE-
+22:35:43:402 -> ---(73-1-64-DU7397764--TBillValue-0.00-BASE-
+22:35:43:402 -> ---*73-1-64-DU7397764--WarrantValue-0.00-BASE-
+22:35:43:402 -> ---+73-1-64-DU7397764--FxCashBalance-0.00-BASE-
+22:35:43:402 -> ---173-1-64-DU7397764--AccountOrGroup-DU7397764-BASE-
+22:35:43:402 -> ---)73-1-64-DU7397764--RealCurrency-USD-BASE-
+22:35:43:402 -> ---/73-1-64-DU7397764--IssuerOptionValue-0.00-BASE-
+22:35:43:402 -> ---(73-1-64-DU7397764--Cryptocurrency--BASE-
+22:35:43:402 -> ---74-1-64-
+22:35:43:405 <- 7-3-65-0-------
+22:35:43:423 -> ---55-1-65-
+22:35:43:428 <- 92-66-DU7397764--
+22:35:43:551 -> ---@94-66--5.442700000000002--112.40093144531238-1234.1018600999998-
+22:37:44:314 -> ---
+8-1-22:37-
+22:37:44:314 -> ---
+8-1-22:37-
+22:37:44:315 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:37:44:315 -> ---
+8-1-22:37-
+22:37:44:319 -> ---
+8-1-22:37-
+22:37:44:320 -> ---
+8-1-22:37-
+22:37:44:322 -> ---/73-1-64-DU7397764--NetLiquidation-30904.81-USD-
+22:37:44:322 -> ---
+8-1-22:37-

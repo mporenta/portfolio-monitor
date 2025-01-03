@@ -22,3 +22,6 @@ discord_webhook
 apscheduler
 pandas
 aiohttp
+feedparser
+redis
+asyncio-redis

@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
-from shorts import short_stock_manager
+from shorts import ShortStockManager
 import httpx
 from datetime import datetime
 from typing import List, Dict, Optional, Union, Any
@@ -28,7 +28,7 @@ load_dotenv()
 loadDotEnv = load_dotenv()
 tiingo_token = os.getenv('TIINGO_API_TOKEN')
 unique_ts = str((time.time_ns() // 1000000) -  (4 * 60 * 60 * 1000))
-
+short_stock_manager = ShortStockManager()
 
 def get_timestamp(unique_ts: str) -> str:
     """Get timestamp for database"""
@@ -70,7 +70,7 @@ def get_db():
 # Set up logging
 log_file_path = '/app/logs/app.log'
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
-
+pnl_threshold = float(os.getenv("WEBHOOK_PNL_THRESHOLD", "-300"))
 log_level = os.getenv('TBOT_LOGLEVEL', 'INFO')
 logging.basicConfig(
     level=getattr(logging, log_level),
@@ -177,6 +177,7 @@ async def lifespan(app: FastAPI):
                     accounts = ib.managedAccounts()
                     account = accounts[0] if accounts else None
                     ib.reqPnL(account)
+                    
                     ib.disconnectedEvent += on_disconnected
                     logger.info("Connected to IB Gateway and subscribed to disconnection event")
                     return True
@@ -282,122 +283,191 @@ async def preflight_handler(rest_of_path: str):
 async def proxy_webhook(webhook_data: WebhookRequest):
     pnl= PnL()
     try:
-        loadDotEnv
-        logger.info(f"loadDotEnv{loadDotEnv}")
-        logger.info("Received webhook request")
-        logger.debug(f"Incoming webhook data: {webhook_data.model_dump()}")
-         # Check if it's a short entry order
-        if "entryshort" in webhook_data.direction.lower():
-            # Check if all entry values are 0 for Market Order
-            entry_types = ["entry.limit", "entry.stop"]
-            for entry_type in entry_types:
-                value = next((metric.value for metric in webhook_data.metrics if metric.name == entry_type), None)
-                if value is None or value != 0:
-                    return JSONResponse(
-                        status_code=403,
-                        content={
-                            "status": "rejected",
-                            "message": f"Invalid {entry_type} value. Expected 0, got {value}"
-                        }
-                    )
-
-            # Get quantity from metrics
-            quantity = next((metric.value for metric in webhook_data.metrics if metric.name == "qty"), None)
-            if quantity is None:
-                raise HTTPException(status_code=400, detail="Quantity not found in metrics")
-            
-            # Check short availability
-            shares = short_stock_manager.get_availability(webhook_data.ticker)
-            if shares is None:
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "status": "rejected",
-                        "message": f"No short availability data found for {webhook_data.ticker}"
-                    }
-                )
-            
-            required_shares = quantity * 5
-            if shares < required_shares:
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "status": "rejected",
-                        "message": f"Insufficient shares available to short. Required: {required_shares}, Available: {shares}",
-                        "symbol": webhook_data.ticker,
-                        "available_shares": shares,
-                        "required_shares": required_shares
-                    }
-                )
-            logger.info(f"Short availability check passed for {webhook_data.ticker}. Required: {required_shares}, Available: {shares}")
-
-        # Rest of your existing webhook logic...
+        # Get price from metrics
+        price = next((metric.value for metric in webhook_data.metrics if metric.name == "price"), None)
         
-        # Check if direction contains "close" or "cancel" - bypass PNL check if true
-        if "close" in webhook_data.direction.lower() or "cancel" in webhook_data.direction.lower():
-            logger.info(f"Direction '{webhook_data.direction}' contains close/cancel - bypassing PNL check")
-        else:
-            # Get PNL threshold from environment
-            pnl_threshold = float(os.getenv("WEBHOOK_PNL_THRESHOLD", "-300"))
-            logger.info(f"PNL threshold set to: {pnl_threshold}")
-            total_pnl = None
-            # Fetch current positions and PNL data
-            try:
-
-                total_pnl = await on_pnl_event(pnl)
-           
+        # Check if price is below threshold and fetch trade halts if needed
+        if price is not None and price < 10.0:
+            logger.info(f"Price {price} is below 10.0, checking trade halts for {webhook_data.ticker}")
+            
+            # Fetch current trade halts
+            await short_stock_manager.fetch_and_parse_trade_halts()
+            rss_data = short_stock_manager.parse_rss_to_json(short_stock_manager.fetch_rss_feed())
+            
+            # Check if ticker is in halts
+            ticker_halt = next((item for item in rss_data.get("items", []) 
+                              if item.get("IssueSymbol") == webhook_data.ticker), None)
+            
+            if ticker_halt:
+                logger.info(f"Found halt data for {webhook_data.ticker}")
                 
-                logger.info(f"Calculated total PNL: {total_pnl} and pnl_threshold is: {pnl_threshold}")
-                
-                # Check if total PNL meets threshold
-                if total_pnl <= pnl_threshold:
-                    logger.warning(f"Total PNL ({total_pnl}) below threshold ({pnl_threshold}). Webhook blocked.")
+                # Check ResumptionDate and ResumptionTradeTime
+                if not ticker_halt.get("ResumptionDate"):
+                    logger.warning(f"No resumption date for {webhook_data.ticker}, blocking webhook")
                     return JSONResponse(
                         status_code=403,
                         content={
                             "status": "rejected",
-                            "message": f"Current PNL ({total_pnl}) is below threshold ({pnl_threshold})",
-                            "total_pnl": total_pnl,
-                            "threshold": pnl_threshold
+                            "message": f"Trading halted for {webhook_data.ticker} with no resumption date"
                         }
                     )
                 
-                logger.info(f"PNL check passed. Proceeding with webhook forwarding.")
+                # Check if enough time has passed since resumption
+                try:
+                    ny_tz = pytz.timezone('America/New_York')
+                    now = datetime.now(ny_tz)
                     
-            except Exception as e:
-                logger.error(f"Error fetching or processing PNL data: {str(e)}")
-                raise HTTPException(status_code=500, detail="Failed to verify PNL conditions")
-        
-        # If we get here, either PNL check passed or direction was close/cancel
-        webhook_url = "http://tbot-on-tradingboat:5000/webhook"
-        logger.info(f"Forwarding to webhook URL: {webhook_url}")
-        
-        # Convert webhook data to dictionary and add the key
-        webhook_dict = webhook_data.model_dump()
-        webhook_dict["key"] = tbotKey
-        logger.info(f"Added key to webhook data, ticker: {webhook_dict.get('ticker')}")
-        
-        # Forward the request to the webhook
-        response = requests.post(
-            webhook_url,
-            headers={'Content-Type': 'application/json'},
-            json=webhook_dict
-        )
-        
-        logger.info(f"Webhook response status code: {response.status_code}")
-        logger.debug(f"Webhook response content: {response.content}")
-        
-        # Return the forwarded response with CORS headers
-        return Response(
-            content=response.content,
-            status_code=response.status_code,
-            headers={
-                "Access-Control-Allow-Origin": "https://portfolio.porenta.us",
-                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type",
-            },
-        )
-        
+                    resumption_datetime = datetime.strptime(
+                        f"{ticker_halt['ResumptionDate']} {ticker_halt['ResumptionTradeTime']}", 
+                        "%m/%d/%Y %H:%M:%S"
+                    )
+                    resumption_datetime = ny_tz.localize(resumption_datetime)
+                    
+                    time_since_resumption = (now - resumption_datetime).total_seconds()
+                    
+                    if time_since_resumption < 300:  # Less than 5 minutes
+                        logger.warning(f"Not enough time passed since resumption for {webhook_data.ticker}")
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "status": "rejected",
+                                "message": f"Only {time_since_resumption} seconds have passed since trading resumed for {webhook_data.ticker}. Required: 300 seconds"
+                            }
+                        )
+                except Exception as e:
+                    logger.error(f"Error processing resumption time: {str(e)}")
+                    # If we can't process the time properly, reject for safety
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "status": "rejected",
+                            "message": f"Error processing halt data for {webhook_data.ticker}"
+                        }
+                    )
+        try:
+            loadDotEnv
+            logger.info(f"loadDotEnv{loadDotEnv}")
+            logger.info("Received webhook request")
+            logger.debug(f"Incoming webhook data: {webhook_data.model_dump()}")
+            # Check if it's a short entry order
+            if "entryshort" in webhook_data.direction.lower():
+                # Check if all entry values are 0 for Market Order
+                entry_types = ["entry.limit", "entry.stop"]
+                for entry_type in entry_types:
+                    value = next((metric.value for metric in webhook_data.metrics if metric.name == entry_type), None)
+                    if value is None or value != 0:
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "status": "rejected",
+                                "message": f"Invalid {entry_type} value. Expected 0, got {value}"
+                            }
+                        )
+
+                # Get quantity from metrics
+                quantity = next((metric.value for metric in webhook_data.metrics if metric.name == "qty"), None)
+                if quantity is None:
+                    raise HTTPException(status_code=400, detail="Quantity not found in metrics")
+                
+                # Check short availability
+                shares = short_stock_manager.get_availability(webhook_data.ticker)
+                if shares is None:
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "status": "rejected",
+                            "message": f"No short availability data found for {webhook_data.ticker}"
+                        }
+                    )
+                
+                required_shares = quantity * 5
+                if shares < required_shares:
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "status": "rejected",
+                            "message": f"Insufficient shares available to short. Required: {required_shares}, Available: {shares}",
+                            "symbol": webhook_data.ticker,
+                            "available_shares": shares,
+                            "required_shares": required_shares
+                        }
+                    )
+                logger.info(f"Short availability check passed for {webhook_data.ticker}. Required: {required_shares}, Available: {shares}")
+
+            # Rest of your existing webhook logic...
+            
+            # Check if direction contains "close" or "cancel" - bypass PNL check if true
+            if "close" in webhook_data.direction.lower() or "cancel" in webhook_data.direction.lower():
+                logger.info(f"Direction '{webhook_data.direction}' contains close/cancel - bypassing PNL check")
+            else:
+                # Get PNL threshold from environment
+                
+                logger.info(f"PNL threshold set to: {pnl_threshold}")
+                total_pnl = None
+                # Fetch current positions and PNL data
+                try:
+
+                    total_pnl = await on_pnl_event(pnl)
+            
+                    
+                    logger.info(f"Calculated total PNL: {total_pnl} and pnl_threshold is: {pnl_threshold}")
+                    
+                    # Check if total PNL meets threshold
+                    if total_pnl <= pnl_threshold:
+                        logger.warning(f"Total PNL ({total_pnl}) below threshold ({pnl_threshold}). Webhook blocked.")
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "status": "rejected",
+                                "message": f"Current PNL ({total_pnl}) is below threshold ({pnl_threshold})",
+                                "total_pnl": total_pnl,
+                                "threshold": pnl_threshold
+                            }
+                        )
+                    
+                    logger.info(f"PNL check passed. Proceeding with webhook forwarding.")
+                        
+                except Exception as e:
+                    logger.error(f"Error fetching or processing PNL data: {str(e)}")
+                    raise HTTPException(status_code=500, detail="Failed to verify PNL conditions")
+            
+            # If we get here, either PNL check passed or direction was close/cancel
+            webhook_url = "http://tbot-on-tradingboat:5000/webhook"
+            logger.info(f"Forwarding to webhook URL: {webhook_url}")
+            
+            # Convert webhook data to dictionary and add the key
+            webhook_dict = webhook_data.model_dump()
+            webhook_dict["key"] = tbotKey
+            logger.info(f"Added key to webhook data, ticker: {webhook_dict.get('ticker')}")
+            
+            # Forward the request to the webhook
+            response = requests.post(
+                webhook_url,
+                headers={'Content-Type': 'application/json'},
+                json=webhook_dict
+            )
+            
+            logger.info(f"Webhook response status code: {response.status_code}")
+            logger.debug(f"Webhook response content: {response.content}")
+            
+            # Return the forwarded response with CORS headers
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers={
+                    "Access-Control-Allow-Origin": "https://portfolio.porenta.us",
+                    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                },
+            )
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error in proxy webhook: {str(e)}")
+            raise HTTPException(status_code=503, detail="Error connecting to webhook service")
+        except Exception as e:
+            logger.error(f"Unexpected error in proxy webhook: {str(e)}")
+            logger.exception("Full exception details:")
+            raise HTTPException(status_code=500, detail=str(e))
     except requests.exceptions.RequestException as e:
         logger.error(f"Network error in proxy webhook: {str(e)}")
         raise HTTPException(status_code=503, detail="Error connecting to webhook service")
@@ -520,8 +590,10 @@ async def get_trades(db: Session = Depends(get_db)):
         logger.error(f"Error fetching trades: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch trades data")
 
+async def on_orderStatus(trade: Trade):
+    logger.info(f"order has new status{trade}")
 
-
+    return trade
 
 
 @app.post("/close_positions", response_model=List[PositionResponse])
@@ -541,161 +613,97 @@ async def place_order(positions_request: PositionsRequest):
         current_time = datetime.now(ny_tz)
         market_open = current_time.replace(hour=9, minute=30, second=0, microsecond=0)
         market_close = current_time.replace(hour=16, minute=0, second=0, microsecond=0)
-        is_market_hours = market_open <= current_time <= market_close
+        is_market_hours = False  # Can be changed to market_open <= current_time <= market_close
 
-        for position in ib.positions():
-            logger.info(f"Processing these positions: {position}")
-            symbol = position.contract.symbol
-            action = "BUY" if position.position < 0 else "SELL"
-            
-            try:
-                if position.position != 0:
-                    logger.info(f"Processing order for {position.contract.symbol}")
-                
-                    # Create contract
-                    contract = Contract()
-                    contract.symbol = position.contract.symbol
-                    contract.secType = "STK"
-                    contract.currency = "USD"
-                    contract.exchange = "SMART"
-                    contract.primaryExchange = "NASDAQ"
-                    print(f"Contract is jengo {contract}")
-                    qcontract=ib.qualifyContracts(contract)
-
-                    
-
-                    # Create order based on market hours
-                    if is_market_hours:
-                        logger.info(f"Creating market order for {symbol}")
-                        order = MarketOrder(
-                            action=action,
-                            totalQuantity=position.position,
-                            tif='GTC'
-                        )
-                    else:
-                        # Fetch real-time midpoint price
-                        market_data=ib.reqMktData(contract, '', False, False)
-                        logger.info(f"Fetching real-time price for {market_data}")
-
-                        is_long_position = action == 'SELL'
-                        tickOffset = -0.01 if is_long_position else 0.01
-                        limit_price = []
-                        logger.info(f"Creating limit order for {position.contract.symbol}")
-                        market_data = ib.reqMktData(contract, '', False, False)
-                        logger.info(f"Market Data for  {market_data}")
-                        async def get_bars():
-                            bars = await ib.reqHistoricalDataAsync(
-                            contract, endDateTime='', durationStr='60 S',
-                            barSizeSetting='5 secs', whatToShow='TRADES', useRTH=False)
-
-                            return bars
-
-                        theBars = await (get_bars())
-
-                        df = util.df(theBars)
-                        limit_price = (theBars[-1].close - 0.01) + tickOffset
-                        logger.debug(f"Stock is {contract}, and bars: {df} - Limit Price: {limit_price}")
-                                
-                                    
-                        # Fetch real-time midpoint price
-
-            
+        # Get current positions from IB
+        current_positions = await ib.reqPositionsAsync()
         
-                                
-                        if theBars:
-
-                            print(f"Bars: {theBars}")
-                            limit_price = theBars[-1].close
-                                    
-                            logger.info(f"Got midpoint limit_price for {position.contract.symbol}: {limit_price}")
-                        else:
-                            logger.info(f"No Bars for {position.contract.symbol}: {limit_price}")
-
-                        order = LimitOrder(
-                            action=action,
-                            totalQuantity=position.position,
-                            lmtPrice=round(limit_price, 2),
-                            tif='GTC',
-                            outsideRth=True
-                            
-                        )
-                        if not limit_price:
-                            raise ValueError(f"Could not get market price for {symbol}")
-
-                        logger.info(f"Creating limit order for {symbol}")
-                        # Fetch current price from Tiingo
-                        logger.info(f"Tiingo token: {tiingo_token}")
-                        tiingo_url = f"https://api.tiingo.com/iex/?tickers={symbol}&token={tiingo_token}"
-                        headers = {'Content-Type': 'application/json'}
-                        
-                    
-                        try:
-                            async with aiohttp.ClientSession() as session:
-                                async with session.get(tiingo_url, headers=headers) as response:
-                                    if response.status == 200:
-                                        data = await response.json()
-                                        if data and len(data) > 0:
-                                            limit_price = data[0]['tngoLast']
-                                            logger.info(f"Got tngoLast limit_price for {symbol} from Tiingo: {limit_price}")
-                                            return limit_price
-                        except Exception as te:
-                            logger.error(f"Error fetching Tiingo data: {str(te)}")
-                        
-                        # Wait for price data
-                        
-                        
-                            
-                        order = LimitOrder(
-                            action=action,
-                            totalQuantity=position.position,
-                            lmtPrice=round(limit_price, 2),
-                            tif='GTC',
-                            outsideRth=True
-                        )
-                        
-
-                    # Place the order
-                    trade = ib.placeOrder(contract=qcontract, order=order)
-                    orderStatus = trade.orderStatus.status
-                    fill = trade.orderStatus.filled
-                    logger.info(f"Order placed for {symbol}: {trade}")
-                    
-
-                    
-
-                    async def orderFilled(trade, fill):
-                        print(f"order has been sent for {symbol}")
-                        print(trade)
-                        print(f"order fill status for {symbol} : {fill}")
-                        print(f"order status for {symbol} : {orderStatus}")
-
-                    trade.fillEvent += orderFilled
-
-                   
-                    
-
-                    # Create PositionResponse
-                    position_response = PositionResponse(
-                        symbol=symbol,
-                        position=float(position.position),
-                        market_price=trade.orderStatus.lastFillPrice or 0.0,
-                        market_value=(trade.orderStatus.lastFillPrice or 0.0) * position.position,
-                        average_cost=trade.orderStatus.avgFillPrice or 0.0,
-                        unrealized_pnl=0.0,  # Will be updated when filled
-                        realized_pnl=0.0,    # Will be updated when filled
-                        account=trade.order.account or "",
-                        exchange=contract.exchange,
-                        timestamp=current_time,
-                        
-                        
+        # Process each position from the request
+        for pos_request in positions_request.positions:
+            symbol = pos_request.symbol
+            action = pos_request.action
+            quantity = pos_request.quantity
+            
+            logger.info(f"Processing order for symbol {symbol}")
+            
+            # Find matching position in current positions
+            matching_position = next(
+                (pos for pos in current_positions if pos.contract.symbol == symbol),
+                None
+            )
+            
+            if not matching_position:
+                logger.warning(f"No matching position found for {symbol}")
+                continue
+                
+            try:
+                # Create contract
+                contract = Contract()
+                contract.symbol = symbol
+                contract.secType = "STK"
+                contract.currency = "USD"
+                contract.exchange = "SMART"
+                contract.primaryExchange = "NASDAQ"
+                
+                if is_market_hours:
+                    logger.info(f"Creating market order for {symbol}")
+                    order = MarketOrder(
+                        action=action,
+                        totalQuantity=quantity,
+                        tif='GTC'
+                    )
+                else:
+                    # Fetch real-time price data
+                    bars = await ib.reqHistoricalDataAsync(
+                        contract, 
+                        endDateTime='', 
+                        durationStr='60 S',
+                        barSizeSetting='5 secs', 
+                        whatToShow='Midpoint', 
+                        useRTH=False
                     )
                     
-                    response_data.append(position_response)
-
+                    if not bars:
+                        logger.warning(f"No price data available for {symbol}")
+                        continue
+                        
+                    last_price = bars[-1].close
+                    tick_offset = -0.01 if action == 'SELL' else 0.01
+                    limit_price = round(last_price + tick_offset, 2)
+                    
+                    order = LimitOrder(
+                        action=action,
+                        totalQuantity=quantity,
+                        lmtPrice=limit_price,
+                        tif='GTC',
+                        outsideRth=True
+                    )
+                
+                # Place the order
+                trade = ib.placeOrder(contract, order)
+                trade.statusEvent += on_orderStatus
+                logger.info(f"Order placed for {symbol}: {order} with limit price {limit_price}")
+                
+                # Create response
+                position_response = PositionResponse(
+                    symbol=symbol,
+                    position=float(quantity),
+                    market_price=float(last_price if 'last_price' in locals() else 0.0),
+                    market_value=float(quantity * (last_price if 'last_price' in locals() else 0.0)),
+                    average_cost=float(matching_position.avgCost),
+                    unrealized_pnl=0.0,  # Will be updated when filled
+                    realized_pnl=0.0,    # Will be updated when filled
+                    account=matching_position.account,
+                    exchange=contract.exchange,
+                    timestamp=current_time
+                )
+                
+                response_data.append(position_response)
+                
             except Exception as e:
                 logger.error(f"Error processing order for {symbol}: {str(e)}", exc_info=True)
                 raise HTTPException(
-                    status_code=500, 
+                    status_code=500,
                     detail=f"Error processing order for {symbol}: {str(e)}"
                 )
 
@@ -705,9 +713,12 @@ async def place_order(positions_request: PositionsRequest):
     except Exception as e:
         logger.error(f"Error processing positions request: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Error processing positions request: {str(e)}"
         )
+
+
+
 async def on_pnl_event(pnl: PnL):
     accounts = ib.managedAccounts()
 
@@ -723,8 +734,6 @@ async def on_pnl_event(pnl: PnL):
             
         total_pnl = total_realized_pnl + (total_unrealized_pnl) / 2
         logger.info(f"{total_pnl} is the total_pnl = total_realized_pnl {total_realized_pnl} + (total_unrealized_pnl) / 2: {total_unrealized_pnl} all pnl object is {pnl}")
-        status = await place_order.on_orderStatus()
-        logger.info(f"{status} is the status of the order")
         return total_pnl
     else:
         logger.warning("PnL data is incomplete.")
@@ -931,6 +940,8 @@ def str2bool(value: str) -> bool:
         raise ValueError(f'Invalid boolean value: {value}')
 
 if __name__ == "__main__":
+    load_dotenv()
+    pnl_threshold = float(os.getenv("WEBHOOK_PNL_THRESHOLD", "-300"))
     
     import uvicorn
     production = str2bool(os.getenv("TBOT_PRODUCTION", "False"))

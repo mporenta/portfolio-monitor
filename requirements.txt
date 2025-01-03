@@ -1,7 +1,8 @@
 ib_async
 asyncio
 sqlalchemy
-fastapi 
+fastapi
+feedparser
 python-dotenv
 pytz
 pathlib
