@@ -1,8 +1,7 @@
 ib_async
 asyncio
 sqlalchemy
-fastapi
-feedparser
+fastapi 
 python-dotenv
 pytz
 pathlib
@@ -15,5 +14,14 @@ waitress
 uvicorn 
 pydantic 
 jinja2 
-python-multipart
+python-multipart 
 aiofiles
+tailwindcss
+httpx
+discord_webhook
+apscheduler
+pandas
+aiohttp
+feedparser
+redis
+asyncio-redis

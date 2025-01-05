@@ -653,12 +653,6 @@
     let refreshInterval;
     const REFRESH_INTERVAL = 30000;
 
-    $(document).ready(() => {
-      initializeTables();
-      fetchData();
-      $('#autoRefresh').change(e => toggleAutoRefresh(e.target.checked));
-      $('#refreshBtn').click(fetchIbData);
-    });
 
     function initializeTables() {
       const commonConfig = {
@@ -673,7 +667,7 @@
       const commonOrderColumns = [
 
         {
-          data: 'uniquekey',
+          data: 'timestamp',
           title: 'TWS Time',
           render: data => moment.tz(data, 'America/Denver').format('YYYY-MM-DD HH:mm:ss')
         },
@@ -694,11 +688,7 @@
           data: 'orderstatus',
           title: 'Status'
         },
-        {
-          data: 'timestamp',
-          title: 'Tbot Time',
-          render: data => moment.tz(data, 'America/Denver').format('YYYY-MM-DD HH:mm:ss')
-        },
+      
         {
           data: 'action',
           title: 'Action'
@@ -927,41 +917,27 @@
 
     async function fetchData() {
       try {
-        // Fetch data from APIs
-        const [ordersDataResponse, alertsDataResponse] = await Promise.all([
-          fetch('/api/orders-data').then(r => r.json()),
-          fetch(`https://tv.porenta.us/alerts/data?_=${Date.now()}`).then(r => r.json())
-        ]);
+        // Fetch portfolio data
+        const portfolioResponse = await fetch('/api/portfolio-data').then(r => r.json());
+        console.log('Portfolio Data Response:', portfolioResponse);
 
-        console.log('Orders Data Response:', ordersDataResponse);
-        console.log('Alerts Data Response:', alertsDataResponse);
-
-        const ordersData = ordersDataResponse.data || [];
-        const alertsData = alertsDataResponse.data || [];
-
-        if (!Array.isArray(ordersData)) {
-          console.error('ordersData is not an array:', ordersData);
-          throw new Error('ordersData is not an array');
-        }
-
-        const today = moment().startOf('day');
-
-        // Filter data for different tables
-        const activePositions = ordersData.filter(order =>
-          order.position !== 0 && order.orderstatus === "Portfolio"
-        );
-
-        const currentPositions = ordersData.filter(order =>
-          order.position !== 0
-        );
-
-        const todayOrders = ordersData.filter(order =>
-          moment(order.timestamp).isSameOrAfter(today) && order.position === 0
-        );
-
-        const historicalOrders = ordersData.filter(order =>
-          moment(order.timestamp).isBefore(today) && order.position === 0
-        );
+        // Transform portfolio data for active positions table
+        const activePositions = portfolioResponse.portfolio_data
+          .filter(pos => pos.position !== 0) // Only non-zero positions
+          .map(position => ({
+            ticker: position.contract,
+            position: position.position,
+            mrkvalue: position.marketValue || 0,
+            avgfillprice: position.marketPrice || 0,
+            unrealizedpnl: position.unrealizedPNL || 0,
+            realizedpnl: position.realizedPNL || 0,
+            orderid: position.conId,
+            orderref: `Ptf_${position.contract}`,
+            orderstatus: "Portfolio",
+            timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+            uniquekey: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+            action: position.position > 0 ? 'BUY' : 'SELL'
+          }));
 
         // Calculate totals for PnL metrics
         const totals = {
@@ -970,20 +946,111 @@
           marketValue: activePositions.reduce((sum, pos) => sum + (pos.mrkvalue || 0), 0)
         };
 
-        // Update all tables and metrics
+        // Update tables and metrics
         updatePnLMetrics(totals);
         activePositionsTable.clear().rows.add(activePositions).draw();
-        currentPortfolioTable.clear().rows.add(currentPositions).draw();
-        todayOrdersTable.clear().rows.add(todayOrders).draw();
-        historicalOrdersTable.clear().rows.add(historicalOrders).draw();
-        alertsTable.clear().rows.add(alertsData).draw();
 
       } catch (error) {
-        console.error("Error fetching data:", error);
-        showError("Failed to refresh data");
+        console.error("Error fetching portfolio data:", error);
+        showError("Failed to refresh portfolio data");
+      }
+    }
+    async function fetchContractData() {
+      try {
+        const contractResponse = await fetch('/api/contract-data').then(r => r.json());
+        console.log('Contract Data Response:', contractResponse);
+
+        if (!contractResponse.contract_data || !Array.isArray(contractResponse.contract_data)) {
+          console.warn('Invalid contract data format');
+          return;
+        }
+
+        const today = moment().startOf('day');
+
+        // Transform trades data
+        const transformedTrades = contractResponse.contract_data.map(trade => {
+          const logEntry = trade.log[0]; // Get the first log entry for timestamp
+          const timestamp = moment(logEntry.time);
+
+          return {
+            ticker: trade.contract.symbol,
+            orderid: trade.orderStatus.permId,
+            orderref: trade.order.orderRef || '',
+            orderstatus: trade.orderStatus.status,
+            ordertype: trade.order.orderType,
+            timestamp: timestamp.format('YYYY-MM-DD HH:mm:ss.SSS'),
+            uniquekey: `${trade.contract.symbol}_${trade.orderStatus.permId}`,
+            action: trade.order.action,
+            lmtprice: trade.order.lmtPrice || 0,
+            auxprice: trade.order.auxPrice || 0,
+            position: trade.orderStatus.remaining,
+            tv_price: trade.order.lmtPrice || 0 // Using limit price as TV price for demonstration
+          };
+        });
+
+        // Split into today's and historical orders
+        const todayOrders = transformedTrades.filter(order =>
+          moment(order.timestamp).isSameOrAfter(today)
+        );
+
+        const historicalOrders = transformedTrades.filter(order =>
+          moment(order.timestamp).isBefore(today)
+        );
+
+        // Update tables
+        todayOrdersTable.clear().rows.add(todayOrders).draw();
+        historicalOrdersTable.clear().rows.add(historicalOrders).draw();
+
+      } catch (error) {
+        console.error("Error fetching contract data:", error);
+        showError("Failed to refresh orders data");
       }
     }
 
+
+    async function fetchAlerts() {
+      try {
+        const alertsDataResponse = await fetch(`https://tv.porenta.us/alerts/data?_=${Date.now()}`).then(r => r.json());
+        console.log('Alerts Data Response:', alertsDataResponse);
+
+        if (alertsDataResponse.data) {
+          alertsTable.clear().rows.add(alertsDataResponse.data).draw();
+        }
+      } catch (error) {
+        console.error("Error fetching alerts data:", error);
+        showError("Failed to refresh alerts data");
+      }
+    }
+
+
+    $(document).ready(() => {
+      initializeTables();
+      fetchData();
+      fetchAlerts();
+      fetchContractData();
+
+      $('#autoRefresh').change(e => toggleAutoRefresh(e.target.checked));
+      $('#refreshBtn').click(() => {
+        fetchData();
+        fetchAlerts();
+        fetchContractData();
+      });
+    });
+
+    // Update auto refresh function
+    function toggleAutoRefresh(enabled) {
+      if (enabled) {
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => {
+          fetchData();
+          fetchAlerts();
+          fetchContractData();
+        }, REFRESH_INTERVAL);
+      } else {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+    }
 
     async function handleClosePosition(symbol, position, price) {
       const button = $(`button[onclick="handleClosePosition('${symbol}', ${position}, ${price})"]`);

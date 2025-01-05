@@ -29,7 +29,8 @@ loadDotEnv = load_dotenv()
 tiingo_token = os.getenv('TIINGO_API_TOKEN')
 unique_ts = str((time.time_ns() // 1000000) -  (4 * 60 * 60 * 1000))
 short_stock_manager = ShortStockManager()
-
+account_value= []
+net_liquidation = 0.0
 def get_timestamp(unique_ts: str) -> str:
     """Get timestamp for database"""
     dtime = datetime.fromtimestamp(int(unique_ts) / 1000.0)
@@ -159,6 +160,9 @@ async def lifespan(app: FastAPI):
             accounts = ib.managedAccounts()
             account = accounts[0] if accounts else None
             ib.reqPnL(account)
+            
+            
+            ib.accountSummaryEvent += on_account_value_update
             ib.disconnectedEvent += on_disconnected
             logger.info("Connected to IB Gateway and subscribed to disconnection event")
             return True
@@ -176,7 +180,10 @@ async def lifespan(app: FastAPI):
                     logger.info(f"jengo awaiting connectAsync()  at host: {IB_HOST}...")
                     accounts = ib.managedAccounts()
                     account = accounts[0] if accounts else None
+                    
                     ib.reqPnL(account)
+                    ib.positionEvent += on_pnl_event
+                    ib.accountSummaryEvent += on_account_value_update
                     
                     ib.disconnectedEvent += on_disconnected
                     logger.info("Connected to IB Gateway and subscribed to disconnection event")
@@ -517,79 +524,224 @@ async def home(request: Request):
         logger.error(f"Error in home route: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to render the dashboard: {str(e)}")
 
-@app.get("/api/positions")
-async def get_positions(db: Session = Depends(get_db)):
+
+async def on_account_value_update(account_value: AccountValue):
+        """Update stored NetLiquidation whenever it changes."""
+        #account_value= await ib.reqAccountSummaryAsync()
+        if account_value.tag == "NetLiquidation":
+            net_liquidation = float(account_value.value)
+            logger.debug(f"NetLiquidation updated: ${net_liquidation:,.2f}")
+            print(f"NetLiquidation updated: ${net_liquidation:,.2f}")
+            return net_liquidation
+            
+
+
+@app.get("/api/pnl-data",response_model=Dict[str, List[dict]])
+async def get_current_pnl(pnl: PnL):
+    """
+    Fetch positions, PnL, and trades with robust connection handling.
+    """
    
+    
     try:
-        logger.info("API call to /api/positions")
-        positions = db.query(Positions).all()
-        positions_data = [
-            {
-                'symbol': pos.symbol,
-                'position': pos.position,
-                'market_price': pos.market_price,
-                'market_value': pos.market_value,
-                'average_cost': pos.average_cost,
-                'unrealized_pnl': pos.unrealized_pnl,
-                'realized_pnl': pos.realized_pnl,
-                'account': pos.account,
-                'exchange': pos.exchange,  # Already correctly named in database
-                'timestamp': pos.timestamp
-            }
-            for pos in positions
-        ]
-        logger.info(f"Successfully fetched positions data.{positions_data}")
-        return {"status": "success", "data": {"active_positions": positions_data}}
-    except Exception as e:
-        logger.error(f"Error fetching positions: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch positions data")
+       
+        # Initialize response data
+        #account_value = []
+        #net_liquidation = await on_account_value_update(account_value)
+        #logger.info(f"jengo requested net_liquidation is {net_liquidation}")
+       
 
-@app.get("/api/current-pnl")
-async def get_current_pnl(db: Session = Depends(get_db)):
-    try:
-        logger.info("API call to /api/current-pnl")
-        pnl = db.query(PnLData).order_by(PnLData.timestamp.desc()).first()
-        if pnl:
-            data = {
-                'daily_pnl': pnl.daily_pnl,
-                'total_unrealized_pnl': pnl.total_unrealized_pnl,
-                'total_realized_pnl': pnl.total_realized_pnl,
-                'net_liquidation': pnl.net_liquidation
-            }
-        else:
-            data = {}
-        logger.info("Successfully fetched current PnL data.")
-        return {"status": "success", "data": data}
-    except Exception as e:
-        logger.error(f"Error fetching current PnL: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch current PnL data")
+            
+        positions_data = []
+        pnl = PnL()
+        pnl_data = []
 
-@app.get("/api/trades")
-async def get_trades(db: Session = Depends(get_db)):
+        
+        
+      
+        try:
+            async with asyncio.timeout(2):  # Reduced timeout
+                if not ib.isConnected():
+                    await ensure_ib_connection()
+                
+                # Request positions
+                positions = await ib.reqPositionsAsync()
+                
+                await asyncio.sleep(1)  # Allow time for data to arrive
+                logger.info(f"jengo requested positions are {positions}")
+                
+                
+                positions_data = [
+                    {
+                        "account": pos.account,
+                        "contract": pos.contract.symbol,
+                        "conId": pos.contract.conId,
+                        "position": pos.position,
+                        "avgCost": pos.avgCost,
+                        
+                    }
+                    for pos in positions
+                ]
+                logger.info(f"Successfully fetched {len(positions_data)} positions")
+                account_pnl =  ib.pnl()
+                await asyncio.sleep(0.5)  # Allow time for data to arrive
+                logger.info(f"jengo requested account_pnl is {account_pnl}")
+                
+                pnl_data = [
+                    {
+            'daily_pnl': item.dailyPnL,
+            'total_unrealized_pnl': item.unrealizedPnL,
+            'total_realized_pnl': item.realizedPnL,
+            }
+            for item in account_pnl
+            
+            ]
+                
+                
+                
+                logger.info(f"Successfully fetched {len(pnl_data)} pnl data")
+                
+                
+
+                
+        
+        except Exception as e:
+            logger.error(f"Error fetching pnl-data: {str(e)}")
+                          
+        
+
+       
+        
+            
+
+        response = {
+            "positions": positions_data,
+            "pnl": pnl_data,
+        }
+
+        
+        logger.info(f"Successfully completed IB data fetch of Pnl {pnl_data} and positions {positions_data} ")
+        return JSONResponse(
+            content=response,
+            status_code=200
+        )
+
+    except Exception as e:
+        logger.error(f"Error in current-pnl: {str(e)}", exc_info=True)
+        # If we get here, something really went wrong
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Failed to fetch PnL data",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
+
+
+@app.get("/api/contract-data", response_model=Dict[str, List[dict]])
+async def get_contracts():
     try:
-        logger.info("API call to /api/trades")
-        trades = db.query(Trades).order_by(Trades.trade_time.desc()).all()
+        logger.info("API call to /api/contract-data")
+        reqAllOpenOrdersAsync = await ib.reqAllOpenOrdersAsync()
+        await asyncio.sleep(1)
+        
+        # Transform each Trade object into a dictionary
+        contract_data = []
+        for trade in reqAllOpenOrdersAsync:
+            # Get the timestamp from the first log entry
+            log_time = trade.log[0].time if trade.log else None
+            
+            trade_dict = {
+                "contract": {
+                    "symbol": trade.contract.symbol,
+                    "conId": trade.contract.conId,
+                    "exchange": trade.contract.exchange,
+                    "currency": trade.contract.currency
+                },
+                "order": {
+                    "permId": trade.order.permId,
+                    "action": trade.order.action,
+                    "totalQuantity": trade.order.totalQuantity,
+                    "orderType": trade.order.orderType,
+                    "lmtPrice": trade.order.lmtPrice,
+                    "auxPrice": trade.order.auxPrice,
+                    "tif": trade.order.tif,
+                    "orderRef": trade.order.orderRef or ""
+                },
+                "orderStatus": {
+                    "status": trade.orderStatus.status,
+                    "filled": trade.orderStatus.filled,
+                    "remaining": trade.orderStatus.remaining,
+                    "avgFillPrice": trade.orderStatus.avgFillPrice,
+                    "permId": trade.orderStatus.permId,
+                    "lastFillPrice": trade.orderStatus.lastFillPrice
+                },
+                "log": [{
+                    "time": log_time.isoformat() if log_time else None,
+                    "status": entry.status,
+                    "message": entry.message,
+                    "errorCode": entry.errorCode
+                } for entry in trade.log]
+            }
+            contract_data.append(trade_dict)
+
+        logger.info(f"Successfully fetched contract data with {len(contract_data)} trades")
+        
+        response = {
+            "contract_data": contract_data
+        }
+        
+        return JSONResponse(
+            content=response,
+            status_code=200
+        )
+    except Exception as e:
+        logger.error(f"Error fetching trades: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch contract data")
+        
+
+@app.get("/api/trade-data", response_model=Dict[str, List[dict]])
+async def get_trades():
+
+    try:
+        logger.info("API call to /api/trade-data")
+        trades = await ib.reqAllOpenOrdersAsync()
+        
         trades_data = [
-            {
-                'trade_time': trade.trade_time,
-                'symbol': trade.symbol,
-                'action': trade.action,
-                'quantity': trade.quantity,
-                'fill_price': trade.fill_price,
-                'commission': trade.commission,
-                'realized_pnl': trade.realized_pnl,
-                'exchange': trade.exchange,
-                'order_ref': trade.order_ref,
-                'status': trade.status
-            }
-            for trade in trades
-        ]
-        logger.info("Successfully fetched trades data.")
-        return {"status": "success", "data": {"trades": trades_data}}
+                        {
+                            "tradeId": trade.order.permId,
+                            "contract": trade.contract.symbol,
+                            "action": trade.order.action,
+                            "position": trade.order.totalQuantity,
+                            "status": trade.orderStatus.status,
+                            "orderType": trade.order.orderType,
+                            "limitPrice": trade.order.lmtPrice,
+                            "avgFillPrice": trade.orderStatus.avgFillPrice,
+                            "filled": trade.orderStatus.filled,
+                            "remaining": trade.orderStatus.remaining
+                        }
+                        for trade in trades
+                        
+                    ]
+        logger.info(f"Successfully fetched trades data {trades_data}.")
+        
+        response = {
+           
+            "trades": trades_data,
+           
+        }
+
+        
+        logger.info(f"Successfully completed IB data fetch of trades data {trades_data}")
+        return JSONResponse(
+            content=response,
+            status_code=200
+        )
     except Exception as e:
         logger.error(f"Error fetching trades: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch trades data")
-
+    
 async def on_orderStatus(trade: Trade):
     logger.info(f"order has new status{trade}")
 
@@ -727,13 +879,13 @@ async def on_pnl_event(pnl: PnL):
     for item in pnl:
         total_unrealized_pnl = float((item.unrealizedPnL /2) or 0.0)
         total_realized_pnl = float(item.realizedPnL or 0.0)
-        logger.info(f"Received PnL update for unrealizedPnL: {total_unrealized_pnl} with the full item as {item}")
+        logger.debug(f"Received PnL update for unrealizedPnL: {total_unrealized_pnl} with the full item as {item}")
     #if pnl and pnl.realizedPnL is not None and pnl.unrealizedPnL is not None:
     if pnl:
 
             
         total_pnl = total_realized_pnl + (total_unrealized_pnl) / 2
-        logger.info(f"{total_pnl} is the total_pnl = total_realized_pnl {total_realized_pnl} + (total_unrealized_pnl) / 2: {total_unrealized_pnl} all pnl object is {pnl}")
+        logger.debug(f"{total_pnl} is the total_pnl = total_realized_pnl {total_realized_pnl} + (total_unrealized_pnl) / 2: {total_unrealized_pnl} all pnl object is {pnl}")
         return total_pnl
     else:
         logger.warning("PnL data is incomplete.")
@@ -785,7 +937,6 @@ async def get_ib_data():
         
         # Initialize response data
         positions_data = []
-        pnl_data = []
         trades_data = []
         
         # Fetch positions with retry logic
@@ -824,7 +975,7 @@ async def get_ib_data():
                 else:
                     logger.error("All position fetch attempts failed")
             except Exception as e:
-                logger.error(f"Error fetching positions: {str(e)}")
+                logger.error(f"Error fetching positions for ib-data: {str(e)}")
                 if attempt < max_retries - 1:
                     await asyncio.sleep(retry_delay)
                     continue
@@ -886,47 +1037,50 @@ async def get_ib_data():
                 "timestamp": datetime.now().isoformat()
             }
         )
-@app.get("/api/orders-data")
-async def proxy_orders_data():
+@app.get("/api/portfolio-data", response_model=Dict[str, List[dict]])
+async def get_portfolio_data():
+
     try:
-        logger.info("Received request for orders data")
+        logger.info("API call to /api/portfolio-data")
+        portfolio_items = ib.portfolio()
+
+     
+        portfolio_data = [
+                         {
+                            "account": item.account,
+                            "contract": item.contract.symbol,
+                            "conId": item.contract.conId,
+                            "position": item.position,
+                            "unrealizedPNL": item.unrealizedPNL,
+                            "realizedPNL": item.realizedPNL,
+                            "marketPrice": item.marketPrice,
+                            "marketValue": item.marketValue,
+                        }
+                        for item in portfolio_items
+                        
+                    ]
+        logger.info(f"Successfully fetched portfolio-data  {portfolio_data}.")
         
-        # Generate timestamp using your method
+        response = {
+           
+            "portfolio_data": portfolio_data,
+           
+        }
+
         
-        # Use the container name as hostname since they're on the same network
-        orders_url = f"http://tbot-on-tradingboat:5000/orders/data?_={unique_ts}"
-        logger.info(f"Forwarding request to internal endpoint: {orders_url}")
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                orders_url,
-                timeout=10.0
-            )
-            
-            logger.info(f"Orders data response status code: {response.status_code}")
-            logger.debug(f"Orders data response content: {response.text}")
-            
-            return Response(
-                content=response.content,
-                status_code=response.status_code,
-                headers={
-                    "Access-Control-Allow-Origin": "https://portfolio.porenta.us",
-                    "Access-Control-Allow-Methods": "GET, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type",
-                    "Content-Type": response.headers.get("Content-Type", "application/json")
-                }
-            )
-            
-    except httpx.TimeoutException:
-        logger.error("Timeout while fetching orders data")
-        raise HTTPException(status_code=504, detail="Request to orders service timed out")
-    except httpx.RequestError as e:
-        logger.error(f"Network error in orders proxy: {str(e)}")
-        raise HTTPException(status_code=503, detail="Error connecting to orders service")
+        logger.info(f"Successfully completed IB data fetch of portfolio-data  {portfolio_data}")
+        return JSONResponse(
+            content=response,
+            status_code=200
+        )
     except Exception as e:
-        logger.error(f"Unexpected error in orders proxy: {str(e)}")
-        logger.exception("Full exception details:")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching trades: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch portfolio data")
+    
+async def on_orderStatus(trade: Trade):
+    logger.info(f"order has new status{trade}")
+
+    return trade
         
 
 def str2bool(value: str) -> bool:
