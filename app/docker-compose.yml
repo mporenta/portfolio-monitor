@@ -12,6 +12,7 @@ services:
   
     environment:
       TWS_USERID: ${TWS_USERID}
+      IB_GATEWAY_VERSION: ${IB_GATEWAY_VERSION}
       TWS_PASSWORD: ${TWS_PASSWORD}
       TRADING_MODE: ${TRADING_MODE:-live}
       READ_ONLY_API: ${READ_ONLY_API:-}
@@ -85,6 +86,7 @@ services:
       dockerfile: Dockerfile.pnl_frontend
     depends_on:
       - ngrok-pnl
+      - redis_fastapi
     ports:
       - 5001:5001
     networks:
@@ -94,6 +96,11 @@ services:
       TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-}
       TBOT_IBKR_PORT: ${TBOT_IBKR_PORT:-4001}
       WEBHOOK_PNL_THRESHOLD: ${WEBHOOK_PNL_THRESHOLD:-}
+      FAST_REDIS_HOST: ${FAST_REDIS_HOST:-redis_fastapi}
+      FAST_REDIS_PORT: ${FAST_REDIS_PORT:-6380} 
+      FAST_REDIS_DB: ${FAST_REDIS_DB:-0}
+      FAST_REDIS_PASSWORD: ${FAST_REDIS_PASSWORD:-}
+      
 
   
       DATABASE_PATH: ${DATABASE_PATH:-/app/data/pnl_data_jengo.db}
@@ -168,6 +175,24 @@ services:
     command: /bin/bash
 
 
+  redis_fastapi:
+      image: redis:7.0.10-alpine
+      container_name: redis_fastapi_ib
+      command: redis-server --port 6380  # Add this line to make Redis listen on 6380
+      ports:
+        - "6380:6380"
+      volumes:
+      - ./redis_fastapi_data:/app/data  
+      networks:
+        - tbot-network
+      restart: always
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+
+ 
 
 
 networks:

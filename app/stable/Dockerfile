@@ -1,3 +1,4 @@
+
 #
 # Setup Stage: install apps
 #
@@ -8,9 +9,9 @@
 FROM ubuntu:22.04 as setup
 
 
-ENV IB_GATEWAY_VERSION=10.30.1s
-ENV IB_GATEWAY_RELEASE_CHANNEL=stable
-ENV IBC_VERSION=3.20.0
+ENV IB_GATEWAY_VERSION=10.23.2a
+ENV IB_GATEWAY_RELEASE_CHANNEL=latest
+ENV IBC_VERSION=3.17.0
 
 # Prepare system
 RUN apt-get update -y
@@ -40,6 +41,7 @@ RUN unzip ./IBCLinux-${IBC_VERSION}.zip -d /root/ibc
 RUN chmod -R u+x /root/ibc/*.sh 
 RUN chmod -R u+x /root/ibc/scripts/*.sh
 COPY ./config/ibc/config.ini.tmpl /root/ibc/config.ini.tmpl
+
 # Copy scripts
 COPY ./scripts /root/scripts
 
@@ -88,7 +90,6 @@ ENV IBC_PATH /root/ibc
 ENV IBC_INI /root/ibc/config.ini
 ENV TWOFA_TIMEOUT_ACTION exit
 
-
 RUN apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:deadsnakes/ppa
 
@@ -107,13 +108,11 @@ COPY ./tbot/tbot_run.sh /home/tbot/tbot_run.sh
 RUN chmod a+x /home/tbot/tbot_run.sh
 
 # TBOT: Set default git repository and allow user to override
-ARG TBOT_TRADINGBOAT_GIT_REPO=https://github.com/mporenta/tbot-tradingboat2.git
-ARG TBOT_TRADINGBOAT_GIT_BRANCH=rth
+ARG TBOT_TRADINGBOAT_GIT_REPO=https://github.com/mporenta/tbot-tradingboat.git
+ARG TBOT_TRADINGBOAT_GIT_BRANCH=main
 
-ARG TBOT_TVWB_GIT_REPO=https://github.com/mporenta/tradingview-webhooks-bot2.git
-ARG TBOT_TVWB_GIT_BRANCH=envKey
-
-
+ARG TBOT_TVWB_GIT_REPO=https://github.com/mporenta/tradingview-webhooks-bot.git
+ARG TBOT_TVWB_GIT_BRANCH=main
 
 # Add GitHub to known hosts for SSH, copy SSH keys, and clone repository conditionally
 COPY ./tbot/* /home/tbot/.ssh/
@@ -127,8 +126,8 @@ RUN if echo "${TBOT_TRADINGBOAT_GIT_REPO}" | grep -q "git@"; then \
         /home/tbot/copy_ssh_key.sh && \
         chmod 600 /home/tbot/.ssh/id_rsa && \
         ssh-keyscan github.com > /home/tbot/.ssh/known_hosts && \
-        git config --global user.email ${USER_EMAIL_GIT} && \
-        git config --global user.name ${USER_NAME_GIT} && \
+        git config --global user.email "you@example.com" && \
+        git config --global user.name "Your Name" && \
         git config --global core.sshCommand "ssh -i /home/tbot/.ssh/id_rsa -o StrictHostKeyChecking=no"; \
     fi
 
@@ -145,15 +144,6 @@ WORKDIR /home/tbot/develop/github/tbot-tradingboat
 RUN pip install -r requirements.txt
 RUN pip install -e .
 RUN chmod a+x /home/tbot/develop/github/tbot-tradingboat/tbottmux/*.sh
-RUN pip install fastapi uvicorn
-WORKDIR /home/tbot/develop/github/tbot-tradingboat
-COPY ./tbot/tbot_order.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order.py
-COPY ./tbot/tbot_decoder.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_decoder.py
-
-COPY ./tbot/tbot_order_event.py /home/tbot/develop/github/tbot-tradingboat/src/tbot_tradingboat/pg_decoder/ib_api/tbot_order_event.py
-
-
-
 
 RUN git clone -b ${TBOT_TVWB_GIT_BRANCH} ${TBOT_TVWB_GIT_REPO} /home/tbot/develop/github/tradingview-webhooks-bot
 WORKDIR /home/tbot/develop/github/tradingview-webhooks-bot/src
@@ -171,23 +161,20 @@ COPY ./flask/main.py /home/tbot/develop/github/tradingview-webhooks-bot/src/main
 #COPY ./service_error.html /home/tbot/develop/github/tradingview-webhooks-bot/src/templates/service_error.html
 COPY ./static/img/favicon.ico  /home/tbot/develop/github/tradingview-webhooks-bot/src/static/img/favicon.ico
 
-# Install dependencies in the virtual environment
-RUN pip install -r requirements.txt
-# TBOT: Set the default directory
-WORKDIR /home/tbot/develop/github/tbot-tradingboat
+
 # Copy the PnL monitoring script into the TBOT_APP_HOME directory
 #COPY ./pnl_monitor.py /home/tbot/develop/github/tbot-tradingboat/pnl_monitor.py
 ENV TVWB_UNIQUE_KEY=${TVWB_UNIQUE_KEY:-}
 ENV WEBHOOK_PNL_THRESHOLD=-300.0
 
+# Install dependencies in the virtual environment
+RUN pip install -r requirements.txt
+# TBOT: Set the default directory
+WORKDIR /home/tbot/develop/github/tbot-tradingboat
 
 COPY ./scripts/fork_ports_delayed.sh /root/scripts/fork_ports_delayed.sh
 COPY ./scripts/run_x11_vnc.sh /root/scripts/run_x11_vnc.sh
 RUN dos2unix /root/scripts/*.sh && chmod a+x /root/scripts/*.sh
-
-# Add a cache-busting argument
-ARG CACHE_BUST=1
-RUN echo "Cache Bust: $CACHE_BUST"
 
 # Start run script
 RUN dos2unix /home/tbot/tbot_run.sh && chmod a+x /home/tbot/tbot_run.sh

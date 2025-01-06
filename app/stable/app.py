@@ -1,3 +1,4 @@
+from redis.asyncio import Redis
 from fastapi import FastAPI, HTTPException, Request, Response, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,23 +9,21 @@ from shorts import ShortStockManager
 import httpx
 from datetime import datetime
 from typing import List, Dict, Optional, Union, Any
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 import pytz
+import json
 import aiohttp
 import time
 from dotenv import load_dotenv
 from ib_async import *
-from ib_async import PnL, Contract
 import logging
 import signal
 import requests
 import asyncio
 import os
-from models import Base, Positions, PnLData, Trades, Orders, PositionClose
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 load_dotenv()
+redis: Redis = None
 loadDotEnv = load_dotenv()
 tiingo_token = os.getenv('TIINGO_API_TOKEN')
 unique_ts = str((time.time_ns() // 1000000) -  (4 * 60 * 60 * 1000))
@@ -54,20 +53,6 @@ SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory (project root)
 ROOT_DIR = os.path.dirname(SRC_DIR)
 DATA_DIR = "/app/data"
-
-DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/data/pnl_data_jengo.db')
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-Base.metadata.create_all(bind=engine)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 # Set up logging
 log_file_path = '/app/logs/app.log'
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
@@ -83,7 +68,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
 class PositionCloseRequest(BaseModel):
     contract: Contract
     position: float
@@ -140,12 +124,353 @@ class WebhookRequest(BaseModel):
     orderRef: str
     direction: str
     metrics: List[Metric]
+class IBRedisSync:
+    def __init__(self, redis: Redis):
+        self.redis = redis
+        self.running = False
+        self._task: Optional[asyncio.Task] = None
+        self.net_liquidation = net_liquidation
 
+    async def initialize(self, ib: IB):
+        self.ib = ib
+        # Set up event handlers for real-time updates
+        self.ib.pnlEvent += self._handle_pnl_update
+        self.ib.orderStatusEvent += self._handle_order_update
+        logger.info("IBRedisSync initialized")
+    
+        
+    async def start(self):
+        if self.running:
+            return
+        self.running = True
+        self._task = asyncio.create_task(self._sync_loop())
+        logger.info("IBRedisSync service started")
+
+    async def stop(self):
+        self.running = False
+        if self._task:
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+
+    async def _sync_loop(self):
+        """Main sync loop for periodic data updates"""
+        while self.running:
+            try:
+                if not self.ib.isConnected():
+                    await asyncio.sleep(5)
+                    continue
+
+                await asyncio.gather(
+                    self._sync_portfolio_data(),
+                    self._sync_contract_data(),
+                    self._sync_pnl_data(),
+                    self._sync_trade_data(),
+                    self._sync_ib_data(),
+                    self.on_account_value_update()
+                )
+                await asyncio.sleep(1)
+            except Exception as e:
+                logger.error(f"Error in sync loop: {e}")
+                await asyncio.sleep(5)
+    async def _handle_order_update(self, trade: Trade):
+        """Real-time Trade updates"""
+        try:
+            open_orders = await self.ib.reqAllOpenOrdersAsync()
+            contract_data = []
+            for trade in open_orders:
+                # Get the timestamp from the first log entry
+                log_time = trade.log[0].time if trade.log else None
+                
+                trade_dict = {
+                    "contract": {
+                        "symbol": trade.contract.symbol,
+                        "conId": trade.contract.conId,
+                        "exchange": trade.contract.exchange,
+                        "currency": trade.contract.currency
+                    },
+                    "order": {
+                        "permId": trade.order.permId,
+                        "action": trade.order.action,
+                        "totalQuantity": trade.order.totalQuantity,
+                        "orderType": trade.order.orderType,
+                        "lmtPrice": trade.order.lmtPrice,
+                        "auxPrice": trade.order.auxPrice,
+                        "tif": trade.order.tif,
+                        "orderRef": trade.order.orderRef or ""
+                    },
+                    "orderStatus": {
+                        "status": trade.orderStatus.status,
+                        "filled": trade.orderStatus.filled,
+                        "remaining": trade.orderStatus.remaining,
+                        "avgFillPrice": trade.orderStatus.avgFillPrice,
+                        "permId": trade.orderStatus.permId,
+                        "lastFillPrice": trade.orderStatus.lastFillPrice
+                    },
+                    "log": [{
+                        "time": log_time.isoformat() if log_time else None,
+                        "status": entry.status,
+                        "message": entry.message,
+                        "errorCode": entry.errorCode
+                    } for entry in trade.log]
+                }
+                contract_data.append(trade_dict)
+                
+                # Store by symbol for quick lookup
+                await self.redis.hset(
+                    f"contract:{trade.contract.symbol}",
+                    trade.order.permId,
+                    json.dumps(trade_dict)
+                )
+            
+            # Store full contract data
+            await self.redis.set('contract:data', json.dumps(contract_data))
+        except Exception as e:
+            logger.error(f"Error syncing contract data: {e}")
+    async def _handle_pnl_update(self, pnl: PnL):
+        """Real-time PNL updates"""
+        try:
+            pnl_data = {
+                'unrealized_pnl': float(pnl.unrealizedPnL or 0),
+                'realized_pnl': float(pnl.realizedPnL or 0),
+                'daily_pnl': float(pnl.dailyPnL or 0),
+            }
+            await self.redis.hset('current:pnl', mapping=pnl_data)
+        except Exception as e:
+            logger.error(f"Error handling PNL update: {e}")
+
+    async def _sync_portfolio_data(self):
+        """Sync portfolio items"""
+        try:
+            logger.info("jengo Syncing portfolio data in redis...")
+            portfolio_items = self.ib.portfolio()
+            portfolio_data = [
+                {
+                    "account": item.account,
+                    "contract": item.contract.symbol,
+                    "conId": item.contract.conId,
+                    "position": item.position,
+                    "unrealizedPNL": item.unrealizedPNL,
+                    "realizedPNL": item.realizedPNL,
+                    "marketPrice": item.marketPrice,
+                    "marketValue": item.marketValue,
+                }
+                for item in portfolio_items
+            ]
+            await self.redis.set('portfolio:data', json.dumps(portfolio_data))
+        except Exception as e:
+            logger.error(f"Error syncing portfolio data: {e}")
+
+    async def _sync_contract_data(self):
+        """Sync open orders and contracts"""
+        try:
+            open_orders = await self.ib.reqAllOpenOrdersAsync()
+            contract_data = []
+            for trade in open_orders:
+                # Get the timestamp from the first log entry
+                log_time = trade.log[0].time if trade.log else None
+                
+                trade_dict = {
+                    "contract": {
+                        "symbol": trade.contract.symbol,
+                        "conId": trade.contract.conId,
+                        "exchange": trade.contract.exchange,
+                        "currency": trade.contract.currency
+                    },
+                    "order": {
+                        "permId": trade.order.permId,
+                        "action": trade.order.action,
+                        "totalQuantity": trade.order.totalQuantity,
+                        "orderType": trade.order.orderType,
+                        "lmtPrice": trade.order.lmtPrice,
+                        "auxPrice": trade.order.auxPrice,
+                        "tif": trade.order.tif,
+                        "orderRef": trade.order.orderRef or ""
+                    },
+                    "orderStatus": {
+                        "status": trade.orderStatus.status,
+                        "filled": trade.orderStatus.filled,
+                        "remaining": trade.orderStatus.remaining,
+                        "avgFillPrice": trade.orderStatus.avgFillPrice,
+                        "permId": trade.orderStatus.permId,
+                        "lastFillPrice": trade.orderStatus.lastFillPrice
+                    },
+                    "log": [{
+                        "time": log_time.isoformat() if log_time else None,
+                        "status": entry.status,
+                        "message": entry.message,
+                        "errorCode": entry.errorCode
+                    } for entry in trade.log]
+                }
+                contract_data.append(trade_dict)
+                
+                # Store by symbol for quick lookup
+                await self.redis.hset(
+                    f"contract:{trade.contract.symbol}",
+                    trade.order.permId,
+                    json.dumps(trade_dict)
+                )
+            
+            # Store full contract data
+            await self.redis.set('contract:data', json.dumps(contract_data))
+        except Exception as e:
+            logger.error(f"Error syncing contract data: {e}")
+
+    async def _sync_pnl_data(self):
+        """Sync PNL data"""
+        try:
+            accounts = self.ib.managedAccounts()
+            account = accounts[0] if accounts else None
+            if account:
+                pnl_items = self.ib.pnl(account)
+                pnl_data = [{
+                    'daily_pnl': item.dailyPnL,
+                    'total_unrealized_pnl': item.unrealizedPnL,
+                    'total_realized_pnl': item.realizedPnL,
+                    'net_liquidation': await self.on_account_value_update(),
+                } for item in pnl_items]
+                await self.redis.set('pnl:data', json.dumps(pnl_data))
+        except Exception as e:
+            logger.error(f"Error syncing PNL data: {e}")
+
+    async def _sync_trade_data(self):
+        """Sync trade data"""
+        try:
+            trades = await self.ib.reqAllOpenOrdersAsync()
+            trades_data = [{
+                "tradeId": trade.order.permId,
+                "contract": trade.contract.symbol,
+                "action": trade.order.action,
+                "position": trade.order.totalQuantity,
+                "status": trade.orderStatus.status,
+                "orderType": trade.order.orderType,
+                "limitPrice": trade.order.lmtPrice,
+                "avgFillPrice": trade.orderStatus.avgFillPrice,
+                "filled": trade.orderStatus.filled,
+                "remaining": trade.orderStatus.remaining
+            } for trade in trades]
+            await self.redis.set('trade:data', json.dumps(trades_data))
+        except Exception as e:
+            logger.error(f"Error syncing trade data: {e}")
+
+    async def on_account_value_update(self):
+        """Update stored NetLiquidation whenever it changes."""
+        try:
+            account_value= await self.ib.accountSummaryAsync()
+            for account_value in account_value:
+                if account_value.tag == "NetLiquidation":
+                    self.net_liquidation = float(account_value.value)
+                    logger.info(f"NetLiquidation updated: ${self.net_liquidation:,.2f}")
+                    print(f"jengo NetLiquidation updated: ${self.net_liquidation:,.2f}")
+                    return self.net_liquidation
+        except Exception as e:
+            logger.error(f"Error getting account values  for {account_value}: {str(e)}")
+        
+    async def _sync_ib_data(self):
+        """Sync combined IB data"""
+        try:
+            positions = await self.ib.reqPositionsAsync()
+            await asyncio.sleep(0.5)
+            
+            positions_data = [{
+                "account": pos.account,
+                "contract": pos.contract.symbol,
+                "position": pos.position,
+                "avgCost": pos.avgCost,
+                "marketPrice": getattr(pos, 'marketPrice', None),
+                "marketValue": getattr(pos, 'marketValue', None)
+            } for pos in positions]
+
+            trades = self.ib.executions()
+            trades_data = [{
+                "tradeId": trade.order.orderId,
+                "contract": trade.contract.symbol,
+                "action": trade.order.action,
+                "quantity": trade.order.totalQuantity,
+                "status": trade.orderStatus.status,
+                "orderType": trade.order.orderType,
+                "limitPrice": getattr(trade.order, 'lmtPrice', None),
+                "avgFillPrice": trade.orderStatus.avgFillPrice,
+                "filled": trade.orderStatus.filled,
+                "remaining": trade.orderStatus.remaining
+            } for trade in trades]
+
+            ib_data = {
+                "positions": positions_data,
+                "trades": trades_data,
+            }
+            
+            await self.redis.set('ib:data', json.dumps(ib_data))
+        except Exception as e:
+            logger.error(f"Error syncing IB data: {e}")
+
+redis_sync=IBRedisSync(Redis)
+# Redis connection parameters from environment variables with defaults
+# At the top with other globals
+REDIS_HOST = os.getenv('FAST_REDIS_HOST', 'redis_fastapi')  # Use container name
+REDIS_PORT = int(os.getenv('FAST_REDIS_PORT', 6380))
+REDIS_DB = int(os.getenv('FAST_REDIS_DB', 0))
+FAST_REDIS_PASSWORD = os.getenv("FAST_REDIS_PASSWORD", None)  # Optional password
+
+async def init_redis() -> Redis:
+    """Initialize Redis connection"""
+    try:
+       
+        redis = Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB,
+            decode_responses=True,
+            socket_timeout=5,
+            socket_connect_timeout=5,
+            retry_on_timeout=True
+        )
+        # Test connection
+        await redis.ping()
+        logger.info(f"jengo init_redis() -> Redis: Successfully connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
+        return redis
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {e}")
+        raise
+
+async def close_redis(redis: Redis):
+    """Close Redis connection"""
+    try:
+        await redis.close()
+        logger.info("Redis connection closed")
+    except Exception as e:
+        logger.error(f"Error closing Redis connection: {e}")
 # Initialize FastAPI app with lifespan
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global redis
     logger.info("Loading .env in lifespan...")
     
+    # Initialize Redis
+    try:
+        redis = Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB,
+            decode_responses=True,
+            socket_timeout=5,
+            socket_connect_timeout=5,
+            retry_on_timeout=True
+        )
+        await redis.ping()  # Test connection
+        logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
+        
+        # Initialize Redis sync
+        redis_sync = IBRedisSync(redis)
+        await redis_sync.initialize(ib)
+        await redis_sync.start()
+        app.state.redis_sync = redis_sync  # Store in app state for cleanup
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis: {e}")
+        raise
+
     async def try_connect():
         logger.info(f"jengo try connect() Attempting to connect to IB Gateway at {IB_HOST}...")
         try:
@@ -160,9 +485,12 @@ async def lifespan(app: FastAPI):
             accounts = ib.managedAccounts()
             account = accounts[0] if accounts else None
             ib.reqPnL(account)
+            ib.reqAccountSummaryAsync()
+            # Initialize Redis sync
+            await app.state.redis_sync.initialize(ib)
+            await app.state.redis_sync.start()
             
             
-            ib.accountSummaryEvent += on_account_value_update
             ib.disconnectedEvent += on_disconnected
             logger.info("Connected to IB Gateway and subscribed to disconnection event")
             return True
@@ -183,7 +511,10 @@ async def lifespan(app: FastAPI):
                     
                     ib.reqPnL(account)
                     ib.positionEvent += on_pnl_event
-                    ib.accountSummaryEvent += on_account_value_update
+                    ib.reqAccountSummaryAsync()
+                    # Initialize Redis sync
+                    await app.state.redis_sync.initialize(ib)
+                    await app.state.redis_sync.start()
                     
                     ib.disconnectedEvent += on_disconnected
                     logger.info("Connected to IB Gateway and subscribed to disconnection event")
@@ -240,6 +571,10 @@ async def lifespan(app: FastAPI):
     # Cleanup
     try:
         logger.info("Starting shutdown process...")
+         # Stop Redis sync
+        if redis:
+            await redis.close()
+            logger.info("Redis connection closed")
         
         # Disconnect from IB if connected
         if ib and ib.isConnected():
@@ -274,7 +609,6 @@ app.add_middleware(
 # Set up templates
 templates = Jinja2Templates(directory=os.path.join(ROOT_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(ROOT_DIR, "static")), name="static")
-print(f"global Connecting to database at {DATABASE_PATH}")
 
 @app.options("/{rest_of_path:path}")
 async def preflight_handler(rest_of_path: str):
@@ -525,227 +859,72 @@ async def home(request: Request):
         raise HTTPException(status_code=500, detail=f"Failed to render the dashboard: {str(e)}")
 
 
-async def on_account_value_update(account_value: AccountValue):
-        """Update stored NetLiquidation whenever it changes."""
-        #account_value= await ib.reqAccountSummaryAsync()
-        if account_value.tag == "NetLiquidation":
-            net_liquidation = float(account_value.value)
-            logger.debug(f"NetLiquidation updated: ${net_liquidation:,.2f}")
-            print(f"NetLiquidation updated: ${net_liquidation:,.2f}")
-            return net_liquidation
+
             
 
 
-@app.get("/api/pnl-data",response_model=Dict[str, List[dict]])
-async def get_current_pnl(pnl: PnL):
-    """
-    Fetch positions, PnL, and trades with robust connection handling.
-    """
-   
-    
+@app.get("/api/pnl-data", response_model=Dict[str, List[dict]])
+async def get_current_pnl():
     try:
-       
-        # Initialize response data
-        #account_value = []
-        #net_liquidation = await on_account_value_update(account_value)
-        #logger.info(f"jengo requested net_liquidation is {net_liquidation}")
-       
-
-            
-        positions_data = []
-        pnl = PnL()
-        pnl_data = []
-
+        pnl_data = await redis.get('pnl:data')
+        positions_data = await redis.get('positions:data')
         
-        
-      
-        try:
-            async with asyncio.timeout(2):  # Reduced timeout
-                if not ib.isConnected():
-                    await ensure_ib_connection()
-                
-                # Request positions
-                positions = await ib.reqPositionsAsync()
-                
-                await asyncio.sleep(1)  # Allow time for data to arrive
-                logger.info(f"jengo requested positions are {positions}")
-                
-                
-                positions_data = [
-                    {
-                        "account": pos.account,
-                        "contract": pos.contract.symbol,
-                        "conId": pos.contract.conId,
-                        "position": pos.position,
-                        "avgCost": pos.avgCost,
-                        
-                    }
-                    for pos in positions
-                ]
-                logger.info(f"Successfully fetched {len(positions_data)} positions")
-                account_pnl =  ib.pnl()
-                await asyncio.sleep(0.5)  # Allow time for data to arrive
-                logger.info(f"jengo requested account_pnl is {account_pnl}")
-                
-                pnl_data = [
-                    {
-            'daily_pnl': item.dailyPnL,
-            'total_unrealized_pnl': item.unrealizedPnL,
-            'total_realized_pnl': item.realizedPnL,
-            }
-            for item in account_pnl
-            
-            ]
-                
-                
-                
-                logger.info(f"Successfully fetched {len(pnl_data)} pnl data")
-                
-                
-
-                
-        
-        except Exception as e:
-            logger.error(f"Error fetching pnl-data: {str(e)}")
-                          
-        
-
-       
-        
-            
-
         response = {
-            "positions": positions_data,
-            "pnl": pnl_data,
+            "positions": json.loads(positions_data) if positions_data else [],
+            "pnl": json.loads(pnl_data) if pnl_data else [],
         }
-
         
-        logger.info(f"Successfully completed IB data fetch of Pnl {pnl_data} and positions {positions_data} ")
-        return JSONResponse(
-            content=response,
-            status_code=200
-        )
-
+        return JSONResponse(content=response, status_code=200)
     except Exception as e:
-        logger.error(f"Error in current-pnl: {str(e)}", exc_info=True)
-        # If we get here, something really went wrong
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "Failed to fetch PnL data",
-                "message": str(e),
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-
+        logger.error(f"Error fetching PNL data from Redis: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch PNL data")
 
 @app.get("/api/contract-data", response_model=Dict[str, List[dict]])
 async def get_contracts():
     try:
-        logger.info("API call to /api/contract-data")
-        reqAllOpenOrdersAsync = await ib.reqAllOpenOrdersAsync()
-        await asyncio.sleep(1)
-        
-        # Transform each Trade object into a dictionary
-        contract_data = []
-        for trade in reqAllOpenOrdersAsync:
-            # Get the timestamp from the first log entry
-            log_time = trade.log[0].time if trade.log else None
-            
-            trade_dict = {
-                "contract": {
-                    "symbol": trade.contract.symbol,
-                    "conId": trade.contract.conId,
-                    "exchange": trade.contract.exchange,
-                    "currency": trade.contract.currency
-                },
-                "order": {
-                    "permId": trade.order.permId,
-                    "action": trade.order.action,
-                    "totalQuantity": trade.order.totalQuantity,
-                    "orderType": trade.order.orderType,
-                    "lmtPrice": trade.order.lmtPrice,
-                    "auxPrice": trade.order.auxPrice,
-                    "tif": trade.order.tif,
-                    "orderRef": trade.order.orderRef or ""
-                },
-                "orderStatus": {
-                    "status": trade.orderStatus.status,
-                    "filled": trade.orderStatus.filled,
-                    "remaining": trade.orderStatus.remaining,
-                    "avgFillPrice": trade.orderStatus.avgFillPrice,
-                    "permId": trade.orderStatus.permId,
-                    "lastFillPrice": trade.orderStatus.lastFillPrice
-                },
-                "log": [{
-                    "time": log_time.isoformat() if log_time else None,
-                    "status": entry.status,
-                    "message": entry.message,
-                    "errorCode": entry.errorCode
-                } for entry in trade.log]
-            }
-            contract_data.append(trade_dict)
-
-        logger.info(f"Successfully fetched contract data with {len(contract_data)} trades")
-        
+        contract_data = await redis.get('contract:data')
         response = {
-            "contract_data": contract_data
+            "contract_data": json.loads(contract_data) if contract_data else []
         }
-        
-        return JSONResponse(
-            content=response,
-            status_code=200
-        )
+        return JSONResponse(content=response, status_code=200)
     except Exception as e:
-        logger.error(f"Error fetching trades: {str(e)}")
+        logger.error(f"Error fetching contract data from Redis: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch contract data")
-        
 
 @app.get("/api/trade-data", response_model=Dict[str, List[dict]])
 async def get_trades():
-
     try:
-        logger.info("API call to /api/trade-data")
-        trades = await ib.reqAllOpenOrdersAsync()
-        
-        trades_data = [
-                        {
-                            "tradeId": trade.order.permId,
-                            "contract": trade.contract.symbol,
-                            "action": trade.order.action,
-                            "position": trade.order.totalQuantity,
-                            "status": trade.orderStatus.status,
-                            "orderType": trade.order.orderType,
-                            "limitPrice": trade.order.lmtPrice,
-                            "avgFillPrice": trade.orderStatus.avgFillPrice,
-                            "filled": trade.orderStatus.filled,
-                            "remaining": trade.orderStatus.remaining
-                        }
-                        for trade in trades
-                        
-                    ]
-        logger.info(f"Successfully fetched trades data {trades_data}.")
-        
+        trade_data = await redis.get('trade:data')
         response = {
-           
-            "trades": trades_data,
-           
+            "trades": json.loads(trade_data) if trade_data else []
         }
-
-        
-        logger.info(f"Successfully completed IB data fetch of trades data {trades_data}")
-        return JSONResponse(
-            content=response,
-            status_code=200
-        )
+        return JSONResponse(content=response, status_code=200)
     except Exception as e:
-        logger.error(f"Error fetching trades: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch trades data")
-    
-async def on_orderStatus(trade: Trade):
-    logger.info(f"order has new status{trade}")
+        logger.error(f"Error fetching trade data from Redis: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch trade data")
 
-    return trade
+@app.get("/api/ib-data", response_model=Dict[str, List[dict]])
+async def get_ib_data():
+    try:
+        ib_data = await redis.get('ib:data')
+        if not ib_data:
+            raise HTTPException(status_code=404, detail="No IB data available")
+        return JSONResponse(content=json.loads(ib_data), status_code=200)
+    except Exception as e:
+        logger.error(f"Error fetching IB data from Redis: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch IB data")
+
+@app.get("/api/portfolio-data", response_model=Dict[str, List[dict]])
+async def get_portfolio_data():
+    try:
+        portfolio_data = await redis.get('portfolio:data')
+        response = {
+            "portfolio_data": json.loads(portfolio_data) if portfolio_data else []
+        }
+        return JSONResponse(content=response, status_code=200)
+    except Exception as e:
+        logger.error(f"Error fetching portfolio data from Redis: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch portfolio data")
 
 
 @app.post("/close_positions", response_model=List[PositionResponse])
@@ -924,161 +1103,23 @@ async def ensure_ib_connection():
         logger.error(f"Connection error: {str(e)}")
         raise HTTPException(status_code=503, detail="IB Gateway connection failed")
 
-@app.get("/api/ib-data", response_model=Dict[str, List[dict]])
-async def get_ib_data():
-    """
-    Fetch positions, PnL, and trades with robust connection handling.
-    """
-    logger.info("Starting IB data fetch")
-    
-    try:
-        # Ensure connection is active
-        await ensure_ib_connection()
-        
-        # Initialize response data
-        positions_data = []
-        trades_data = []
-        
-        # Fetch positions with retry logic
-        max_retries = 3
-        retry_delay = 2  # seconds
-        
-        for attempt in range(max_retries):
-            try:
-                async with asyncio.timeout(2):  # Reduced timeout
-                    if not ib.isConnected():
-                        await ensure_ib_connection()
-                    
-                    # Request positions
-                    positions = await ib.reqPositionsAsync()
-                    await asyncio.sleep(0.5)  # Allow time for data to arrive
-                    
-                    positions_data = [
-                        {
-                            "account": pos.account,
-                            "contract": pos.contract.symbol,
-                            "position": pos.position,
-                            "avgCost": pos.avgCost,
-                            "marketPrice": getattr(pos, 'marketPrice', None),
-                            "marketValue": getattr(pos, 'marketValue', None)
-                        }
-                        for pos in positions
-                    ]
-                    logger.info(f"Successfully fetched {len(positions_data)} positions")
-                    break  # Success, exit retry loop
-                    
-            except asyncio.TimeoutError:
-                logger.warning(f"Timeout on attempt {attempt + 1} of {max_retries}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                    continue
-                else:
-                    logger.error("All position fetch attempts failed")
-            except Exception as e:
-                logger.error(f"Error fetching positions for ib-data: {str(e)}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                    continue
-                break
 
-       
-        # Fetch open orders with retry logic
-        for attempt in range(max_retries):
-            try:
-                async with asyncio.timeout(5):
-                    if not ib.isConnected():
-                        await ensure_ib_connection()
-                    
-                    trades = ib.executions()
-                    await asyncio.sleep(0.5)  # Allow time for data to arrive
-                    
-                    trades_data = [
-                        {
-                            "tradeId": trade.order.orderId,
-                            "contract": trade.contract.symbol,
-                            "action": trade.order.action,
-                            "quantity": trade.order.totalQuantity,
-                            "status": trade.orderStatus.status,
-                            "orderType": trade.order.orderType,
-                            "limitPrice": getattr(trade.order, 'lmtPrice', None),
-                            "avgFillPrice": trade.orderStatus.avgFillPrice,
-                            "filled": trade.orderStatus.filled,
-                            "remaining": trade.orderStatus.remaining
-                        }
-                        for trade in trades
-                    ]
-                    logger.debug(f"Successfully fetched {len(trades_data)} open orders")
-                    break
-            except (asyncio.TimeoutError, Exception) as e:
-                logger.warning(f"Orders fetch attempt {attempt + 1} failed: {str(e)}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                    continue
-
-        response = {
-            "positions": positions_data,
-            "trades": trades_data,
-        }
-        
-        logger.info(f"Successfully completed IB data fetch of positions {positions_data} and trades {trades_data}")
-        return JSONResponse(
-            content=response,
-            status_code=200
-        )
-
-    except Exception as e:
-        logger.error(f"Error in get_ib_data: {str(e)}", exc_info=True)
-        # If we get here, something really went wrong
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "Failed to fetch IB data",
-                "message": str(e),
-                "timestamp": datetime.now().isoformat()
-            }
-        )
 @app.get("/api/portfolio-data", response_model=Dict[str, List[dict]])
 async def get_portfolio_data():
-
     try:
-        logger.info("API call to /api/portfolio-data")
-        portfolio_items = ib.portfolio()
-
-     
-        portfolio_data = [
-                         {
-                            "account": item.account,
-                            "contract": item.contract.symbol,
-                            "conId": item.contract.conId,
-                            "position": item.position,
-                            "unrealizedPNL": item.unrealizedPNL,
-                            "realizedPNL": item.realizedPNL,
-                            "marketPrice": item.marketPrice,
-                            "marketValue": item.marketValue,
-                        }
-                        for item in portfolio_items
-                        
-                    ]
-        logger.info(f"Successfully fetched portfolio-data  {portfolio_data}.")
-        
+        logger.info("jengo Fetching portfolio data from Redis")
+        portfolio_data = await redis.get('portfolio:data')
         response = {
-           
-            "portfolio_data": portfolio_data,
-           
+            "portfolio_data": json.loads(portfolio_data) if portfolio_data else []
         }
-
-        
-        logger.info(f"Successfully completed IB data fetch of portfolio-data  {portfolio_data}")
-        return JSONResponse(
-            content=response,
-            status_code=200
-        )
+        return JSONResponse(content=response, status_code=200)
     except Exception as e:
-        logger.error(f"Error fetching trades: {str(e)}")
+        logger.error(f"Error fetching portfolio data from Redis: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch portfolio data")
     
 async def on_orderStatus(trade: Trade):
     logger.info(f"order has new status{trade}")
+    redis_sync._sync_contract_data()
 
     return trade
         

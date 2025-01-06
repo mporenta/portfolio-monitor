@@ -29,6 +29,7 @@ COPY ./db.py /app/python/db.py
 COPY ./entrypoint.sh /app/python/entrypoint.sh
 COPY ./__init__.py /app/python/__init__.py
 COPY ./models.py /app/python/models.py
+COPY ./tick.py /app/python/tick.py
 COPY ./bkapp.py /app/python/bkapp.py
 # Copy static and template files
 COPY ./static/img/favicon.ico /app/python/static/img/favicon.ico
